@@ -6,15 +6,15 @@
     <title>Anatolya Kebabs Weekly Roster</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen p-2 sm:p-4 pb-24">
-    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-4 sm:p-6 space-y-6">
-        <h1 class="text-xl sm:text-2xl font-bold text-gray-800 border-b pb-4 text-center">Anatolya Kebabs Weekly Roster</h1>
+<body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5">
+        <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
         <form id="payForm" class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Staff Member</label>
-                    <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -24,83 +24,83 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Date</label>
-                    <input type="date" id="date" required onchange="applyDefaultShiftTimes()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <input type="date" id="date" required onchange="applyDefaultShiftTimes()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">From</label>
-                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">To</label>
-                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2 border font-semibold text-gray-700 text-sm shadow-sm">
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2 border font-semibold text-gray-700 text-xs shadow-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Paid in Cash Hours</label>
-                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm">
+                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Cash Rate ($/h)</label>
-                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm">
+                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Tax Rate ($/h)</label>
-                    <input type="number" id="taxPayRate" step="0.01" value="28.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-sm shadow-sm">
+                    <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white p-2.5 rounded-md font-semibold hover:bg-blue-700 transition text-sm shadow-sm">Log Shift</button>
+            <button type="submit" class="w-full bg-blue-600 text-white p-2.5 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm">Log Shift</button>
         </form>
 
-        <hr class="border-gray-300 my-4">
+        <hr class="border-gray-300 my-3">
 
-        <div class="space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
-                <h2 class="text-md font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Weekly Summary</h2>
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-gray-500 uppercase">Week:</label>
+        <div class="space-y-3">
+            <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
+                <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
+                <div class="flex items-center gap-1.5">
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Week:</label>
                     <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
                 </div>
             </div>
 
-            <div class="text-center bg-blue-50 border border-blue-100 py-1.5 px-3 rounded-lg flex justify-between items-center text-xs">
+            <div class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
                 <span id="weekRangeDisplay" class="font-bold text-blue-950">-</span>
-                <span class="bg-blue-600 text-white font-extrabold px-2 py-0.5 rounded">Total Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
+                <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
             </div>
             
-            <div class="overflow-x-auto border border-gray-200 rounded-xl shadow-sm bg-white">
-                <table class="min-w-full divide-y divide-gray-200 text-xs table-fixed sm:table-auto">
+            <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
+                <table class="min-w-full divide-y divide-gray-200 text-[10px] table-fixed">
                     <thead class="bg-gray-800 text-white">
                         <tr>
-                            <th class="w-20 px-2 py-2.5 text-left font-bold tracking-wider">Staff</th>
-                            <th class="w-12 text-center font-semibold">Mon</th>
-                            <th class="w-12 text-center font-semibold">Tue</th>
-                            <th class="w-12 text-center font-semibold">Wed</th>
-                            <th class="w-12 text-center font-semibold">Thu</th>
-                            <th class="w-12 text-center font-semibold">Fri</th>
-                            <th class="w-12 text-center font-semibold">Sat</th>
-                            <th class="w-12 text-center font-semibold">Sun</th>
-                            <th class="w-12 text-center font-bold bg-amber-900/60">Cash H</th>
-                            <th class="w-12 text-center font-bold bg-blue-900/60">Tax H</th>
-                            <th class="w-16 text-right pr-2 font-bold bg-slate-700">Cash $</th>
-                            <th class="w-16 text-right pr-2 font-bold bg-slate-700">Tax $</th>
+                            <th class="w-16 px-1 py-1.5 text-left font-bold tracking-tight">Staff</th>
+                            <th class="w-10 text-center font-normal">Mon</th>
+                            <th class="w-10 text-center font-normal">Tue</th>
+                            <th class="w-10 text-center font-normal">Wed</th>
+                            <th class="w-10 text-center font-normal">Thu</th>
+                            <th class="w-10 text-center font-normal">Fri</th>
+                            <th class="w-10 text-center font-normal">Sat</th>
+                            <th class="w-10 text-center font-normal">Sun</th>
+                            <th class="w-10 text-center font-bold bg-amber-900/60">Cash H</th>
+                            <th class="w-10 text-center font-bold bg-blue-900/60">Tax H</th>
+                            <th class="w-12 text-right pr-1 font-bold bg-slate-700">Cash</th>
+                            <th class="w-12 text-right pr-1 font-bold bg-slate-700">Tax</th>
                         </tr>
                     </thead>
                     <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white">
                         </tbody>
-                    <tfoot class="bg-gray-100 font-bold divide-y divide-gray-200 text-[11px]">
+                    <tfoot class="bg-gray-100 font-bold divide-y divide-gray-200 text-[9px]">
                         <tr id="weeklyTableFoot">
                             </tr>
                     </tfoot>
@@ -108,8 +108,8 @@
             </div>
         </div>
 
-        <div class="pt-2">
-            <button onclick="exportUpdatedHtml()" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold hover:bg-green-700 transition shadow">
+        <div class="pt-1">
+            <button onclick="exportUpdatedHtml()" class="w-full bg-green-600 text-white p-2.5 rounded-lg font-bold hover:bg-green-700 transition text-xs shadow">
                 💾 Save & Export Webpage
             </button>
         </div>
@@ -118,7 +118,7 @@
     <script id="payrollData" type="application/json">[]</script>
 
     <script>
-        const ESTIMATED_TAX_RATE = 0.15; // Standard 15% system default proxy holding
+        const ESTIMATED_TAX_RATE = 0.15; // 15% standard index bracket adjustment proxy
 
         // Initialize core layout trackers
         const todayStr = new Date().toISOString().split('T')[0];
@@ -129,6 +129,21 @@
         try {
             dataStore = JSON.parse(document.getElementById('payrollData').textContent);
         } catch (e) { console.error("Error loading structural dataset array.", e); }
+
+        // Dynamic context configuration profiles mapping requests rules conditions
+        function applyStaffRateDefaults() {
+            const name = document.getElementById('staffName').value;
+            let cashRate = "25.00";
+            let taxRate = "30.00";
+
+            if (name === "Sumina" || name === "Rekha") {
+                cashRate = "22.00";
+                taxRate = "27.00";
+            }
+
+            document.getElementById('payRate').value = cashRate;
+            document.getElementById('taxPayRate').value = taxRate;
+        }
 
         function applyDefaultShiftTimes() {
             const dateInput = document.getElementById('date').value;
@@ -224,21 +239,19 @@
 
             const mandatoryStaff = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
             
-            // Storage mapping matrices array logic tracking daily metrics across 7 segments
             let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
             let macroTotals = { cashH: 0, taxH: 0, cashPayout: 0, taxPayout: 0, globalHours: 0 };
 
             let tbodyHtml = '';
 
             mandatoryStaff.forEach(staffName => {
-                let staffRowHtml = `<td class="px-2 py-3 font-bold text-gray-900 border-r bg-gray-50">${staffName}</td>`;
+                let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
                 
                 let staffCashH = 0;
                 let staffTaxH = 0;
                 let staffCashPay = 0;
                 let staffTaxPay = 0;
 
-                // Loop through all 7 calendar indices
                 for (let i = 0; i < 7; i++) {
                     let loopDay = new Date(startMonday);
                     loopDay.setDate(startMonday.getDate() + i);
@@ -247,7 +260,6 @@
                     const record = dataStore.find(entry => entry.date === loopDayIsoStr && entry.name === staffName);
 
                     if (record) {
-                        // Short form string for responsive space reduction on small displays (e.g. 09:30 -> 9:30a)
                         const convertTimeStr = (t) => {
                             let [h, m] = t.split(':').map(Number);
                             let ampm = h >= 12 ? 'p' : 'a';
@@ -255,7 +267,7 @@
                             return `${h}:${m.toString().padStart(2, '0')}${ampm}`;
                         };
                         
-                        staffRowHtml += `<td class="p-1 text-center text-[10px] text-gray-700 leading-tight border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
+                        staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
                         
                         staffCashH += record.cashHours;
                         staffTaxH += record.taxHours;
@@ -267,7 +279,7 @@
                         globalDailyTotals[i] += record.totalHours;
                         macroTotals.globalHours += record.totalHours;
                     } else {
-                        staffRowHtml += `<td class="p-1 text-center text-gray-300 border-r">—</td>`;
+                        staffRowHtml += `<td class="p-0.5 text-center text-gray-300 border-r">—</td>`;
                     }
                 }
 
@@ -276,12 +288,12 @@
                 macroTotals.cashPayout += staffCashPay;
                 macroTotals.taxPayout += staffTaxPay;
 
-                // Append trailing metric arrays matching layout config request
+                // Removed '$' signs completely from cell formatting outputs to optimize narrow views
                 staffRowHtml += `
-                    <td class="text-center font-bold bg-amber-50 text-amber-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
-                    <td class="text-center font-bold bg-blue-50 text-blue-900 border-r">${staffTaxH > 0 ? staffTaxH.toFixed(1) : '—'}</td>
-                    <td class="text-right pr-2 font-medium text-gray-900 bg-slate-50/50 border-r">${staffCashPay > 0 ? '$' + staffCashPay.toFixed(0) : '—'}</td>
-                    <td class="text-right pr-2 font-medium text-gray-900 bg-slate-50/50">${staffTaxPay > 0 ? '$' + staffTaxPay.toFixed(0) : '—'}</td>`;
+                    <td class="text-center font-semibold bg-amber-50/70 text-amber-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
+                    <td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${staffTaxH > 0 ? staffTaxH.toFixed(1) : '—'}</td>
+                    <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${staffCashPay > 0 ? staffCashPay.toFixed(0) : '—'}</td>
+                    <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${staffTaxPay > 0 ? staffTaxPay.toFixed(0) : '—'}</td>`;
 
                 tbodyHtml += `<tr>${staffRowHtml}</tr>`;
             });
@@ -289,21 +301,20 @@
             tableBody.innerHTML = tbodyHtml;
             document.getElementById('grandTotalHoursHeader').innerText = macroTotals.globalHours.toFixed(1);
 
-            // Dynamically evaluate footer context summary row elements
-            let tfootHtml = `<td class="px-2 py-2 text-left bg-gray-200 text-gray-900 border-r">TOTALS</td>`;
+            // Dynamically evaluate footer text elements (stripped currency symbols)
+            let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
             globalDailyTotals.forEach(dayTotal => {
-                tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) + 'h' : '—'}</td>`;
+                tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) : '—'}</td>`;
             });
             tfootHtml += `
-                <td class="text-center bg-amber-100 text-amber-950 border-r">${macroTotals.cashH.toFixed(1)}h</td>
-                <td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}h</td>
-                <td class="text-right pr-2 bg-slate-200 text-gray-900 border-r">$${macroTotals.cashPayout.toFixed(0)}</td>
-                <td class="text-right pr-2 bg-slate-200 text-gray-900">$${macroTotals.taxPayout.toFixed(0)}</td>`;
+                <td class="text-center bg-amber-100 text-amber-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
+                <td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
+                <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
+                <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
             
             tableFoot.innerHTML = tfootHtml;
         }
 
-        // File Exporter Data Injection Core
         function exportUpdatedHtml() {
             const currentDoc = document.documentElement.outerHTML;
             const parser = new DOMParser();
@@ -318,7 +329,8 @@
             a.click();
         }
 
-        // Bootstrap environment states on layout startup
+        // Bootstrap on startup
+        applyStaffRateDefaults();
         applyDefaultShiftTimes();
         renderWeeklyTable();
     </script>
