@@ -26,7 +26,7 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Date</label>
-                    <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
+                    <input type="date" id="date" required onchange="applyDefaultShiftTimes()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
 
@@ -149,10 +149,9 @@
     <script id="payrollData" type="application/json">[]</script>
 
     <script>
-        // CONFIGURABLE CONSTANTS FOR PAYROLL ENGINE
-        const ESTIMATED_TAX_RATE = 0.15; // Standard 15% placeholder
+        const ESTIMATED_TAX_RATE = 0.15; // 15% placeholder tax
 
-        // Set default date inputs to today
+        // Init page defaults
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('date').value = todayStr;
         document.getElementById('filterWeek').value = todayStr;
@@ -161,6 +160,32 @@
         try {
             dataStore = JSON.parse(document.getElementById('payrollData').textContent);
         } catch (e) { console.error("Error loading data array.", e); }
+
+        // Automatically set times based on rules
+        function applyDefaultShiftTimes() {
+            const dateInput = document.getElementById('date').value;
+            if (!dateInput) return;
+
+            // Instantiating local date parts correctly to avoid timezone slipping shifts
+            const [year, month, day] = dateInput.split('-').map(Number);
+            const dayOfWeek = new Date(year, month - 1, day).getDay(); // 0=Sun, 4=Thu, 6=Sat
+
+            let defaultStart = "09:30";
+            let defaultEnd = "17:00";
+
+            // Rules configuration logic
+            if (dayOfWeek === 6) { // Saturday
+                defaultStart = "09:00";
+            }
+            if (dayOfWeek === 4) { // Thursday
+                defaultEnd = "19:00";
+            }
+
+            document.getElementById('startTime').value = defaultStart;
+            document.getElementById('endTime').value = defaultEnd;
+            
+            calculateHoursFromTime();
+        }
 
         function calculateHoursFromTime() {
             const start = document.getElementById('startTime').value;
@@ -171,7 +196,7 @@
             const [endH, endM] = end.split(':').map(Number);
             let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
             
-            if (diffMinutes < 0) diffMinutes += 24 * 60; // Overnight shifts
+            if (diffMinutes < 0) diffMinutes += 24 * 60; // Overnight logic
             document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
 
@@ -228,14 +253,12 @@
             renderWeeklyTable();
             alert(`Shift logged for ${newEntry.name}!`);
             
-            // Clean dynamic fields
-            document.getElementById('startTime').value = '';
-            document.getElementById('endTime').value = '';
-            document.getElementById('totalHours').value = '';
+            // Reapply defaults back for today's date context seamlessly
+            applyDefaultShiftTimes();
             document.getElementById('cashHours').value = '';
         });
 
-        // Generate the 7-day structure matrix view
+        // Generate table data
         function renderWeeklyTable() {
             const filterWeekVal = document.getElementById('filterWeek').value;
             const filterStaffVal = document.getElementById('filterStaff').value;
@@ -322,6 +345,8 @@
             a.click();
         }
 
+        // Run default runtime setup listeners
+        applyDefaultShiftTimes();
         renderWeeklyTable();
     </script>
 </body>
