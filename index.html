@@ -7,18 +7,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 pb-24">
-    <div class="max-w-xl mx-auto bg-white rounded-xl shadow-md p-6 space-y-6">
-        <h1 class="text-2xl font-bold text-gray-800 border-b pb-2 text-center">Staff Payroll Tracker</h1>
+    <div class="max-w-2xl mx-auto bg-white rounded-xl shadow-md p-6 space-y-8">
+        <h1 class="text-2xl font-bold text-gray-800 border-b pb-4 text-center">Staff Payroll Tracker</h1>
         
-        <form id="payForm" class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+        <form id="payForm" class="space-y-6">
+            <h2 class="text-md font-bold text-gray-700 tracking-wide uppercase border-l-4 border-blue-600 pl-2">Log Daily Shift</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Date</label>
-                    <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
+                    <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Staff Member</label>
-                    <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -28,65 +30,114 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Shift Start</label>
-                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <label class="block text-sm font-medium text-gray-700">Shift Start (From)</label>
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Shift End</label>
-                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <label class="block text-sm font-medium text-gray-700">Shift End (To)</label>
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 shadow-sm p-2 border font-semibold text-gray-700">
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2.5 border font-semibold text-gray-700">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Paid in Cash</label>
-                    <input type="number" id="cashHours" step="0.1" value="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <label class="block text-sm font-medium text-gray-700">Paid in Cash Hours</label>
+                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Pay Rate ($/h)</label>
-                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <label class="block text-sm font-medium text-gray-700">Cash Pay Rate ($/h)</label>
+                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tax Pay Rate ($/h)</label>
+                    <input type="number" id="taxPayRate" step="0.01" value="28.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border">
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-md font-semibold hover:bg-blue-700 transition">Add Entry</button>
+            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition shadow-sm">Log Shift</button>
         </form>
 
-        <hr class="border-gray-300">
+        <hr class="border-gray-300 my-8">
 
-        <div>
-            <h2 class="text-lg font-bold text-gray-800 mb-2">Weekly Timesheet Viewer</h2>
-            <div class="flex items-center gap-3 mb-4 bg-blue-50 p-3 rounded-md border border-blue-200">
-                <label class="block text-sm font-semibold text-blue-900 whitespace-nowrap">Select Week:</label>
-                <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm">
+        <div class="space-y-6">
+            <h2 class="text-md font-bold text-gray-700 tracking-wide uppercase border-l-4 border-gray-800 pl-2">Weekly Timesheet Log</h2>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">1. Select Week (Choose any day):</label>
+                    <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 p-2 border text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-600 mb-1">2. Select Staff Member:</label>
+                    <select id="filterStaff" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 p-2 border text-sm">
+                        <option>Adhiraj</option>
+                        <option>Aayush</option>
+                        <option>Manisha</option>
+                        <option>Sumina</option>
+                        <option>Rekha</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="text-center bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                <span class="text-xs font-bold text-blue-800 uppercase block tracking-wider">Payroll Cycle Window</span>
+                <div id="weekRangeDisplay" class="text-md font-extrabold text-blue-950 mt-0.5">-</div>
             </div>
             
-            <div class="overflow-x-auto border rounded-lg shadow-sm">
+            <div class="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
                 <table class="min-w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-800 text-white">
                         <tr>
-                            <th class="px-3 py-2 text-left font-medium">Staff</th>
-                            <th class="px-3 py-2 text-center font-medium">Total H</th>
-                            <th class="px-3 py-2 text-center font-medium">Cash H</th>
-                            <th class="px-3 py-2 text-center font-medium">Paid H</th>
-                            <th class="px-3 py-2 text-right font-medium">Est. Pay</th>
+                            <th class="px-4 py-3 text-left font-semibold">Day</th>
+                            <th class="px-3 py-3 text-center font-semibold">From</th>
+                            <th class="px-3 py-3 text-center font-semibold">To</th>
+                            <th class="px-3 py-3 text-center font-semibold">Total H</th>
+                            <th class="px-3 py-3 text-center font-semibold">Cash H</th>
+                            <th class="px-3 py-3 text-center font-semibold">Tax H</th>
                         </tr>
                     </thead>
-                    <tbody id="weeklyTableBody" class="bg-white divide-y divide-gray-200">
+                    <tbody id="weeklyTableBody" class="bg-white divide-y divide-gray-100">
                         </tbody>
-                    <tfoot id="weeklyTableFoot" class="bg-gray-100 font-bold divide-y divide-gray-200">
-                        </tfoot>
                 </table>
+            </div>
+
+            <div class="bg-slate-900 text-white p-5 rounded-xl shadow border space-y-3">
+                <h3 class="font-bold border-b border-slate-700 pb-1.5 text-sm uppercase tracking-wider text-slate-400">Weekly Totals & Estimated Earnings</h3>
+                <div class="grid grid-cols-3 gap-2 text-center border-b border-slate-800 pb-3 text-xs">
+                    <div>
+                        <span class="text-slate-400 block">Total Work Hours</span>
+                        <strong id="summaryTotalHours" class="text-base text-white">0.0h</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Cash Hours</span>
+                        <strong id="summaryCashHours" class="text-base text-amber-400">0.0h</strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block">Tax Hours</span>
+                        <strong id="summaryTaxHours" class="text-base text-blue-400">0.0h</strong>
+                    </div>
+                </div>
+                <div class="space-y-2 pt-1 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-300">💵 Calculated Cash Payment:</span>
+                        <span id="payoutCash" class="font-bold text-amber-400">$0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-300">🏛️ Est. Tax Gross Payout (+12% Super):</span>
+                        <span id="payoutTax" class="font-bold text-blue-400">$0.00</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="pt-2">
-            <button onclick="exportUpdatedHtml()" class="w-full bg-green-600 text-white p-3 rounded-md font-bold hover:bg-green-700 transition shadow">
+        <div class="pt-4">
+            <button onclick="exportUpdatedHtml()" class="w-full bg-green-600 text-white p-3.5 rounded-xl font-bold hover:bg-green-700 transition shadow">
                 💾 Save & Export Webpage
             </button>
         </div>
@@ -95,7 +146,10 @@
     <script id="payrollData" type="application/json">[]</script>
 
     <script>
-        // Set default date pickers to today
+        // CONFIGURABLE CONSTANTS FOR PAYROLL ENGINE
+        const ESTIMATED_TAX_RATE = 0.15; // Set your custom estimated tax rate (e.g., 15% withholding)
+
+        // Set default date inputs to today
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('date').value = todayStr;
         document.getElementById('filterWeek').value = todayStr;
@@ -103,9 +157,8 @@
         let dataStore = [];
         try {
             dataStore = JSON.parse(document.getElementById('payrollData').textContent);
-        } catch (e) { console.error("Error loading payroll dataset.", e); }
+        } catch (e) { console.error("Error loading data array.", e); }
 
-        // Automatically calculate hours between Start and End time strings
         function calculateHoursFromTime() {
             const start = document.getElementById('startTime').value;
             const end = document.getElementById('endTime').value;
@@ -113,137 +166,152 @@
 
             const [startH, startM] = start.split(':').map(Number);
             const [endH, endM] = end.split(':').map(Number);
-
             let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
             
-            // If the shift crosses midnight (e.g., 10 PM to 6 AM)
-            if (diffMinutes < 0) {
-                diffMinutes += 24 * 60;
-            }
-
-            const decimalHours = diffMinutes / 60;
-            document.getElementById('totalHours').value = decimalHours.toFixed(1);
+            if (diffMinutes < 0) diffMinutes += 24 * 60; // Handles overnight shifts cleanly
+            document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
 
-        // Helper to get the Monday of a given date string
-        function getMonday(dateString) {
+        // Returns Monday date object of the target week block
+        function getMondayObj(dateString) {
             let d = new Date(dateString);
             let day = d.getDay();
-            let diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-            let monday = new Date(d.setDate(diff));
-            return monday.toISOString().split('T')[0];
+            let diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
         }
 
-        // Form Submit
+        function formatDisplayDate(dateObj) {
+            const options = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+            return dateObj.toLocaleDateString('en-US', options);
+        }
+
+        // Form Submit Action
         document.getElementById('payForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const total = parseFloat(document.getElementById('totalHours').value);
-            const cash = parseFloat(document.getElementById('cashHours').value);
+            let cash = document.getElementById('cashHours').value === "" ? 0 : parseFloat(document.getElementById('cashHours').value);
             
             if (isNaN(total)) {
-                alert("Please fill out both Start and End times to compute total hours.");
+                alert("Please fill out Shift Start and End times first.");
+                return;
+            }
+            if (cash > total) {
+                alert("Cash hours cannot be greater than total hours worked.");
                 return;
             }
 
-            const paidHours = Math.max(0, total - cash);
-            const rate = parseFloat(document.getElementById('payRate').value);
+            const taxHours = Math.max(0, total - cash);
             const chosenDate = document.getElementById('date').value;
+            const targetMonday = getMondayObj(chosenDate).toISOString().split('T')[0];
 
             const newEntry = {
                 date: chosenDate,
-                weekCommencing: getMonday(chosenDate),
+                weekCommencing: targetMonday,
                 name: document.getElementById('staffName').value,
-                rate: rate,
+                from: document.getElementById('startTime').value,
+                to: document.getElementById('endTime').value,
+                cashRate: parseFloat(document.getElementById('payRate').value),
+                taxRate: parseFloat(document.getElementById('taxPayRate').value),
                 totalHours: total,
                 cashHours: cash,
-                paidHours: paidHours,
-                calculatedPay: paidHours * rate
+                taxHours: taxHours
             };
 
             dataStore.push(newEntry);
             
-            // Lock the selected filter week to the week of the newly added record so the user instantly sees it
+            // Sync filter views to matching contexts to make verification simple
             document.getElementById('filterWeek').value = chosenDate;
+            document.getElementById('filterStaff').value = newEntry.name;
             
             renderWeeklyTable();
-            alert(`Added entry for ${newEntry.name}. Make sure to 'Save & Export Webpage' to keep it permanent!`);
+            alert(`Shift logged for ${newEntry.name}!`);
             
-            // Clean up fields
+            // Clean dynamic fields
             document.getElementById('startTime').value = '';
             document.getElementById('endTime').value = '';
             document.getElementById('totalHours').value = '';
-            document.getElementById('cashHours').value = '0';
+            document.getElementById('cashHours').value = '';
         });
 
-        // Render the one-table view for the selected week
+        // Generate the 7-day structure matrix view for chosen configurations
         function renderWeeklyTable() {
-            const selectedWeekDate = document.getElementById('filterWeek').value;
+            const filterWeekVal = document.getElementById('filterWeek').value;
+            const filterStaffVal = document.getElementById('filterStaff').value;
             const tableBody = document.getElementById('weeklyTableBody');
-            const tableFoot = document.getElementById('weeklyTableFoot');
             
-            if (!selectedWeekDate) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Please select a week.</td></tr>';
-                tableFoot.innerHTML = '';
-                return;
+            if (!filterWeekVal || !filterStaffVal) return;
+
+            const startMonday = getMondayObj(filterWeekVal);
+            
+            // Setup calendar labels string mapping range window
+            let endSunday = new Date(startMonday);
+            endSunday.setDate(startMonday.getDate() + 6);
+            document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDate(startMonday)} – ${formatDisplayDate(endSunday)}`;
+
+            // Build dataset array indices tracking 7 discrete indexes matching Mon-Sun sequential shifts
+            const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const dayRowsData = [];
+
+            let runningTotals = { total: 0, cash: 0, tax: 0, cashPayout: 0, taxPayout: 0 };
+
+            for(let i=0; i<7; i++) {
+                let currentLoopDay = new Date(startMonday);
+                currentLoopDay.setDate(startMonday.getDate() + i);
+                const loopDayIsoStr = currentLoopDay.toISOString().split('T')[0];
+
+                // Check store for data rows matching this date calendar window segment
+                const record = dataStore.find(entry => entry.date === loopDayIsoStr && entry.name === filterStaffVal);
+                
+                let rowMeta = {
+                    dayLabel: weekDays[i].substring(0,3),
+                    from: record ? record.from : '-',
+                    to: record ? record.to : '-',
+                    total: record ? record.totalHours : 0,
+                    cash: record ? record.cashHours : 0,
+                    tax: record ? record.taxHours : 0
+                };
+
+                if (record) {
+                    runningTotals.total += record.totalHours;
+                    runningTotals.cash += record.cashHours;
+                    runningTotals.tax += record.taxHours;
+                    // Cash calculation
+                    runningTotals.cashPayout += (record.cashHours * record.cashRate);
+                    // Tax calculation formula: (Tax Hours * Tax Pay Rate) with an assumed layout factoring net deductions offset + 12% super margins
+                    const grossBase = record.taxHours * record.taxRate;
+                    const afterTaxEst = grossBase * (1 - ESTIMATED_TAX_RATE);
+                    const withSuper = afterTaxEst * 1.12; 
+                    runningTotals.taxPayout += withSuper;
+                }
+
+                dayRowsData.push(rowMeta);
             }
 
-            const activeWeekMonday = getMonday(selectedWeekDate);
-            
-            // Filter global dataset down to this specific Monday cycle
-            const weeklyData = dataStore.filter(entry => entry.weekCommencing === activeWeekMonday);
-
-            // Initialize all core staff explicitly to ensure they always show in the sheet
-            const mandatoryStaff = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
-            const staffRollup = {};
-            mandatoryStaff.forEach(name => {
-                staffRollup[name] = { total: 0, cash: 0, paid: 0, pay: 0 };
-            });
-
-            // Aggregate hours for items that match the current filtered week
-            weeklyData.forEach(entry => {
-                if (staffRollup[entry.name]) {
-                    staffRollup[entry.name].total += entry.totalHours;
-                    staffRollup[entry.name].cash += entry.cashHours;
-                    staffRollup[entry.name].paid += entry.paidHours;
-                    staffRollup[entry.name].pay += entry.calculatedPay;
-                }
-            });
-
-            // Build out individual rows
-            let bodyHtml = '';
-            let grandTotals = { total: 0, cash: 0, paid: 0, pay: 0 };
-
-            mandatoryStaff.forEach(name => {
-                const stats = staffRollup[name];
-                grandTotals.total += stats.total;
-                grandTotals.cash += stats.cash;
-                grandTotals.paid += stats.paid;
-                grandTotals.pay += stats.pay;
-
-                bodyHtml += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-3 py-2 font-medium text-gray-900">${name}</td>
-                        <td class="px-3 py-2 text-center text-gray-600">${stats.total.toFixed(1)}</td>
-                        <td class="px-3 py-2 text-center text-gray-600">${stats.cash.toFixed(1)}</td>
-                        <td class="px-3 py-2 text-center font-semibold text-gray-700">${stats.paid.toFixed(1)}</td>
-                        <td class="px-3 py-2 text-right text-green-700 font-semibold">$${stats.pay.toFixed(2)}</td>
+            // Print rows out cleanly
+            let htmlStr = '';
+            dayRowsData.forEach(r => {
+                htmlStr += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 font-bold text-gray-700 bg-gray-50/50">${r.dayLabel}</td>
+                        <td class="px-3 py-3 text-center text-gray-500">${r.from}</td>
+                        <td class="px-3 py-3 text-center text-gray-500">${r.to}</td>
+                        <td class="px-3 py-3 text-center font-medium text-gray-900">${r.total > 0 ? r.total.toFixed(1) + 'h' : '-'}</td>
+                        <td class="px-3 py-3 text-center font-medium text-amber-600">${r.cash > 0 ? r.cash.toFixed(1) + 'h' : '-'}</td>
+                        <td class="px-3 py-3 text-center font-medium text-blue-600">${r.tax > 0 ? r.tax.toFixed(1) + 'h' : '-'}</td>
                     </tr>`;
             });
-            tableBody.innerHTML = bodyHtml;
+            tableBody.innerHTML = htmlStr;
 
-            // Generate Footer Row summary tracking global metrics across all employees
-            tableFoot.innerHTML = `
-                <tr class="bg-gray-100 border-t border-gray-300">
-                    <td class="px-3 py-2 text-left text-gray-900">TOTALS</td>
-                    <td class="px-3 py-2 text-center text-gray-900">${grandTotals.total.toFixed(1)}</td>
-                    <td class="px-3 py-2 text-center text-gray-900">${grandTotals.cash.toFixed(1)}</td>
-                    <td class="px-3 py-2 text-center text-gray-900">${grandTotals.paid.toFixed(1)}</td>
-                    <td class="px-3 py-2 text-right text-green-800">$${grandTotals.pay.toFixed(2)}</td>
-                </tr>`;
+            // Bind out summary text metric parameters
+            document.getElementById('summaryTotalHours').innerText = runningTotals.total.toFixed(1) + 'h';
+            document.getElementById('summaryCashHours').innerText = runningTotals.cash.toFixed(1) + 'h';
+            document.getElementById('summaryTaxHours').innerText = runningTotals.tax.toFixed(1) + 'h';
+            document.getElementById('payoutCash').innerText = '$' + runningTotals.cashPayout.toFixed(2);
+            document.getElementById('payoutTax').innerText = '$' + runningTotals.taxPayout.toFixed(2);
         }
 
-        // HTML Injector Engine
+        // Exporter
         function exportUpdatedHtml() {
             const currentDoc = document.documentElement.outerHTML;
             const parser = new DOMParser();
@@ -259,7 +327,7 @@
             a.click();
         }
 
-        // Run on application startup
+        // Run application default view initialization loops
         renderWeeklyTable();
     </script>
 </body>
