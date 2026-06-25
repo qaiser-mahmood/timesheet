@@ -11,10 +11,10 @@
         <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
         <form id="payForm" class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Staff Member</label>
-                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
+                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -24,44 +24,44 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Date</label>
-                    <input type="date" id="date" required onchange="applyDefaultShiftTimes()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs">
+                    <input type="date" id="date" required onchange="applyDefaultShiftTimes()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs">
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">From</label>
-                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs min-h-[44px]">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">To</label>
-                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs">
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-3 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs min-h-[44px]">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2 border font-semibold text-gray-700 text-xs shadow-sm">
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2.5 border font-semibold text-gray-700 text-xs shadow-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Paid in Cash Hours</label>
-                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
+                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Cash Rate ($/h)</label>
-                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
+                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Tax Rate ($/h)</label>
-                    <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
+                    <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white p-2.5 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm">Log Shift</button>
+            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm">Log Shift</button>
         </form>
 
         <hr class="border-gray-300 my-3">
@@ -118,7 +118,7 @@
     <script id="payrollData" type="application/json">[]</script>
 
     <script>
-        const ESTIMATED_TAX_RATE = 0.15; // 15% standard index bracket adjustment proxy
+        const ESTIMATED_TAX_RATE = 0.15; 
 
         // Initialize core layout trackers
         const todayStr = new Date().toISOString().split('T')[0];
@@ -130,7 +130,6 @@
             dataStore = JSON.parse(document.getElementById('payrollData').textContent);
         } catch (e) { console.error("Error loading structural dataset array.", e); }
 
-        // Dynamic context configuration profiles mapping requests rules conditions
         function applyStaffRateDefaults() {
             const name = document.getElementById('staffName').value;
             let cashRate = "25.00";
@@ -150,7 +149,7 @@
             if (!dateInput) return;
 
             const [year, month, day] = dateInput.split('-').map(Number);
-            const dayOfWeek = new Date(year, month - 1, day).getDay(); // 0=Sun, 4=Thu, 6=Sat
+            const dayOfWeek = new Date(year, month - 1, day).getDay(); 
 
             let defaultStart = "09:30";
             let defaultEnd = "17:00";
@@ -187,7 +186,6 @@
             return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
-        // Form Submission Logic
         document.getElementById('payForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
@@ -224,7 +222,6 @@
             document.getElementById('cashHours').value = '';
         });
 
-        // Generate Master Summary Matrix Spreadsheet
         function renderWeeklyTable() {
             const filterWeekVal = document.getElementById('filterWeek').value;
             const tableBody = document.getElementById('weeklyTableBody');
@@ -288,7 +285,6 @@
                 macroTotals.cashPayout += staffCashPay;
                 macroTotals.taxPayout += staffTaxPay;
 
-                // Removed '$' signs completely from cell formatting outputs to optimize narrow views
                 staffRowHtml += `
                     <td class="text-center font-semibold bg-amber-50/70 text-amber-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
                     <td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${staffTaxH > 0 ? staffTaxH.toFixed(1) : '—'}</td>
@@ -301,7 +297,6 @@
             tableBody.innerHTML = tbodyHtml;
             document.getElementById('grandTotalHoursHeader').innerText = macroTotals.globalHours.toFixed(1);
 
-            // Dynamically evaluate footer text elements (stripped currency symbols)
             let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
             globalDailyTotals.forEach(dayTotal => {
                 tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) : '—'}</td>`;
@@ -329,7 +324,7 @@
             a.click();
         }
 
-        // Bootstrap on startup
+        // Bootstrap
         applyStaffRateDefaults();
         applyDefaultShiftTimes();
         renderWeeklyTable();
