@@ -7,88 +7,152 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 pb-24">
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-6 space-y-6">
+    <div class="max-w-xl mx-auto bg-white rounded-xl shadow-md p-6 space-y-6">
         <h1 class="text-2xl font-bold text-gray-800 border-b pb-2 text-center">Staff Payroll Tracker</h1>
         
         <form id="payForm" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Date</label>
-                <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Staff Member</label>
-                <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                    <option>Adhiraj</option>
-                    <option>Aayush</option>
-                    <option>Manisha</option>
-                    <option>Sumina</option>
-                    <option>Rekha</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Hourly Pay Rate ($)</label>
-                <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-            </div>
-
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Paid in Cash Hours</label>
+                    <label class="block text-sm font-medium text-gray-700">Staff Member</label>
+                    <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        <option>Adhiraj</option>
+                        <option>Aayush</option>
+                        <option>Manisha</option>
+                        <option>Sumina</option>
+                        <option>Rekha</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-md border">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Shift Start</label>
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Shift End</label>
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Total Hours</label>
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 shadow-sm p-2 border font-semibold text-gray-700">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Paid in Cash</label>
                     <input type="number" id="cashHours" step="0.1" value="0" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Pay Rate ($/h)</label>
+                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
                 </div>
             </div>
 
             <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-md font-semibold hover:bg-blue-700 transition">Add Entry</button>
         </form>
 
-        <hr>
+        <hr class="border-gray-300">
 
         <div>
-            <h2 class="text-lg font-semibold text-gray-700 mb-2">Weekly Summary</h2>
-            <div class="flex gap-2 mb-4">
-                <input type="date" id="filterWeek" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm">
-                <button onclick="filterByWeek()" class="bg-gray-800 text-white px-4 py-2 rounded-md text-sm">Filter</button>
-                <button onclick="clearFilter()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm">Clear</button>
+            <h2 class="text-lg font-bold text-gray-800 mb-2">Weekly Timesheet Viewer</h2>
+            <div class="flex items-center gap-3 mb-4 bg-blue-50 p-3 rounded-md border border-blue-200">
+                <label class="block text-sm font-semibold text-blue-900 whitespace-nowrap">Select Week:</label>
+                <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm">
             </div>
-            <div id="summaryView" class="space-y-2 bg-gray-50 p-3 rounded-md text-sm border"></div>
+            
+            <div class="overflow-x-auto border rounded-lg shadow-sm">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-800 text-white">
+                        <tr>
+                            <th class="px-3 py-2 text-left font-medium">Staff</th>
+                            <th class="px-3 py-2 text-center font-medium">Total H</th>
+                            <th class="px-3 py-2 text-center font-medium">Cash H</th>
+                            <th class="px-3 py-2 text-center font-medium">Paid H</th>
+                            <th class="px-3 py-2 text-right font-medium">Est. Pay</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weeklyTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    <tfoot id="weeklyTableFoot" class="bg-gray-100 font-bold divide-y divide-gray-200">
+                        </tfoot>
+                </table>
+            </div>
         </div>
 
         <div class="pt-2">
             <button onclick="exportUpdatedHtml()" class="w-full bg-green-600 text-white p-3 rounded-md font-bold hover:bg-green-700 transition shadow">
                 💾 Save & Export Webpage
             </button>
-            <p class="text-xs text-center text-gray-500 mt-2">Downloads an updated index.html to upload to GitHub.</p>
         </div>
     </div>
 
     <script id="payrollData" type="application/json">[]</script>
 
     <script>
-        // Set default date picker to today
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        // Set default date pickers to today
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('date').value = todayStr;
+        document.getElementById('filterWeek').value = todayStr;
         
-        // Load embedded data safely
         let dataStore = [];
         try {
             dataStore = JSON.parse(document.getElementById('payrollData').textContent);
         } catch (e) { console.error("Error loading payroll dataset.", e); }
 
-        // Process Form Submission
+        // Automatically calculate hours between Start and End time strings
+        function calculateHoursFromTime() {
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            if (!start || !end) return;
+
+            const [startH, startM] = start.split(':').map(Number);
+            const [endH, endM] = end.split(':').map(Number);
+
+            let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+            
+            // If the shift crosses midnight (e.g., 10 PM to 6 AM)
+            if (diffMinutes < 0) {
+                diffMinutes += 24 * 60;
+            }
+
+            const decimalHours = diffMinutes / 60;
+            document.getElementById('totalHours').value = decimalHours.toFixed(1);
+        }
+
+        // Helper to get the Monday of a given date string
+        function getMonday(dateString) {
+            let d = new Date(dateString);
+            let day = d.getDay();
+            let diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+            let monday = new Date(d.setDate(diff));
+            return monday.toISOString().split('T')[0];
+        }
+
+        // Form Submit
         document.getElementById('payForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const total = parseFloat(document.getElementById('totalHours').value);
             const cash = parseFloat(document.getElementById('cashHours').value);
+            
+            if (isNaN(total)) {
+                alert("Please fill out both Start and End times to compute total hours.");
+                return;
+            }
+
             const paidHours = Math.max(0, total - cash);
             const rate = parseFloat(document.getElementById('payRate').value);
+            const chosenDate = document.getElementById('date').value;
 
             const newEntry = {
-                date: document.getElementById('date').value,
+                date: chosenDate,
+                weekCommencing: getMonday(chosenDate),
                 name: document.getElementById('staffName').value,
                 rate: rate,
                 totalHours: total,
@@ -98,80 +162,93 @@
             };
 
             dataStore.push(newEntry);
-            alert(`Added record for ${newEntry.name}! Click 'Save & Export Webpage' when you are done adding records.`);
-            calculateWeeklyPayroll();
-            this.reset();
-            document.getElementById('date').value = new Date().toISOString().split('T')[0];
-            document.getElementById('payRate').value = rate; 
+            
+            // Lock the selected filter week to the week of the newly added record so the user instantly sees it
+            document.getElementById('filterWeek').value = chosenDate;
+            
+            renderWeeklyTable();
+            alert(`Added entry for ${newEntry.name}. Make sure to 'Save & Export Webpage' to keep it permanent!`);
+            
+            // Clean up fields
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+            document.getElementById('totalHours').value = '';
+            document.getElementById('cashHours').value = '0';
         });
 
-        // Helper to find start of the week (Monday)
-        function getMonday(d) {
-            d = new Date(d);
-            let day = d.getDay(), diff = d.getDate() - day + (day == 0 ? -6 : 1);
-            return new Date(d.setDate(diff)).toISOString().split('T')[0];
-        }
-
-        // Aggregate data into a clean text display
-        function calculateWeeklyPayroll(targetWeekStart = null) {
-            const summaryDiv = document.getElementById('summaryView');
-            if (dataStore.length === 0) {
-                summaryDiv.innerHTML = '<p class="text-gray-500 italic text-center">No hours logged yet.</p>';
+        // Render the one-table view for the selected week
+        function renderWeeklyTable() {
+            const selectedWeekDate = document.getElementById('filterWeek').value;
+            const tableBody = document.getElementById('weeklyTableBody');
+            const tableFoot = document.getElementById('weeklyTableFoot');
+            
+            if (!selectedWeekDate) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Please select a week.</td></tr>';
+                tableFoot.innerHTML = '';
                 return;
             }
 
-            let filtered = dataStore;
-            if (targetWeekStart) {
-                filtered = dataStore.filter(entry => getMonday(entry.date) === targetWeekStart);
-            }
+            const activeWeekMonday = getMonday(selectedWeekDate);
+            
+            // Filter global dataset down to this specific Monday cycle
+            const weeklyData = dataStore.filter(entry => entry.weekCommencing === activeWeekMonday);
 
-            // Group metrics by staff name
-            const staffTotals = {};
-            filtered.forEach(entry => {
-                if (!staffTotals[entry.name]) {
-                    staffTotals[entry.name] = { total: 0, cash: 0, paid: 0, earnings: 0 };
-                }
-                staffTotals[entry.name].total += entry.totalHours;
-                staffTotals[entry.name].cash += entry.cashHours;
-                staffTotals[entry.name].paid += entry.paidHours;
-                staffTotals[entry.name].earnings += entry.calculatedPay;
+            // Initialize all core staff explicitly to ensure they always show in the sheet
+            const mandatoryStaff = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
+            const staffRollup = {};
+            mandatoryStaff.forEach(name => {
+                staffRollup[name] = { total: 0, cash: 0, paid: 0, pay: 0 };
             });
 
-            let html = targetWeekStart ? `<div class="font-bold text-blue-600 mb-2 text-xs">Showing week starting: ${targetWeekStart}</div>` : `<div class="font-bold text-gray-600 mb-2 text-xs">Showing ALL recorded history:</div>`;
-            
-            for (const [name, stats] of Object.entries(staffTotals)) {
-                html += `
-                    <div class="border-b pb-2 mb-2 last:border-0 last:mb-0">
-                        <div class="font-semibold text-gray-800">${name}</div>
-                        <div class="grid grid-cols-2 text-xs text-gray-600">
-                            <div>Total Hours: <strong>${stats.total.toFixed(1)}h</strong></div>
-                            <div>Paid Hours: <strong>${stats.paid.toFixed(1)}h</strong></div>
-                            <div>Cash Hours: <strong>${stats.cash.toFixed(1)}h</strong></div>
-                            <div class="text-green-700 font-semibold">Est. Pay: $${stats.earnings.toFixed(2)}</div>
-                        </div>
-                    </div>`;
-            }
-            summaryDiv.innerHTML = html;
+            // Aggregate hours for items that match the current filtered week
+            weeklyData.forEach(entry => {
+                if (staffRollup[entry.name]) {
+                    staffRollup[entry.name].total += entry.totalHours;
+                    staffRollup[entry.name].cash += entry.cashHours;
+                    staffRollup[entry.name].paid += entry.paidHours;
+                    staffRollup[entry.name].pay += entry.calculatedPay;
+                }
+            });
+
+            // Build out individual rows
+            let bodyHtml = '';
+            let grandTotals = { total: 0, cash: 0, paid: 0, pay: 0 };
+
+            mandatoryStaff.forEach(name => {
+                const stats = staffRollup[name];
+                grandTotals.total += stats.total;
+                grandTotals.cash += stats.cash;
+                grandTotals.paid += stats.paid;
+                grandTotals.pay += stats.pay;
+
+                bodyHtml += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-3 py-2 font-medium text-gray-900">${name}</td>
+                        <td class="px-3 py-2 text-center text-gray-600">${stats.total.toFixed(1)}</td>
+                        <td class="px-3 py-2 text-center text-gray-600">${stats.cash.toFixed(1)}</td>
+                        <td class="px-3 py-2 text-center font-semibold text-gray-700">${stats.paid.toFixed(1)}</td>
+                        <td class="px-3 py-2 text-right text-green-700 font-semibold">$${stats.pay.toFixed(2)}</td>
+                    </tr>`;
+            });
+            tableBody.innerHTML = bodyHtml;
+
+            // Generate Footer Row summary tracking global metrics across all employees
+            tableFoot.innerHTML = `
+                <tr class="bg-gray-100 border-t border-gray-300">
+                    <td class="px-3 py-2 text-left text-gray-900">TOTALS</td>
+                    <td class="px-3 py-2 text-center text-gray-900">${grandTotals.total.toFixed(1)}</td>
+                    <td class="px-3 py-2 text-center text-gray-900">${grandTotals.cash.toFixed(1)}</td>
+                    <td class="px-3 py-2 text-center text-gray-900">${grandTotals.paid.toFixed(1)}</td>
+                    <td class="px-3 py-2 text-right text-green-800">$${grandTotals.pay.toFixed(2)}</td>
+                </tr>`;
         }
 
-        function filterByWeek() {
-            const val = document.getElementById('filterWeek').value;
-            if (!val) return;
-            calculateWeeklyPayroll(getMonday(val));
-        }
-
-        function clearFilter() {
-            document.getElementById('filterWeek').value = '';
-            calculateWeeklyPayroll();
-        }
-
-        // Self-Modifying HTML Engine: injects data array into its own script tag
+        // HTML Injector Engine
         function exportUpdatedHtml() {
             const currentDoc = document.documentElement.outerHTML;
             const parser = new DOMParser();
             const doc = parser.parseFromString(currentDoc, 'text/html');
             
-            // Overwrite JSON storage tag cleanly
             doc.getElementById('payrollData').textContent = JSON.stringify(dataStore);
             
             const updatedHtmlStr = "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
@@ -182,8 +259,8 @@
             a.click();
         }
 
-        // Init layout on load
-        calculateWeeklyPayroll();
+        // Run on application startup
+        renderWeeklyTable();
     </script>
 </body>
 </html>
