@@ -13,14 +13,10 @@
         <form id="payForm" class="space-y-6">
             <h2 class="text-md font-bold text-gray-700 tracking-wide uppercase border-l-4 border-blue-600 pl-2">Log Daily Shift</h2>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Date</label>
-                    <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
-                </div>
+            <div class="grid grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Staff Member</label>
-                    <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    <select id="staffName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border bg-white focus:ring-blue-500 focus:border-blue-500">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -28,39 +24,46 @@
                         <option>Rekha</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    <input type="date" id="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500">
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div class="grid grid-cols-2 gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Shift Start (From)</label>
-                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border bg-white focus:ring-blue-500 focus:border-blue-500">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Shift End (To)</label>
-                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border">
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border bg-white focus:ring-blue-500 focus:border-blue-500">
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2.5 border font-semibold text-gray-700">
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2.5 border font-semibold text-gray-700 shadow-sm">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Paid in Cash Hours</label>
-                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Cash Pay Rate ($/h)</label>
-                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Tax Pay Rate ($/h)</label>
-                    <input type="number" id="taxPayRate" step="0.01" value="28.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border">
+                    <input type="number" id="cashHours" step="0.1" placeholder="Leave blank if 0" class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 shadow-sm">
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition shadow-sm">Log Shift</button>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Cash Pay Rate ($/h)</label>
+                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tax Pay Rate ($/h)</label>
+                    <input type="number" id="taxPayRate" step="0.01" value="28.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 shadow-sm">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-600 text-white p-3.5 rounded-md font-semibold hover:bg-blue-700 transition shadow-sm">Log Shift</button>
         </form>
 
         <hr class="border-gray-300 my-8">
@@ -71,11 +74,11 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <div>
                     <label class="block text-xs font-bold text-gray-600 mb-1">1. Select Week (Choose any day):</label>
-                    <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 p-2 border text-sm">
+                    <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 p-2 border text-sm bg-white">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-600 mb-1">2. Select Staff Member:</label>
-                    <select id="filterStaff" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 p-2 border text-sm">
+                    <select id="filterStaff" onchange="renderWeeklyTable()" class="block w-full rounded-md border-gray-300 p-2 border text-sm bg-white">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -147,7 +150,7 @@
 
     <script>
         // CONFIGURABLE CONSTANTS FOR PAYROLL ENGINE
-        const ESTIMATED_TAX_RATE = 0.15; // Set your custom estimated tax rate (e.g., 15% withholding)
+        const ESTIMATED_TAX_RATE = 0.15; // Standard 15% placeholder
 
         // Set default date inputs to today
         const todayStr = new Date().toISOString().split('T')[0];
@@ -168,11 +171,10 @@
             const [endH, endM] = end.split(':').map(Number);
             let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
             
-            if (diffMinutes < 0) diffMinutes += 24 * 60; // Handles overnight shifts cleanly
+            if (diffMinutes < 0) diffMinutes += 24 * 60; // Overnight shifts
             document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
 
-        // Returns Monday date object of the target week block
         function getMondayObj(dateString) {
             let d = new Date(dateString);
             let day = d.getDay();
@@ -220,7 +222,6 @@
 
             dataStore.push(newEntry);
             
-            // Sync filter views to matching contexts to make verification simple
             document.getElementById('filterWeek').value = chosenDate;
             document.getElementById('filterStaff').value = newEntry.name;
             
@@ -234,7 +235,7 @@
             document.getElementById('cashHours').value = '';
         });
 
-        // Generate the 7-day structure matrix view for chosen configurations
+        // Generate the 7-day structure matrix view
         function renderWeeklyTable() {
             const filterWeekVal = document.getElementById('filterWeek').value;
             const filterStaffVal = document.getElementById('filterStaff').value;
@@ -244,12 +245,10 @@
 
             const startMonday = getMondayObj(filterWeekVal);
             
-            // Setup calendar labels string mapping range window
             let endSunday = new Date(startMonday);
             endSunday.setDate(startMonday.getDate() + 6);
             document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDate(startMonday)} – ${formatDisplayDate(endSunday)}`;
 
-            // Build dataset array indices tracking 7 discrete indexes matching Mon-Sun sequential shifts
             const weekDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             const dayRowsData = [];
 
@@ -260,7 +259,6 @@
                 currentLoopDay.setDate(startMonday.getDate() + i);
                 const loopDayIsoStr = currentLoopDay.toISOString().split('T')[0];
 
-                // Check store for data rows matching this date calendar window segment
                 const record = dataStore.find(entry => entry.date === loopDayIsoStr && entry.name === filterStaffVal);
                 
                 let rowMeta = {
@@ -276,9 +274,8 @@
                     runningTotals.total += record.totalHours;
                     runningTotals.cash += record.cashHours;
                     runningTotals.tax += record.taxHours;
-                    // Cash calculation
                     runningTotals.cashPayout += (record.cashHours * record.cashRate);
-                    // Tax calculation formula: (Tax Hours * Tax Pay Rate) with an assumed layout factoring net deductions offset + 12% super margins
+                    
                     const grossBase = record.taxHours * record.taxRate;
                     const afterTaxEst = grossBase * (1 - ESTIMATED_TAX_RATE);
                     const withSuper = afterTaxEst * 1.12; 
@@ -288,7 +285,6 @@
                 dayRowsData.push(rowMeta);
             }
 
-            // Print rows out cleanly
             let htmlStr = '';
             dayRowsData.forEach(r => {
                 htmlStr += `
@@ -303,7 +299,6 @@
             });
             tableBody.innerHTML = htmlStr;
 
-            // Bind out summary text metric parameters
             document.getElementById('summaryTotalHours').innerText = runningTotals.total.toFixed(1) + 'h';
             document.getElementById('summaryCashHours').innerText = runningTotals.cash.toFixed(1) + 'h';
             document.getElementById('summaryTaxHours').innerText = runningTotals.tax.toFixed(1) + 'h';
@@ -327,7 +322,6 @@
             a.click();
         }
 
-        // Run application default view initialization loops
         renderWeeklyTable();
     </script>
 </body>
