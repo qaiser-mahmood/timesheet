@@ -170,7 +170,6 @@
         let dataStore = [];
         let staffRegistry = [];
 
-        // Interactive View Controller for Clean Cropping States
         function toggleRosterShareMode() {
             const app = document.getElementById('appContainer');
             const title = document.getElementById('mainTitle');
@@ -261,6 +260,24 @@
 
         function selectDayInline(targetIsoDate) {
             document.getElementById('date').value = targetIsoDate;
+            
+            // Re-render styles dynamically on selection click loop
+            const baseWeekDate = document.getElementById('filterWeek').value;
+            const startMonday = getMondayString(baseWeekDate);
+            const gridContainer = document.getElementById('daySelectorGrid');
+            const buttons = gridContainer.querySelectorAll('button');
+            
+            for (let i = 0; i < 7; i++) {
+                const loopDayIso = addDaysString(startMonday, i);
+                const btn = buttons[i];
+                if (btn) {
+                    if (loopDayIso === targetIsoDate) {
+                        btn.className = "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-blue-600 text-white border-blue-600 font-bold";
+                    } else {
+                        btn.className = "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                    }
+                }
+            }
             applyDefaultShiftTimes();
         }
 
@@ -416,7 +433,6 @@
                 macroTotals.cashH += staffCashH; macroTotals.taxH += staffTaxH;
                 macroTotals.cashPayout += staffCashPay; macroTotals.taxPayout += staffTaxPay;
 
-                // Dynamically append calculations column only if share mode is inactive
                 if (!isShareModeActive) {
                     staffRowHtml += `
                         <td class="text-center font-semibold bg-amber-50/70 text-amber-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
