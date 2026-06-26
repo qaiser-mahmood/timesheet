@@ -6,67 +6,79 @@
     <title>Anatolya Kebabs Weekly Roster</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Force mobile browsers to style time inputs exactly like regular inputs */
         input[type="time"] {
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             min-height: 40px;
         }
+        /* Custom Print Rule Engine: Hides pay inputs, financial columns, and buttons */
+        @media print {
+            body { background: white; p: 0; margin: 0; }
+            .no-print, form, hr, .bg-blue-50\/70, #filterWeek, .flex-row { display: none !important; }
+            .max-w-4xl { max-w: 100% !important; shadow: none !important; border: none !important; padding: 0 !important; }
+            /* Hide specific pay-related data columns and totals rows */
+            th:nth-child(9), th:nth-child(10), th:nth-child(11), th:nth-child(12),
+            td:nth-child(9), td:nth-child(10), td:nth-child(11), td:nth-child(12) {
+                display: none !important;
+            }
+            table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+            th, td { border: 1px solid #000 !important; color: #000 !important; background: transparent !important; padding: 6px !important; font-size: 11px !important; }
+            tfoot { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
-        <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
+        <div class="flex items-center justify-between border-b pb-3">
+            <h1 class="text-lg sm:text-xl font-bold text-gray-800">Anatolya Kebabs Roster Engine</h1>
+            <button type="button" onclick="window.print()" class="no-print bg-green-600 text-white font-bold px-3 py-1.5 rounded-md text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1">
+                🖨️ Print Roster
+            </button>
+        </div>
         
         <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
-            <!-- Fixed Symmetrical Core Entry Row -->
             <div class="grid grid-cols-3 gap-3 items-end">
                 <div class="w-full">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Staff</label>
-                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10">
-                        <option>Adhiraj</option>
-                        <option>Aayush</option>
-                        <option>Manisha</option>
-                        <option>Sumina</option>
-                        <option>Rekha</option>
+                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white text-xs h-10">
+                        <option value="">Loading Staff...</option>
                     </select>
                 </div>
                 <div class="w-full">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">From</label>
-                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10 box-border">
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white text-xs h-10 box-border">
                 </div>
                 <div class="w-full">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">To</label>
-                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10 box-border">
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white text-xs h-10 box-border">
                 </div>
             </div>
 
-            <!-- Inline Quick Day Picker Grid -->
+            <!-- Inline Day Picker Grid -->
             <div class="w-full">
                 <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Select Day</label>
                 <div id="daySelectorGrid" class="grid grid-cols-7 gap-1"></div>
                 <input type="hidden" id="date" required>
             </div>
 
-            <!-- Pay Rate Settings Row -->
+            <!-- Lock down pay values via readonly attributes -->
             <div class="grid grid-cols-3 gap-3 items-end">
                 <div>
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-700 text-xs shadow-sm h-10">
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
                 </div>
                 <div>
-                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Cash Rate</label>
-                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 px-2 py-1.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm h-10">
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Cash Rate ($)</label>
+                    <input type="number" id="payRate" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
                 </div>
                 <div>
-                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Tax Rate</label>
-                    <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 px-2 py-1.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm h-10">
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Tax Rate ($)</label>
+                    <input type="number" id="taxPayRate" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
                 </div>
             </div>
 
-            <!-- Log / Delete Actions Block Row -->
             <div class="flex gap-3 pt-2">
                 <button type="submit" id="submitBtn" class="flex-1 bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm flex items-center justify-center">Log Shift</button>
                 <button type="button" id="deleteBtn" onclick="deleteSelectedShift()" class="w-1/4 bg-red-100 text-red-700 border border-red-200 p-3 rounded-md font-semibold hover:bg-red-200 transition text-xs shadow-sm flex items-center justify-center">Delete</button>
@@ -75,18 +87,14 @@
 
         <hr class="border-gray-300 my-4">
 
-        <!-- Updated Weekly Automated Tax Capping Box Container -->
+        <!-- Weekly Tax Capping Box -->
         <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-3">
             <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1">Weekly Tax-Limit Auto Splitter</h3>
             <div class="grid grid-cols-3 gap-2 items-end">
                 <div>
                     <label class="block text-[10px] font-bold text-blue-900 uppercase">Staff Target</label>
                     <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-blue-200 p-2 border bg-white text-xs h-9">
-                        <option>Adhiraj</option>
-                        <option>Aayush</option>
-                        <option>Manisha</option>
-                        <option>Sumina</option>
-                        <option>Rekha</option>
+                        <option value="">Loading Staff...</option>
                     </select>
                 </div>
                 <div>
@@ -97,7 +105,7 @@
             </div>
         </div>
 
-        <!-- Weekly Summary Dashboard Module -->
+        <!-- Weekly Summary Dashboard -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -109,7 +117,7 @@
 
             <div class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
                 <span id="weekRangeDisplay" class="font-bold text-blue-950">-</span>
-                <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
+                <span class="no-print bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
             </div>
             
             <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
@@ -124,10 +132,10 @@
                             <th class="w-10 text-center font-normal">Fri</th>
                             <th class="w-10 text-center font-normal">Sat</th>
                             <th class="w-10 text-center font-normal">Sun</th>
-                            <th class="w-10 text-center font-bold bg-amber-900/60">Cash H</th>
-                            <th class="w-10 text-center font-bold bg-blue-900/60">Tax H</th>
-                            <th class="w-12 text-right pr-1 font-bold bg-slate-700">Cash</th>
-                            <th class="w-12 text-right pr-1 font-bold bg-slate-700">Tax</th>
+                            <th class="w-10 text-center font-bold bg-amber-900/60 class-cash-h">Cash H</th>
+                            <th class="w-10 text-center font-bold bg-blue-900/60 class-tax-h">Tax H</th>
+                            <th class="w-12 text-right pr-1 font-bold bg-slate-700 class-cash-p">Cash</th>
+                            <th class="w-12 text-right pr-1 font-bold bg-slate-700 class-tax-p">Tax</th>
                         </tr>
                     </thead>
                     <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white"></tbody>
@@ -140,6 +148,7 @@
     </div>
 
     <script>
+        // Update this URL if deployment adjustments create a new address string
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybwGgrqyvxbHI6lrjAzz1kxMTZi3rcUVSEYV-SqQtWtmUgRPkFtjtsU20C2EMY8EDKjg/exec";
         const ESTIMATED_TAX_RATE = 0.15; 
 
@@ -147,6 +156,7 @@
         document.getElementById('filterWeek').value = todayStr;
         
         let dataStore = [];
+        let staffRegistry = [];
 
         async function loadCloudData() {
             try {
@@ -155,15 +165,58 @@
                     headers: { "Content-Type": "text/plain" },
                     body: JSON.stringify({ action: "get" })
                 });
-                const fetchedData = await res.json();
-                if (Array.isArray(fetchedData)) {
-                    dataStore = fetchedData;
+                const responseObj = await res.json();
+                
+                if (responseObj.staff && Array.isArray(responseObj.staff)) {
+                    staffRegistry = responseObj.staff;
+                    populateStaffDropdowns();
+                }
+                if (responseObj.logs && Array.isArray(responseObj.logs)) {
+                    dataStore = responseObj.logs;
                 }
             } catch (e) { 
-                console.error("Offline display trace:", e); 
+                console.error("Offline display context trace:", e); 
             }
             renderWeeklyTable();
             generateDaySelectors();
+        }
+
+        function populateStaffDropdowns() {
+            const picker = document.getElementById('staffName');
+            const bulkPicker = document.getElementById('bulkStaffName');
+            
+            picker.innerHTML = '';
+            bulkPicker.innerHTML = '';
+            
+            if (staffRegistry.length === 0) {
+                picker.innerHTML = '<option value="">No staff found in sheet</option>';
+                bulkPicker.innerHTML = '<option value="">No staff found</option>';
+                return;
+            }
+            
+            staffRegistry.forEach(person => {
+                let opt1 = document.createElement('option');
+                opt1.text = person.name; opt1.value = person.name;
+                picker.add(opt1);
+                
+                let opt2 = document.createElement('option');
+                opt2.text = person.name; opt2.value = person.name;
+                bulkPicker.add(opt2);
+            });
+            applyStaffRateDefaults();
+        }
+
+        function applyStaffRateDefaults() {
+            const currentSelected = document.getElementById('staffName').value;
+            const staffObj = staffRegistry.find(p => p.name === currentSelected);
+            
+            if (staffObj) {
+                document.getElementById('payRate').value = parseFloat(staffObj.cashRate).toFixed(2);
+                document.getElementById('taxPayRate').value = parseFloat(staffObj.taxRate).toFixed(2);
+            } else {
+                document.getElementById('payRate').value = "25.00";
+                document.getElementById('taxPayRate').value = "30.00";
+            }
         }
 
         function generateDaySelectors() {
@@ -231,15 +284,13 @@
             renderWeeklyTable();
         }
 
-        // Automatic Tax Capping & Remainder Cash Split Algorithm
         async function distributeWeeklyTaxHours() {
             const staffTarget = document.getElementById('bulkStaffName').value;
             let targetTaxAllocation = parseFloat(document.getElementById('bulkTaxHours').value);
             const activeWeekStart = getMondayString(document.getElementById('filterWeek').value);
             
-            if (isNaN(targetTaxAllocation) || targetTaxAllocation < 0) return;
+            if (isNaN(targetTaxAllocation) || targetTaxAllocation < 0 || !staffTarget) return;
 
-            // Gather all shift logs for this worker this week
             let currentWeekShifts = dataStore.filter(entry => {
                 if (!entry.date || !entry.name) return false;
                 return getMondayString(entry.date) === activeWeekStart && entry.name === staffTarget;
@@ -247,7 +298,6 @@
 
             if (currentWeekShifts.length === 0) return;
 
-            // Loop through shifts: Fill up the Tax allocation first, then dump the rest into Cash
             for (let shift of currentWeekShifts) {
                 let shiftTotal = Number(shift.totalHours);
                 
@@ -267,7 +317,6 @@
 
             renderWeeklyTable();
             
-            // Push updates quietly to Google Sheets in the background
             for (let updatedShift of currentWeekShifts) {
                 try {
                     await fetch(SHEET_API_URL, {
@@ -279,14 +328,6 @@
                 } catch(e) { console.error("Cloud background sync error:", e); }
             }
             document.getElementById('bulkTaxHours').value = '';
-        }
-
-        function applyStaffRateDefaults() {
-            const name = document.getElementById('staffName').value;
-            let cashRate = "25.00"; let taxRate = "30.00";
-            if (name === "Sumina" || name === "Rekha") { cashRate = "22.00"; taxRate = "27.00"; }
-            document.getElementById('payRate').value = cashRate;
-            document.getElementById('taxPayRate').value = taxRate;
         }
 
         function applyDefaultShiftTimes() {
@@ -346,11 +387,11 @@
         document.getElementById('payForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const total = parseFloat(document.getElementById('totalHours').value);
-            if (isNaN(total)) return;
+            const currentStaff = document.getElementById('staffName').value;
+            if (isNaN(total) || !currentStaff) return;
 
             const chosenDate = document.getElementById('date').value;
             const targetMonday = getMondayString(chosenDate);
-            const currentStaff = document.getElementById('staffName').value;
 
             const matchedPrevious = dataStore.find(entry => entry.date === chosenDate && entry.name === currentStaff);
             let savedCashHours = matchedPrevious ? Number(matchedPrevious.cashHours || 0) : 0;
@@ -390,7 +431,7 @@
                     redirect: "follow"
                 });
             } catch (err) { 
-                console.error("Cloud framework sync break:", err); 
+                console.error("Cloud framework framework sync break:", err); 
             }
 
             btn.innerText = "Log Shift";
@@ -401,8 +442,7 @@
         async function deleteSelectedShift() {
             const chosenDate = document.getElementById('date').value;
             const currentStaff = document.getElementById('staffName').value;
-            
-            if (!chosenDate) return;
+            if (!chosenDate || !currentStaff) return;
             
             const confirmDelete = confirm(`Are you sure you want to completely erase the record for ${currentStaff} on ${chosenDate}?`);
             if (!confirmDelete) return;
@@ -429,13 +469,12 @@
                     redirect: "follow"
                 });
             } catch (err) {
-                console.error("Cloud framework deletion error context:", err);
+                console.error("Cloud framework deletion context:", err);
             }
 
             delBtn.innerText = "Delete";
             delBtn.disabled = false;
             subBtn.disabled = false;
-            
             generateDaySelectors();
         }
 
@@ -449,12 +488,15 @@
             const endSundayStr = addDaysString(startMondayStr, 6);
             document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(endSundayStr)}`;
 
-            const mandatoryStaff = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
+            // Build dynamic display metrics directly from the staff tab registry
+            let targetRenderList = staffRegistry.map(s => s.name);
+            if (targetRenderList.length === 0) targetRenderList = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
+
             let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
             let macroTotals = { cashH: 0, taxH: 0, cashPayout: 0, taxPayout: 0, globalHours: 0 };
             let tbodyHtml = '';
 
-            mandatoryStaff.forEach(staffName => {
+            targetRenderList.forEach(staffName => {
                 let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
                 let staffCashH = 0; let staffTaxH = 0; let staffCashPay = 0; let staffTaxPay = 0;
 
@@ -505,7 +547,6 @@
             tableFoot.innerHTML = tfootHtml;
         }
 
-        applyStaffRateDefaults();
         loadCloudData();
     </script>
 </body>
