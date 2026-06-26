@@ -4,13 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anatolya Kebabs Weekly Roster</title>
+    <!-- Tailwind CSS for clean styling -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
+        <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
+            <!-- Row 1: Staff Selector & Calendar -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="w-full">
                     <label class="block text-xs font-bold text-gray-700 uppercase">Staff Member</label>
@@ -28,6 +31,7 @@
                 </div>
             </div>
 
+            <!-- Row 2: From & To Time -->
             <div class="flex flex-row space-x-4 w-full">
                 <div class="flex-1">
                     <label class="block text-xs font-bold text-gray-700 uppercase">From</label>
@@ -39,6 +43,7 @@
                 </div>
             </div>
 
+            <!-- Row 3: Total & Cash Hours -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Total Hours</label>
@@ -50,6 +55,7 @@
                 </div>
             </div>
 
+            <!-- Row 4: Cash & Tax Pay Rate -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Cash Rate</label>
@@ -66,6 +72,7 @@
 
         <hr class="border-gray-300 my-3">
 
+        <!-- Weekly Master Roster Component -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -75,11 +82,13 @@
                 </div>
             </div>
 
+            <!-- Date Range Header Display -->
             <div class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
-                <span id="weekRangeDisplay" class="font-bold text-blue-950">Loading data from Google Sheets...</span>
+                <span id="weekRangeDisplay" class="font-bold text-blue-950">-</span>
                 <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
             </div>
             
+            <!-- Master Horizontal Roster Grid -->
             <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
                 <table class="min-w-full divide-y divide-gray-200 text-[10px] table-fixed">
                     <thead class="bg-gray-800 text-white">
@@ -99,18 +108,21 @@
                         </tr>
                     </thead>
                     <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white">
-                        </tbody>
+                        <!-- Dynamic spreadsheet injection -->
+                    </tbody>
                     <tfoot class="bg-gray-100 font-bold divide-y divide-gray-200 text-[9px]">
                         <tr id="weeklyTableFoot">
-                            </tr>
+                            <!-- Daily Column Totals injected here -->
+                        </tr>
                     </tfoot>
                 </table>
             </div>
         </div>
     </div>
 
+    <!-- App Engine Script -->
     <script>
-        // Paste your generated Web App URL directly here inside the quotes
+        // Connected to your customized Google Sheet Web App Link
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybwGgrqyvxbHI6lrjAzz1kxMTZi3rcUVSEYV-SqQtWtmUgRPkFtjtsU20C2EMY8EDKjg/exec";
         const ESTIMATED_TAX_RATE = 0.15; 
 
@@ -121,21 +133,25 @@
         let dataStore = [];
 
         async function loadCloudData() {
-            if (SHEET_API_URL === "PASTE_YOUR_WEB_APP_URL_HERE") return;
             try {
                 const res = await fetch(SHEET_API_URL, {
                     method: "POST",
-                    mode: "cors",
+                    headers: { "Content-Type": "text/plain" },
                     body: JSON.stringify({ action: "get" })
                 });
-                dataStore = await res.json();
-                renderWeeklyTable();
-            } catch (e) { console.error("Error connecting to Google Sheet database.", e); }
+                const fetchedData = await res.json();
+                if (Array.isArray(fetchedData)) {
+                    dataStore = fetchedData;
+                }
+            } catch (e) { 
+                console.error("Connection down. Operating in offline display mode.", e); 
+            }
+            renderWeeklyTable();
         }
 
         function applyStaffRateDefaults() {
             const name = document.getElementById('staffName').value;
-            let cashRate = "25.00";
+            let cashRate = "25.00"; 
             let taxRate = "30.00";
             if (name === "Sumina" || name === "Rekha") {
                 cashRate = "22.00";
@@ -211,25 +227,26 @@
                 taxHours: taxHours
             };
 
-            // Optimistic local storage update
+            // Optimistically update the UI grid frame instantly so layout remains interactive
             const existingIndex = dataStore.findIndex(entry => entry.date === chosenDate && entry.name === currentStaff);
             if (existingIndex !== -1) { dataStore[existingIndex] = newEntry; } else { dataStore.push(newEntry); }
             
             renderWeeklyTable();
             
             const btn = document.getElementById('submitBtn');
-            btn.innerText = "Saving to Google Sheets...";
+            btn.innerText = "Syncing with Sheet...";
             btn.disabled = true;
 
-            // Silently send directly to Google Sheet API
-            if (SHEET_API_URL !== "PASTE_YOUR_WEB_APP_URL_HERE") {
-                try {
-                    await fetch(SHEET_API_URL, {
-                        method: "POST",
-                        mode: "cors",
-                        body: JSON.stringify({ action: "save", entry: newEntry })
-                    });
-                } catch (err) { console.error("Cloud tracking error:", err); }
+            // Safe submission using alternative content configuration rules
+            try {
+                await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "save", entry: newEntry }),
+                    redirect: "follow"
+                });
+            } catch (err) { 
+                console.error("Cloud synchronization framework error:", err); 
             }
 
             btn.innerText = "Log Shift";
@@ -310,7 +327,7 @@
             tableFoot.innerHTML = tfootHtml;
         }
 
-        // Bootstrap on startup
+        // Bootstrap actions
         applyStaffRateDefaults();
         applyDefaultShiftTimes();
         loadCloudData();
