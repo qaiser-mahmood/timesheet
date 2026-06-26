@@ -111,7 +111,7 @@
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybwGgrqyvxbHI6lrjAzz1kxMTZi3rcUVSEYV-SqQtWtmUgRPkFtjtsU20C2EMY8EDKjg/exec";
         const ESTIMATED_TAX_RATE = 0.15; 
 
-        const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; // Handshakes clean format YYYY-MM-DD safely
+        const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
         document.getElementById('date').value = todayStr;
         document.getElementById('filterWeek').value = todayStr;
         
@@ -166,13 +166,13 @@
             document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
 
-        // Timezone agnostic parsing routine
+        // Timezone-blind tracking routine with accurate Sunday week calculations
         function getMondayString(dateString) {
             const [partsYear, partsMonth, partsDay] = dateString.split('-').map(Number);
             let d = new Date(Date.UTC(partsYear, partsMonth - 1, partsDay));
-            let day = d.getUTCDay();
-            let diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
-            let mon = new Date(Date.UTC(partsYear, partsMonth - 1, diff));
+            let day = d.getUTCDay(); 
+            let daysToSubtract = (day === 0) ? 6 : (day - 1);
+            let mon = new Date(Date.UTC(partsYear, partsMonth - 1, partsDay - daysToSubtract));
             return mon.toISOString().split('T')[0];
         }
 
@@ -260,7 +260,6 @@
                 for (let i = 0; i < 7; i++) {
                     const loopDayIsoStr = addDaysString(startMondayStr, i);
                     
-                    // Force text-based string normalization to bypass hidden trailing data forms
                     const record = dataStore.find(entry => {
                         if (!entry.date || !entry.name) return false;
                         const cleanEntryDate = entry.date.toString().trim().split('T')[0];
