@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anatolya Kebabs Weekly Roster</title>
-    <!-- Tailwind CSS for clean styling -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
-        <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
-            <!-- Row 1: Staff Selector & Calendar -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="w-full">
                     <label class="block text-xs font-bold text-gray-700 uppercase">Staff Member</label>
@@ -31,7 +28,6 @@
                 </div>
             </div>
 
-            <!-- Row 2: From & To Time (With explicit flex gaps and padding fixes) -->
             <div class="flex flex-row space-x-4 w-full">
                 <div class="flex-1">
                     <label class="block text-xs font-bold text-gray-700 uppercase">From</label>
@@ -43,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Row 3: Total & Cash Hours -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Total Hours</label>
@@ -55,24 +50,22 @@
                 </div>
             </div>
 
-            <!-- Row 4: Cash & Tax Pay Rate -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase">Cash Rate ($/h)</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase">Cash Rate</label>
                     <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase">Tax Rate ($/h)</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase">Tax Rate</label>
                     <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm">
                 </div>
             </div>
 
-            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm">Log Shift</button>
+            <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm flex items-center justify-center">Log Shift</button>
         </form>
 
         <hr class="border-gray-300 my-3">
 
-        <!-- Weekly Master Roster Component -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -82,13 +75,11 @@
                 </div>
             </div>
 
-            <!-- Date Range Header Display -->
             <div class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
-                <span id="weekRangeDisplay" class="font-bold text-blue-950">-</span>
+                <span id="weekRangeDisplay" class="font-bold text-blue-950">Loading data from Google Sheets...</span>
                 <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
             </div>
             
-            <!-- Master Horizontal Roster Grid -->
             <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
                 <table class="min-w-full divide-y divide-gray-200 text-[10px] table-fixed">
                     <thead class="bg-gray-800 text-white">
@@ -108,30 +99,19 @@
                         </tr>
                     </thead>
                     <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white">
-                        <!-- Dynamic spreadsheet injection -->
-                    </tbody>
+                        </tbody>
                     <tfoot class="bg-gray-100 font-bold divide-y divide-gray-200 text-[9px]">
                         <tr id="weeklyTableFoot">
-                            <!-- Daily Column Totals injected here -->
-                        </tr>
+                            </tr>
                     </tfoot>
                 </table>
             </div>
         </div>
-
-        <!-- Export Action -->
-        <div class="pt-1">
-            <button onclick="exportUpdatedHtml()" class="w-full bg-green-600 text-white p-2.5 rounded-lg font-bold hover:bg-green-700 transition text-xs shadow">
-                💾 Save & Export Webpage
-            </button>
-        </div>
     </div>
 
-    <!-- Data Injection Target -->
-    <script id="payrollData" type="application/json">[]</script>
-
-    <!-- App Engine Script -->
     <script>
+        // Paste your generated Web App URL directly here inside the quotes
+        const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybwGgrqyvxbHI6lrjAzz1kxMTZi3rcUVSEYV-SqQtWtmUgRPkFtjtsU20C2EMY8EDKjg/exec";
         const ESTIMATED_TAX_RATE = 0.15; 
 
         const todayStr = new Date().toISOString().split('T')[0];
@@ -139,20 +119,28 @@
         document.getElementById('filterWeek').value = todayStr;
         
         let dataStore = [];
-        try {
-            dataStore = JSON.parse(document.getElementById('payrollData').textContent);
-        } catch (e) { console.error("Error loading data store array.", e); }
+
+        async function loadCloudData() {
+            if (SHEET_API_URL === "PASTE_YOUR_WEB_APP_URL_HERE") return;
+            try {
+                const res = await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    mode: "cors",
+                    body: JSON.stringify({ action: "get" })
+                });
+                dataStore = await res.json();
+                renderWeeklyTable();
+            } catch (e) { console.error("Error connecting to Google Sheet database.", e); }
+        }
 
         function applyStaffRateDefaults() {
             const name = document.getElementById('staffName').value;
             let cashRate = "25.00";
             let taxRate = "30.00";
-
             if (name === "Sumina" || name === "Rekha") {
                 cashRate = "22.00";
                 taxRate = "27.00";
             }
-
             document.getElementById('payRate').value = cashRate;
             document.getElementById('taxPayRate').value = taxRate;
         }
@@ -160,13 +148,11 @@
         function applyDefaultShiftTimes() {
             const dateInput = document.getElementById('date').value;
             if (!dateInput) return;
-
             const [year, month, day] = dateInput.split('-').map(Number);
             const dayOfWeek = new Date(year, month - 1, day).getDay(); 
 
             let defaultStart = "09:30";
             let defaultEnd = "17:00";
-
             if (dayOfWeek === 6) defaultStart = "09:00";
             if (dayOfWeek === 4) defaultEnd = "19:00";
 
@@ -179,11 +165,9 @@
             const start = document.getElementById('startTime').value;
             const end = document.getElementById('endTime').value;
             if (!start || !end) return;
-
             const [startH, startM] = start.split(':').map(Number);
             const [endH, endM] = end.split(':').map(Number);
             let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-            
             if (diffMinutes < 0) diffMinutes += 24 * 60;
             document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
@@ -199,14 +183,14 @@
             return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
 
-        // Form Submission Logic
-        document.getElementById('payForm').addEventListener('submit', function(e) {
+        // Form Submission Cloud Connector
+        document.getElementById('payForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const total = parseFloat(document.getElementById('totalHours').value);
             let cash = document.getElementById('cashHours').value === "" ? 0 : parseFloat(document.getElementById('cashHours').value);
             
-            if (isNaN(total)) return alert("Please specify valid Shift Start/End frames.");
+            if (isNaN(total)) return;
             if (cash > total) return alert("Cash component bounds check failed.");
 
             const taxHours = Math.max(0, total - cash);
@@ -227,24 +211,34 @@
                 taxHours: taxHours
             };
 
-            // FIX: Overwrite logic checks for a match with date and name to replace rather than duplicate
+            // Optimistic local storage update
             const existingIndex = dataStore.findIndex(entry => entry.date === chosenDate && entry.name === currentStaff);
-            if (existingIndex !== -1) {
-                dataStore[existingIndex] = newEntry; // Update existing entry
-            } else {
-                dataStore.push(newEntry); // Add new entry
-            }
-
-            document.getElementById('filterWeek').value = chosenDate;
+            if (existingIndex !== -1) { dataStore[existingIndex] = newEntry; } else { dataStore.push(newEntry); }
             
             renderWeeklyTable();
-            alert(`Shift logged/updated for ${newEntry.name}!`);
             
+            const btn = document.getElementById('submitBtn');
+            btn.innerText = "Saving to Google Sheets...";
+            btn.disabled = true;
+
+            // Silently send directly to Google Sheet API
+            if (SHEET_API_URL !== "PASTE_YOUR_WEB_APP_URL_HERE") {
+                try {
+                    await fetch(SHEET_API_URL, {
+                        method: "POST",
+                        mode: "cors",
+                        body: JSON.stringify({ action: "save", entry: newEntry })
+                    });
+                } catch (err) { console.error("Cloud tracking error:", err); }
+            }
+
+            btn.innerText = "Log Shift";
+            btn.disabled = false;
+
             applyDefaultShiftTimes();
             document.getElementById('cashHours').value = '';
         });
 
-        // Generate Master Summary Matrix Spreadsheet
         function renderWeeklyTable() {
             const filterWeekVal = document.getElementById('filterWeek').value;
             const tableBody = document.getElementById('weeklyTableBody');
@@ -258,19 +252,13 @@
             document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDate(startMonday)} – ${formatDisplayDate(endSunday)}`;
 
             const mandatoryStaff = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
-            
             let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
             let macroTotals = { cashH: 0, taxH: 0, cashPayout: 0, taxPayout: 0, globalHours: 0 };
-
             let tbodyHtml = '';
 
             mandatoryStaff.forEach(staffName => {
                 let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
-                
-                let staffCashH = 0;
-                let staffTaxH = 0;
-                let staffCashPay = 0;
-                let staffTaxPay = 0;
+                let staffCashH = 0; let staffTaxH = 0; let staffCashPay = 0; let staffTaxPay = 0;
 
                 for (let i = 0; i < 7; i++) {
                     let loopDay = new Date(startMonday);
@@ -282,38 +270,30 @@
                     if (record) {
                         const convertTimeStr = (t) => {
                             let [h, m] = t.split(':').map(Number);
-                            let ampm = h >= 12 ? 'p' : 'a';
-                            h = h % 12 || 12;
+                            let ampm = h >= 12 ? 'p' : 'a'; h = h % 12 || 12;
                             return `${h}:${m.toString().padStart(2, '0')}${ampm}`;
                         };
-                        
                         staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
-                        
-                        staffCashH += record.cashHours;
-                        staffTaxH += record.taxHours;
-                        staffCashPay += (record.cashHours * record.cashRate);
-                        
-                        const grossBase = record.taxHours * record.taxRate;
+                        staffCashH += Number(record.cashHours);
+                        staffTaxH += Number(record.taxHours);
+                        staffCashPay += (Number(record.cashHours) * Number(record.cashRate));
+                        const grossBase = Number(record.taxHours) * Number(record.taxRate);
                         staffTaxPay += (grossBase * (1 - ESTIMATED_TAX_RATE)) * 1.12;
-
-                        globalDailyTotals[i] += record.totalHours;
-                        macroTotals.globalHours += record.totalHours;
+                        globalDailyTotals[i] += Number(record.totalHours);
+                        macroTotals.globalHours += Number(record.totalHours);
                     } else {
                         staffRowHtml += `<td class="p-0.5 text-center text-gray-300 border-r">—</td>`;
                     }
                 }
 
-                macroTotals.cashH += staffCashH;
-                macroTotals.taxH += staffTaxH;
-                macroTotals.cashPayout += staffCashPay;
-                macroTotals.taxPayout += staffTaxPay;
+                macroTotals.cashH += staffCashH; macroTotals.taxH += staffTaxH;
+                macroTotals.cashPayout += staffCashPay; macroTotals.taxPayout += staffTaxPay;
 
                 staffRowHtml += `
                     <td class="text-center font-semibold bg-amber-50/70 text-amber-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
                     <td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${staffTaxH > 0 ? staffTaxH.toFixed(1) : '—'}</td>
                     <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${staffCashPay > 0 ? staffCashPay.toFixed(0) : '—'}</td>
                     <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${staffTaxPay > 0 ? staffTaxPay.toFixed(0) : '—'}</td>`;
-
                 tbodyHtml += `<tr>${staffRowHtml}</tr>`;
             });
 
@@ -321,36 +301,19 @@
             document.getElementById('grandTotalHoursHeader').innerText = macroTotals.globalHours.toFixed(1);
 
             let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
-            globalDailyTotals.forEach(dayTotal => {
-                tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) : '—'}</td>`;
-            });
+            globalDailyTotals.forEach(dayTotal => { tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) : '—'}</td>`; });
             tfootHtml += `
                 <td class="text-center bg-amber-100 text-amber-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
                 <td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
                 <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
                 <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
-            
             tableFoot.innerHTML = tfootHtml;
         }
 
-        function exportUpdatedHtml() {
-            const currentDoc = document.documentElement.outerHTML;
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(currentDoc, 'text/html');
-            doc.getElementById('payrollData').textContent = JSON.stringify(dataStore);
-            
-            const updatedHtmlStr = "<!DOCTYPE html>\n" + doc.documentElement.outerHTML;
-            const blob = new Blob([updatedHtmlStr], { type: 'text/html' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'index.html';
-            a.click();
-        }
-
-        // Run baseline procedures
+        // Bootstrap on startup
         applyStaffRateDefaults();
         applyDefaultShiftTimes();
-        renderWeeklyTable();
+        loadCloudData();
     </script>
 </body>
 </html>
