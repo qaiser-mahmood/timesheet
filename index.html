@@ -4,16 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anatolya Kebabs Weekly Roster</title>
-    <!-- Tailwind CSS for clean styling -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
-        <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
-            <!-- Row 1: Staff Selector & Calendar -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="w-full">
                     <label class="block text-xs font-bold text-gray-700 uppercase">Staff Member</label>
@@ -31,7 +28,6 @@
                 </div>
             </div>
 
-            <!-- Row 2: From & To Time -->
             <div class="flex flex-row space-x-4 w-full">
                 <div class="flex-1">
                     <label class="block text-xs font-bold text-gray-700 uppercase">From</label>
@@ -43,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Row 3: Total & Cash Hours -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Total Hours</label>
@@ -55,7 +50,6 @@
                 </div>
             </div>
 
-            <!-- Row 4: Cash & Tax Pay Rate -->
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-700 uppercase">Cash Rate</label>
@@ -72,7 +66,6 @@
 
         <hr class="border-gray-300 my-3">
 
-        <!-- Weekly Master Roster Component -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -82,13 +75,11 @@
                 </div>
             </div>
 
-            <!-- Date Range Header Display -->
             <div class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
                 <span id="weekRangeDisplay" class="font-bold text-blue-950">-</span>
                 <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
             </div>
             
-            <!-- Master Horizontal Roster Grid -->
             <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
                 <table class="min-w-full divide-y divide-gray-200 text-[10px] table-fixed">
                     <thead class="bg-gray-800 text-white">
@@ -107,26 +98,20 @@
                             <th class="w-12 text-right pr-1 font-bold bg-slate-700">Tax</th>
                         </tr>
                     </thead>
-                    <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white">
-                        <!-- Dynamic spreadsheet injection -->
-                    </tbody>
+                    <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white"></tbody>
                     <tfoot class="bg-gray-100 font-bold divide-y divide-gray-200 text-[9px]">
-                        <tr id="weeklyTableFoot">
-                            <!-- Daily Column Totals injected here -->
-                        </tr>
+                        <tr id="weeklyTableFoot"></tr>
                     </tfoot>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- App Engine Script -->
     <script>
-        // Connected to your customized Google Sheet Web App Link
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbybwGgrqyvxbHI6lrjAzz1kxMTZi3rcUVSEYV-SqQtWtmUgRPkFtjtsU20C2EMY8EDKjg/exec";
         const ESTIMATED_TAX_RATE = 0.15; 
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; // Handshakes clean format YYYY-MM-DD safely
         document.getElementById('date').value = todayStr;
         document.getElementById('filterWeek').value = todayStr;
         
@@ -144,19 +129,15 @@
                     dataStore = fetchedData;
                 }
             } catch (e) { 
-                console.error("Connection down. Operating in offline display mode.", e); 
+                console.error("Offline display trace:", e); 
             }
             renderWeeklyTable();
         }
 
         function applyStaffRateDefaults() {
             const name = document.getElementById('staffName').value;
-            let cashRate = "25.00"; 
-            let taxRate = "30.00";
-            if (name === "Sumina" || name === "Rekha") {
-                cashRate = "22.00";
-                taxRate = "27.00";
-            }
+            let cashRate = "25.00"; let taxRate = "30.00";
+            if (name === "Sumina" || name === "Rekha") { cashRate = "22.00"; taxRate = "27.00"; }
             document.getElementById('payRate').value = cashRate;
             document.getElementById('taxPayRate').value = taxRate;
         }
@@ -166,12 +147,9 @@
             if (!dateInput) return;
             const [year, month, day] = dateInput.split('-').map(Number);
             const dayOfWeek = new Date(year, month - 1, day).getDay(); 
-
-            let defaultStart = "09:30";
-            let defaultEnd = "17:00";
+            let defaultStart = "09:30"; let defaultEnd = "17:00";
             if (dayOfWeek === 6) defaultStart = "09:00";
             if (dayOfWeek === 4) defaultEnd = "19:00";
-
             document.getElementById('startTime').value = defaultStart;
             document.getElementById('endTime').value = defaultEnd;
             calculateHoursFromTime();
@@ -188,30 +166,38 @@
             document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
 
-        function getMondayObj(dateString) {
-            let d = new Date(dateString);
-            let day = d.getDay();
-            let diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(d.setDate(diff));
+        // Timezone agnostic parsing routine
+        function getMondayString(dateString) {
+            const [partsYear, partsMonth, partsDay] = dateString.split('-').map(Number);
+            let d = new Date(Date.UTC(partsYear, partsMonth - 1, partsDay));
+            let day = d.getUTCDay();
+            let diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+            let mon = new Date(Date.UTC(partsYear, partsMonth - 1, diff));
+            return mon.toISOString().split('T')[0];
         }
 
-        function formatDisplayDate(dateObj) {
-            return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        function addDaysString(dateString, days) {
+            const [y, m, d] = dateString.split('-').map(Number);
+            let res = new Date(Date.UTC(y, m - 1, d + days));
+            return res.toISOString().split('T')[0];
         }
 
-        // Form Submission Cloud Connector
+        function formatDisplayDateStr(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            let dObj = new Date(Date.UTC(y, m - 1, d));
+            return dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+        }
+
         document.getElementById('payForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const total = parseFloat(document.getElementById('totalHours').value);
             let cash = document.getElementById('cashHours').value === "" ? 0 : parseFloat(document.getElementById('cashHours').value);
-            
             if (isNaN(total)) return;
             if (cash > total) return alert("Cash component bounds check failed.");
 
             const taxHours = Math.max(0, total - cash);
             const chosenDate = document.getElementById('date').value;
-            const targetMonday = getMondayObj(chosenDate).toISOString().split('T')[0];
+            const targetMonday = getMondayString(chosenDate);
             const currentStaff = document.getElementById('staffName').value;
 
             const newEntry = {
@@ -227,17 +213,14 @@
                 taxHours: taxHours
             };
 
-            // Optimistically update the UI grid frame instantly so layout remains interactive
             const existingIndex = dataStore.findIndex(entry => entry.date === chosenDate && entry.name === currentStaff);
             if (existingIndex !== -1) { dataStore[existingIndex] = newEntry; } else { dataStore.push(newEntry); }
-            
             renderWeeklyTable();
             
             const btn = document.getElementById('submitBtn');
             btn.innerText = "Syncing with Sheet...";
             btn.disabled = true;
 
-            // Safe submission using alternative content configuration rules
             try {
                 await fetch(SHEET_API_URL, {
                     method: "POST",
@@ -246,12 +229,11 @@
                     redirect: "follow"
                 });
             } catch (err) { 
-                console.error("Cloud synchronization framework error:", err); 
+                console.error("Cloud framework sync break:", err); 
             }
 
             btn.innerText = "Log Shift";
             btn.disabled = false;
-
             applyDefaultShiftTimes();
             document.getElementById('cashHours').value = '';
         });
@@ -260,13 +242,11 @@
             const filterWeekVal = document.getElementById('filterWeek').value;
             const tableBody = document.getElementById('weeklyTableBody');
             const tableFoot = document.getElementById('weeklyTableFoot');
-            
             if (!filterWeekVal) return;
 
-            const startMonday = getMondayObj(filterWeekVal);
-            let endSunday = new Date(startMonday);
-            endSunday.setDate(startMonday.getDate() + 6);
-            document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDate(startMonday)} – ${formatDisplayDate(endSunday)}`;
+            const startMondayStr = getMondayString(filterWeekVal);
+            const endSundayStr = addDaysString(startMondayStr, 6);
+            document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(endSundayStr)}`;
 
             const mandatoryStaff = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
             let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
@@ -278,11 +258,14 @@
                 let staffCashH = 0; let staffTaxH = 0; let staffCashPay = 0; let staffTaxPay = 0;
 
                 for (let i = 0; i < 7; i++) {
-                    let loopDay = new Date(startMonday);
-                    loopDay.setDate(startMonday.getDate() + i);
-                    const loopDayIsoStr = loopDay.toISOString().split('T')[0];
-
-                    const record = dataStore.find(entry => entry.date === loopDayIsoStr && entry.name === staffName);
+                    const loopDayIsoStr = addDaysString(startMondayStr, i);
+                    
+                    // Force text-based string normalization to bypass hidden trailing data forms
+                    const record = dataStore.find(entry => {
+                        if (!entry.date || !entry.name) return false;
+                        const cleanEntryDate = entry.date.toString().trim().split('T')[0];
+                        return cleanEntryDate === loopDayIsoStr && entry.name.toString().trim() === staffName;
+                    });
 
                     if (record) {
                         const convertTimeStr = (t) => {
@@ -327,7 +310,6 @@
             tableFoot.innerHTML = tfootHtml;
         }
 
-        // Bootstrap actions
         applyStaffRateDefaults();
         applyDefaultShiftTimes();
         loadCloudData();
