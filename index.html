@@ -10,7 +10,6 @@
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
-        <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="w-full">
@@ -62,12 +61,14 @@
                 </div>
             </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm flex items-center justify-center">Log Shift</button>
+            <div class="flex gap-3">
+                <button type="submit" id="submitBtn" class="flex-1 bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm flex items-center justify-center">Log Shift</button>
+                <button type="button" id="deleteBtn" onclick="deleteSelectedShift()" class="w-1/3 bg-red-100 text-red-700 border border-red-200 p-3 rounded-md font-semibold hover:bg-red-200 transition text-xs shadow-sm flex items-center justify-center">Delete</button>
+            </div>
         </form>
 
         <hr class="border-gray-300 my-3">
 
-        <!-- Weekly Summary -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -168,7 +169,6 @@
             document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
         }
 
-        // Timezone-blind clean tracking for calendar ranges
         function getMondayString(dateString) {
             const [partsYear, partsMonth, partsDay] = dateString.split('-').map(Number);
             let d = new Date(Date.UTC(partsYear, partsMonth - 1, partsDay));
@@ -248,6 +248,51 @@
             applyDefaultShiftTimes();
             document.getElementById('cashHours').value = '';
         });
+
+        // Dynamic deletion controller function
+        async function deleteSelectedShift() {
+            const chosenDate = document.getElementById('date').value;
+            const currentStaff = document.getElementById('staffName').value;
+            
+            if (!chosenDate) return;
+            
+            // Security verification prompt to prevent accidental thumb taps
+            const confirmDelete = confirm(`Are you sure you want to completely erase the record for ${currentStaff} on ${chosenDate}?`);
+            if (!confirmDelete) return;
+
+            // Remove instantly from local phone data engine framework frame
+            dataStore = dataStore.filter(entry => {
+                if (!entry.date || !entry.name) return true;
+                const cleanEntryDate = entry.date.toString().trim().split('T')[0];
+                return !(cleanEntryDate === chosenDate && entry.name.toString().trim() === currentStaff);
+            });
+            
+            renderWeeklyTable();
+
+            const delBtn = document.getElementById('deleteBtn');
+            const subBtn = document.getElementById('submitBtn');
+            delBtn.innerText = "Deleting...";
+            delBtn.disabled = true;
+            subBtn.disabled = true;
+
+            try {
+                await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "delete", date: chosenDate, name: currentStaff }),
+                    redirect: "follow"
+                });
+            } catch (err) {
+                console.error("Cloud framework deletion error context:", err);
+            }
+
+            delBtn.innerText = "Delete";
+            delBtn.disabled = false;
+            subBtn.disabled = false;
+            
+            applyDefaultShiftTimes();
+            document.getElementById('cashHours').value = '';
+        }
 
         function renderWeeklyTable() {
             const filterWeekVal = document.getElementById('filterWeek').value;
