@@ -10,6 +10,7 @@
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         <h1 class="text-lg sm:text-xl font-bold text-gray-800 border-b pb-3 text-center">Anatolya Kebabs Weekly Roster</h1>
         
+        <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="w-full">
@@ -22,10 +23,19 @@
                         <option>Rekha</option>
                     </select>
                 </div>
+                
+                <!-- Target Week Selection -->
                 <div class="w-full">
-                    <label class="block text-xs font-bold text-gray-700 uppercase">Date</label>
-                    <input type="date" id="date" required onchange="applyDefaultShiftTimes()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs max-w-full">
+                    <label class="block text-xs font-bold text-gray-700 uppercase">Target Week</label>
+                    <input type="date" id="formWeek" onchange="generateDaySelectors()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2.5 border focus:ring-blue-500 focus:border-blue-500 text-xs max-w-full">
                 </div>
+            </div>
+
+            <!-- Inline Quick Day Picker Grid -->
+            <div class="w-full">
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Select Day</label>
+                <div id="daySelectorGrid" class="grid grid-cols-7 gap-1"></div>
+                <input type="hidden" id="date" required>
             </div>
 
             <div class="flex flex-row space-x-4 w-full">
@@ -61,6 +71,7 @@
                 </div>
             </div>
 
+            <!-- Actions Row -->
             <div class="flex gap-3">
                 <button type="submit" id="submitBtn" class="flex-1 bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm flex items-center justify-center">Log Shift</button>
                 <button type="button" id="deleteBtn" onclick="deleteSelectedShift()" class="w-1/3 bg-red-100 text-red-700 border border-red-200 p-3 rounded-md font-semibold hover:bg-red-200 transition text-xs shadow-sm flex items-center justify-center">Delete</button>
@@ -69,12 +80,13 @@
 
         <hr class="border-gray-300 my-3">
 
+        <!-- Weekly Summary -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
                 <div class="flex items-center gap-1.5">
                     <label class="text-[10px] font-bold text-gray-500 uppercase">Week:</label>
-                    <input type="date" id="filterWeek" onchange="renderWeeklyTable()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
+                    <input type="date" id="filterWeek" onchange="syncDashboardWeekFilter()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
                 </div>
             </div>
 
@@ -115,7 +127,7 @@
         const ESTIMATED_TAX_RATE = 0.15; 
 
         const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
-        document.getElementById('date').value = todayStr;
+        document.getElementById('formWeek').value = todayStr;
         document.getElementById('filterWeek').value = todayStr;
         
         let dataStore = [];
@@ -134,6 +146,81 @@
             } catch (e) { 
                 console.error("Offline display trace:", e); 
             }
+            renderWeeklyTable();
+            generateDaySelectors();
+        }
+
+        // Generates the tap-to-select inline day buttons
+        function generateDaySelectors() {
+            const baseWeekDate = document.getElementById('formWeek').value;
+            if (!baseWeekDate) return;
+
+            const startMonday = getMondayString(baseWeekDate);
+            const gridContainer = document.getElementById('daySelectorGrid');
+            gridContainer.innerHTML = '';
+
+            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const currentSelectedDate = document.getElementById('date').value;
+
+            weekdays.forEach((dayName, idx) => {
+                const currentDayIso = addDaysString(startMonday, idx);
+                const isSelected = (currentSelectedDate === currentDayIso);
+                
+                // Extract just the day number (e.g. "23") to display below the text label
+                const dayNum = currentDayIso.split('-')[2];
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `flex flex-col items-center justify-center p-1.5 rounded-md border text-center transition ${
+                    isSelected 
+                    ? 'bg-blue-600 text-white border-blue-600 font-bold' 
+                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                }`;
+                
+                button.innerHTML = `
+                    <span class="text-[9px] uppercase font-semibold tracking-tighter">${dayName}</span>
+                    <span class="text-xs font-bold mt-0.5">${dayNum}</span>
+                `;
+
+                button.onclick = () => selectDayInline(currentDayIso);
+                gridContainer.appendChild(button);
+            });
+
+            // Fallback default setup to verify a selected day exists inside state management
+            if (!currentSelectedDate || getMondayString(currentSelectedDate) !== startMonday) {
+                selectDayInline(startMonday);
+            }
+        }
+
+        function selectDayInline(targetIsoDate) {
+            document.getElementById('date').value = targetIsoDate;
+            
+            // Re-render buttons to colorize the chosen active active state layout styling element
+            const baseWeekDate = document.getElementById('formWeek').value;
+            const startMonday = getMondayString(baseWeekDate);
+            const gridContainer = document.getElementById('daySelectorGrid');
+            const buttons = gridContainer.querySelectorAll('button');
+            
+            weekdaysIndex = 0;
+            for (let i = 0; i < 7; i++) {
+                const loopDayIso = addDaysString(startMonday, i);
+                const btn = buttons[i];
+                if (btn) {
+                    if (loopDayIso === targetIsoDate) {
+                        btn.className = "flex flex-col items-center justify-center p-1.5 rounded-md border text-center transition bg-blue-600 text-white border-blue-600 font-bold shadow-xs";
+                    } else {
+                        btn.className = "flex flex-col items-center justify-center p-1.5 rounded-md border text-center transition bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                    }
+                }
+            }
+
+            applyDefaultShiftTimes();
+        }
+
+        function syncDashboardWeekFilter() {
+            // Automatically maps target form inputs when changing global layout grids
+            document.getElementById('formWeek').value = document.getElementById('filterWeek').value;
+            generateDaySelectors();
             renderWeeklyTable();
         }
 
@@ -245,22 +332,19 @@
 
             btn.innerText = "Log Shift";
             btn.disabled = false;
-            applyDefaultShiftTimes();
+            generateDaySelectors();
             document.getElementById('cashHours').value = '';
         });
 
-        // Dynamic deletion controller function
         async function deleteSelectedShift() {
             const chosenDate = document.getElementById('date').value;
             const currentStaff = document.getElementById('staffName').value;
             
             if (!chosenDate) return;
             
-            // Security verification prompt to prevent accidental thumb taps
             const confirmDelete = confirm(`Are you sure you want to completely erase the record for ${currentStaff} on ${chosenDate}?`);
             if (!confirmDelete) return;
 
-            // Remove instantly from local phone data engine framework frame
             dataStore = dataStore.filter(entry => {
                 if (!entry.date || !entry.name) return true;
                 const cleanEntryDate = entry.date.toString().trim().split('T')[0];
@@ -290,7 +374,7 @@
             delBtn.disabled = false;
             subBtn.disabled = false;
             
-            applyDefaultShiftTimes();
+            generateDaySelectors();
             document.getElementById('cashHours').value = '';
         }
 
@@ -361,7 +445,6 @@
         }
 
         applyStaffRateDefaults();
-        applyDefaultShiftTimes();
         loadCloudData();
     </script>
 </body>
