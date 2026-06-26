@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Anatolya Kebabs Weekly Roster</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Force mobile browsers to style time inputs exactly like regular inputs */
+        input[type="time"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            min-height: 40px;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
@@ -12,11 +21,11 @@
         
         <!-- Entry Form -->
         <form id="payForm" class="space-y-4 max-w-full">
-            <!-- Symmetrical Core Entry Row -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-4 items-end">
-                <div>
+            <!-- Fixed Symmetrical Core Entry Row -->
+            <div class="grid grid-cols-3 gap-3 items-end">
+                <div class="w-full">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Staff</label>
-                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10">
+                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -24,13 +33,13 @@
                         <option>Rekha</option>
                     </select>
                 </div>
-                <div>
+                <div class="w-full">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">From</label>
-                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10">
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10 box-border">
                 </div>
-                <div>
+                <div class="w-full">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">To</label>
-                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10">
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white focus:ring-blue-500 focus:border-blue-500 text-xs h-10 box-border">
                 </div>
             </div>
 
@@ -42,18 +51,18 @@
             </div>
 
             <!-- Pay Rate Settings Row -->
-            <div class="grid grid-cols-3 gap-2 sm:gap-4 items-end">
+            <div class="grid grid-cols-3 gap-3 items-end">
                 <div>
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Total Hours</label>
-                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 p-2 border font-semibold text-gray-700 text-xs shadow-sm h-10">
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-700 text-xs shadow-sm h-10">
                 </div>
                 <div>
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Cash Rate</label>
-                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm h-10">
+                    <input type="number" id="payRate" step="0.01" value="25.00" required class="mt-1 block w-full rounded-md border-gray-300 px-2 py-1.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm h-10">
                 </div>
                 <div>
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Tax Rate</label>
-                    <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 p-2 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm h-10">
+                    <input type="number" id="taxPayRate" step="0.01" value="30.00" required class="mt-1 block w-full rounded-md border-gray-300 px-2 py-1.5 border focus:ring-blue-500 focus:border-blue-500 text-xs shadow-sm h-10">
                 </div>
             </div>
 
@@ -66,13 +75,13 @@
 
         <hr class="border-gray-300 my-4">
 
-        <!-- Weekly Pay Distribution Engine Box Container -->
-        <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-3 space-y-3">
-            <h3 class="text-xs font-bold text-amber-950 uppercase tracking-wide flex items-center gap-1">Weekly Bulk Cash Distribution</h3>
+        <!-- Updated Weekly Automated Tax Capping Box Container -->
+        <div class="bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-3">
+            <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1">Weekly Tax-Limit Auto Splitter</h3>
             <div class="grid grid-cols-3 gap-2 items-end">
                 <div>
-                    <label class="block text-[10px] font-bold text-amber-900 uppercase">Staff Target</label>
-                    <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-amber-200 p-2 border bg-white text-xs h-9">
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase">Staff Target</label>
+                    <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-blue-200 p-2 border bg-white text-xs h-9">
                         <option>Adhiraj</option>
                         <option>Aayush</option>
                         <option>Manisha</option>
@@ -81,10 +90,10 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-amber-900 uppercase">Total Cash Hours</label>
-                    <input type="number" id="bulkCashHours" step="0.1" placeholder="e.g. 16" class="mt-1 block w-full rounded-md border-amber-200 p-2 border bg-white text-xs h-9">
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase">Target Tax Hours</label>
+                    <input type="number" id="bulkTaxHours" step="0.1" placeholder="e.g. 24" class="mt-1 block w-full rounded-md border-blue-200 p-2 border bg-white text-xs h-9">
                 </div>
-                <button type="button" onclick="distributeWeeklyCashHours()" class="bg-amber-700 text-white font-bold rounded-md text-xs hover:bg-amber-800 transition shadow-sm h-9 flex items-center justify-center">Apply Week Cash</button>
+                <button type="button" onclick="distributeWeeklyTaxHours()" class="bg-blue-700 text-white font-bold rounded-md text-xs hover:bg-blue-800 transition shadow-sm h-9 flex items-center justify-center">Apply Week Tax</button>
             </div>
         </div>
 
@@ -222,48 +231,43 @@
             renderWeeklyTable();
         }
 
-        // Sequential multi-shift allocation script calculations
-        async function distributeWeeklyCashHours() {
+        // Automatic Tax Capping & Remainder Cash Split Algorithm
+        async function distributeWeeklyTaxHours() {
             const staffTarget = document.getElementById('bulkStaffName').value;
-            let targetCashAllocation = parseFloat(document.getElementById('bulkCashHours').value);
+            let targetTaxAllocation = parseFloat(document.getElementById('bulkTaxHours').value);
             const activeWeekStart = getMondayString(document.getElementById('filterWeek').value);
             
-            if (isNaN(targetCashAllocation) || targetCashAllocation < 0) {
-                return alert("Please enter a valid amount of cash hours.");
-            }
+            if (isNaN(targetTaxAllocation) || targetTaxAllocation < 0) return;
 
-            // Find all matching logs for this specific worker in the chosen active grid scope
+            // Gather all shift logs for this worker this week
             let currentWeekShifts = dataStore.filter(entry => {
                 if (!entry.date || !entry.name) return false;
                 return getMondayString(entry.date) === activeWeekStart && entry.name === staffTarget;
             });
 
-            if (currentWeekShifts.length === 0) {
-                return alert(`No recorded shifts found for ${staffTarget} in the selected week.`);
-            }
+            if (currentWeekShifts.length === 0) return;
 
-            const totalHoursPool = currentWeekShifts.reduce((acc, shift) => acc + Number(shift.totalHours), 0);
-            if (targetCashAllocation > totalHoursPool) {
-                return alert(`Error: User input allocations exceeds total logged working hours (${totalHoursPool.toFixed(1)}h).`);
-            }
-
-            // Process loop through each entry to set clean cash structures cleanly
+            // Loop through shifts: Fill up the Tax allocation first, then dump the rest into Cash
             for (let shift of currentWeekShifts) {
-                let maxPossibleAlloc = Number(shift.totalHours);
-                if (targetCashAllocation >= maxPossibleAlloc) {
-                    shift.cashHours = maxPossibleAlloc;
-                    targetCashAllocation -= maxPossibleAlloc;
+                let shiftTotal = Number(shift.totalHours);
+                
+                if (targetTaxAllocation >= shiftTotal) {
+                    shift.taxHours = shiftTotal;
+                    shift.cashHours = 0;
+                    targetTaxAllocation -= shiftTotal;
+                } else if (targetTaxAllocation > 0) {
+                    shift.taxHours = targetTaxAllocation;
+                    shift.cashHours = Math.max(0, shiftTotal - targetTaxAllocation);
+                    targetTaxAllocation = 0;
                 } else {
-                    shift.cashHours = targetCashAllocation;
-                    targetCashAllocation = 0;
+                    shift.taxHours = 0;
+                    shift.cashHours = shiftTotal;
                 }
-                shift.taxHours = Math.max(0, Number(shift.totalHours) - Number(shift.cashHours));
             }
 
             renderWeeklyTable();
-            alert(`Cash calculations updated locally! Synced parameters will automatically push down layout variables on modifications.`);
             
-            // Background push array mutations directly to database script handlers
+            // Push updates quietly to Google Sheets in the background
             for (let updatedShift of currentWeekShifts) {
                 try {
                     await fetch(SHEET_API_URL, {
@@ -272,9 +276,9 @@
                         body: JSON.stringify({ action: "save", entry: updatedShift }),
                         redirect: "follow"
                     });
-                } catch(e) { console.error("Async background batch failure profile:", e); }
+                } catch(e) { console.error("Cloud background sync error:", e); }
             }
-            document.getElementById('bulkCashHours').value = '';
+            document.getElementById('bulkTaxHours').value = '';
         }
 
         function applyStaffRateDefaults() {
@@ -348,10 +352,14 @@
             const targetMonday = getMondayString(chosenDate);
             const currentStaff = document.getElementById('staffName').value;
 
-            // Retain any existing cash breakdown calculations on modifications if present
             const matchedPrevious = dataStore.find(entry => entry.date === chosenDate && entry.name === currentStaff);
-            let savedCashHours = matchedPrevious ? Number(matchedPrevious.cashHours) : 0;
-            if (savedCashHours > total) savedCashHours = total;
+            let savedCashHours = matchedPrevious ? Number(matchedPrevious.cashHours || 0) : 0;
+            let savedTaxHours = matchedPrevious ? Number(matchedPrevious.taxHours || 0) : total;
+            
+            if ((savedCashHours + savedTaxHours) !== total) {
+                savedTaxHours = total;
+                savedCashHours = 0;
+            }
 
             const newEntry = {
                 date: chosenDate,
@@ -363,7 +371,7 @@
                 taxRate: parseFloat(document.getElementById('taxPayRate').value),
                 totalHours: total,
                 cashHours: savedCashHours,
-                taxHours: Math.max(0, total - savedCashHours)
+                taxHours: savedTaxHours
             };
 
             const existingIndex = dataStore.findIndex(entry => entry.date === chosenDate && entry.name === currentStaff);
@@ -371,7 +379,7 @@
             renderWeeklyTable();
             
             const btn = document.getElementById('submitBtn');
-            btn.innerText = "Syncing with Sheet...";
+            btn.innerText = "Syncing...";
             btn.disabled = true;
 
             try {
