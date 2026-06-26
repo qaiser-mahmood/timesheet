@@ -40,7 +40,6 @@
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div id="appContainer" class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         
-        <!-- Header Module -->
         <div class="flex items-center justify-between border-b pb-3">
             <h1 id="mainTitle" class="text-lg sm:text-xl font-bold text-gray-800 transition-all">Anatolya Kebabs Roster Engine</h1>
             <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-3 py-1.5 rounded-md text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1">
@@ -48,7 +47,6 @@
             </button>
         </div>
         
-        <!-- Entry Form -->
         <form id="payForm" class="hide-on-share space-y-4 max-w-full">
             <div class="grid grid-cols-3 gap-3 items-end">
                 <div class="w-full">
@@ -67,14 +65,12 @@
                 </div>
             </div>
 
-            <!-- Inline Day Picker Grid -->
             <div class="w-full">
                 <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Select Day</label>
                 <div id="daySelectorGrid" class="grid grid-cols-7 gap-1"></div>
                 <input type="hidden" id="date" required>
             </div>
 
-            <!-- Locked Rates Input Row -->
             <div class="grid grid-cols-3 gap-3 items-end">
                 <div>
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Total Hours</label>
@@ -98,7 +94,6 @@
 
         <hr class="hide-on-share border-gray-300 my-4">
 
-        <!-- Weekly Tax Capping Box -->
         <div class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-3">
             <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1">Weekly Tax-Limit Auto Splitter</h3>
             <div class="grid grid-cols-3 gap-2 items-end">
@@ -116,7 +111,6 @@
             </div>
         </div>
 
-        <!-- Weekly Summary Dashboard -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="hide-on-share text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -126,7 +120,6 @@
                 </div>
             </div>
 
-            <!-- Balanced Centered Week Range Indicator Panel -->
             <div id="weekRangeContainer" class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
                 <span id="weekRangeDisplay" class="font-bold text-blue-950 mx-auto">-</span>
                 <span class="hide-on-share bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
@@ -215,6 +208,11 @@
         function populateStaffDropdowns() {
             const picker = document.getElementById('staffName');
             const bulkPicker = document.getElementById('bulkStaffName');
+            
+            // REMEMBER SELECTIONS: Save what you currently had selected before wiping options
+            const previouslySelectedStaff = picker.value;
+            const previouslySelectedBulk = bulkPicker.value;
+            
             picker.innerHTML = ''; bulkPicker.innerHTML = '';
             
             staffRegistry.forEach(person => {
@@ -223,6 +221,15 @@
                 let opt2 = document.createElement('option'); opt2.text = person.name; opt2.value = person.name;
                 bulkPicker.add(opt2);
             });
+            
+            // RESTORE SELECTIONS: Re-apply your choice if it still exists in the list
+            if (previouslySelectedStaff && staffRegistry.some(p => p.name === previouslySelectedStaff)) {
+                picker.value = previouslySelectedStaff;
+            }
+            if (previouslySelectedBulk && staffRegistry.some(p => p.name === previouslySelectedBulk)) {
+                bulkPicker.value = previouslySelectedBulk;
+            }
+            
             applyStaffRateDefaults();
         }
 
@@ -261,7 +268,6 @@
         function selectDayInline(targetIsoDate) {
             document.getElementById('date').value = targetIsoDate;
             
-            // Re-render styles dynamically on selection click loop
             const baseWeekDate = document.getElementById('filterWeek').value;
             const startMonday = getMondayString(baseWeekDate);
             const gridContainer = document.getElementById('daySelectorGrid');
