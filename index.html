@@ -1,13 +1,3 @@
-You are entirely right on both fronts. Dropping the redundant target week picker and bundling everything neatly into a clean, mobile-first row layout makes perfect visual sense.
-Also, handling cash calculations shift-by-shift is a massive headache. Roster logs should strictly track **who worked when**. Determining cash splits belongs as a single, macro action at the end of the work week.
-I have redesigned the interface.
-### What Changed in this Version:
- * **The Symmetrical Input Row:** Staff, From Time, and To Time are now grouped evenly into a single row. The broken layout wrapping issue is fixed, and margins are adjusted to stop fields from bleeding off the edge of mobile screens.
- * **Shift Logs are Pure Time Logs:** The cash-hour fields have been completely removed from individual shift entries.
- * **New Weekly Cash-Out Module:** A dedicated box now sits directly above your table. At the end of the week, simply select a staff member, input their total cash hours for that week in one go, and hit **Apply Week Cash**. The local app engine splits the payouts cleanly across their logged shifts automatically!
-### Full Updated HTML Code
-Replace everything inside your index.html file with the optimized code block below:
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -512,5 +502,3 @@ Replace everything inside your index.html file with the optimized code block bel
     </script>
 </body>
 </html>
-
-```
