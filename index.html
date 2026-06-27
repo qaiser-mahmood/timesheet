@@ -12,8 +12,6 @@
             appearance: none;
             min-height: 40px;
         }
-
-        /* Clean Screenshot Styles for Share Mode */
         .roster-share-active #mainTitle {
             text-align: center;
             width: 100%;
@@ -32,19 +30,24 @@
             font-size: 13px !important;
         }
         .roster-share-active th {
-            background-color: #4b5563 !important; /* Medium gray header */
-            color: #ffffff !important;            /* Clean white text */
+            background-color: #4b5563 !important;
+            color: #ffffff !important;
         }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div id="appContainer" class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         
-        <div class="flex items-center justify-between border-b pb-3">
-            <h1 id="mainTitle" class="text-lg sm:text-xl font-bold text-gray-800 transition-all">Anatolya Kebabs Roster Engine</h1>
-            <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-3 py-1.5 rounded-md text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1">
-                👁️ View Roster Mode
-            </button>
+        <div class="flex flex-row items-center justify-between border-b pb-3 gap-2 flex-nowrap">
+            <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-800 tracking-tight whitespace-nowrap">Anatolya Kebabs Roster</h1>
+            <div class="flex items-center gap-1.5 hide-on-share flex-nowrap shrink-0">
+                <button type="button" id="aiGenerateBtn" onclick="runAiRosterGeneration()" class="bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    ✨ AI Auto-Fill Week
+                </button>
+                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    👁️ View Roster
+                </button>
+            </div>
         </div>
         
         <form id="payForm" class="hide-on-share space-y-4 max-w-full">
@@ -167,19 +170,18 @@
             const app = document.getElementById('appContainer');
             const title = document.getElementById('mainTitle');
             const btn = document.getElementById('shareModeBtn');
-            
             isShareModeActive = !isShareModeActive;
             
             if (isShareModeActive) {
                 app.classList.add('roster-share-active');
                 title.innerText = "Anatolya Kebabs Weekly Roster";
                 btn.innerText = "🛠️ Back to Dashboard";
-                btn.className = "bg-gray-600 text-white font-bold px-3 py-1.5 rounded-md text-xs hover:bg-gray-700 transition shadow-sm flex items-center gap-1";
+                btn.className = "bg-gray-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-gray-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
             } else {
                 app.classList.remove('roster-share-active');
-                title.innerText = "Anatolya Kebabs Roster Engine";
-                btn.innerText = "👁️ View Roster Mode";
-                btn.className = "bg-green-600 text-white font-bold px-3 py-1.5 rounded-md text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1";
+                title.innerText = "Anatolya Kebabs Roster";
+                btn.innerText = "👁️ View Roster";
+                btn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
             }
             renderWeeklyTable();
         }
@@ -205,16 +207,44 @@
             generateDaySelectors();
         }
 
+        async function runAiRosterGeneration() {
+            const filterWeekVal = document.getElementById('filterWeek').value;
+            if(!filterWeekVal) return alert("Select a date context first.");
+            const activeMonStr = getMondayString(filterWeekVal);
+            
+            if(!confirm(`Use Gemini Free AI to scan historical patterns and auto-populate the week commencing ${activeMonStr}?`)) return;
+            
+            const btn = document.getElementById('aiGenerateBtn');
+            btn.innerText = "⚡ Analyzing...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "ai_generate", targetWeekMonday: activeMonStr })
+                });
+                const responseObj = await res.json();
+                if(responseObj.status === "success") {
+                    alert(`Success! Generated ${responseObj.count} predicted slots for your team.`);
+                } else {
+                    alert("Error: " + responseObj.message);
+                }
+            } catch(e) {
+                alert("Connection failed.");
+            }
+            btn.innerText = "✨ AI Auto-Fill Week";
+            btn.disabled = false;
+            loadCloudData();
+        }
+
         function populateStaffDropdowns() {
             const picker = document.getElementById('staffName');
             const bulkPicker = document.getElementById('bulkStaffName');
-            
-            // REMEMBER SELECTIONS: Save what you currently had selected before wiping options
             const previouslySelectedStaff = picker.value;
             const previouslySelectedBulk = bulkPicker.value;
             
             picker.innerHTML = ''; bulkPicker.innerHTML = '';
-            
             staffRegistry.forEach(person => {
                 let opt1 = document.createElement('option'); opt1.text = person.name; opt1.value = person.name;
                 picker.add(opt1);
@@ -222,14 +252,12 @@
                 bulkPicker.add(opt2);
             });
             
-            // RESTORE SELECTIONS: Re-apply your choice if it still exists in the list
             if (previouslySelectedStaff && staffRegistry.some(p => p.name === previouslySelectedStaff)) {
                 picker.value = previouslySelectedStaff;
             }
             if (previouslySelectedBulk && staffRegistry.some(p => p.name === previouslySelectedBulk)) {
                 bulkPicker.value = previouslySelectedBulk;
             }
-            
             applyStaffRateDefaults();
         }
 
@@ -267,7 +295,6 @@
 
         function selectDayInline(targetIsoDate) {
             document.getElementById('date').value = targetIsoDate;
-            
             const baseWeekDate = document.getElementById('filterWeek').value;
             const startMonday = getMondayString(baseWeekDate);
             const gridContainer = document.getElementById('daySelectorGrid');
@@ -357,7 +384,7 @@
 
         function formatDisplayDateStr(dateStr) {
             const [y, m, d] = dateStr.split('-').map(Number);
-            return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+            return `${d.toString().padStart(2,'0')}/${m.toString().padStart(2,'0')}/${y}`;
         }
 
         function convertTimeStr(t) {
