@@ -1,0 +1,371 @@
+function doPost(e) {
+  var JSON_STRING_REPLY;
+  // Your Gemini API key remains securely placed here
+  var GEMINI_API_KEY = "AQ.Ab8RN6L0cH9G0uhwn6kcJwXWjyy0D5bGgDkPPsb_BesxEoY-Fg";
+  
+  try {
+    var requestData = JSON.parse(e.postData.contents);
+    var targetSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Roster");
+    var staffSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Staff");
+
+    // ACTION 1: FETCH DATA
+    if (requestData.action === "get") {
+      var logs = [];
+      if (targetSheet) {
+        var logRows = targetSheet.getDataRange().getDisplayValues();
+        for (var i = 1; i < logRows.length; i++) {
+          if (logRows[i][2]) {
+            var cleanIsoDate = logRows[i][0];
+            if (cleanIsoDate && cleanIsoDate.includes('/')) {
+               try { cleanIsoDate = new Date(logRows[i][0]).toISOString().split('T')[0];
+               } catch(err){}
+            }
+            logs.push({
+              date: cleanIsoDate,
+              weekCommencing: logRows[i][1],
+              name: logRows[i][2].toString().trim(),
+              from: logRows[i][3],
+              to: logRows[i][4],
+              cashRate: Number(logRows[i][5]) || 0,
+              taxRate: Number(logRows[i][6]) || 0,
+              totalHours: Number(logRows[i][7]) || 0,
+              cashHours: Number(logRows[i][8]) || 0,
+              taxHours: Number(logRows[i][9]) || 0
+            });
+          }
+        }
+      }
+      
+      var dynamicStaff = [];
+      if (staffSheet) {
+        var staffRows = staffSheet.getDataRange().getValues();
+        for (var j = 1; j < staffRows.length; j++) {
+          if (staffRows[j][0]) {
+            dynamicStaff.push({
+              name: staffRows[j][0].toString().trim(),
+              cashRate: staffRows[j][1] || 25.00,
+              taxRate: staffRows[j][2] || 30.00
+            });
+          }
+        }
+      }
+      JSON_STRING_REPLY = JSON.stringify({ logs: logs, staff: dynamicStaff });
+    }
+    
+    // ACTION 2: SAVE ENTRY
+    if (requestData.action === "save") {
+      if (!targetSheet) {
+        targetSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("Roster");
+        targetSheet.appendRow(["Date", "Week Commencing", "Name", "From", "To", "Cash Rate", "Tax Rate", "Total Hours", "Cash Hours", "Tax Hours"]);
+      }
+      var entry = requestData.entry;
+      var existingRows = targetSheet.getDataRange().getDisplayValues();
+      var targetRowIndex = -1;
+      for (var k = 1; k < existingRows.length; k++) {
+        if (existingRows[k][0] === entry.date && existingRows[k][2].toString().trim() === entry.name.toString().trim()) {
+          targetRowIndex = k + 1;
+          break;
+        }
+      }
+      
+      var payload = [entry.date, entry.weekCommencing, entry.name, entry.from, entry.to, entry.cashRate, entry.taxRate, entry.totalHours, entry.cashHours, entry.taxHours];
+      if (targetRowIndex !== -1) {
+        targetSheet.getRange(targetRowIndex, 1, 1, 10).setValues([payload]);
+      } else {
+        targetSheet.appendRow(payload);
+      }
+      JSON_STRING_REPLY = JSON.stringify({ status: "success" });
+    }
+    
+    // ACTION 3: DELETE ENTRY
+    if (requestData.action === "delete") {
+      if (targetSheet) {
+        var currentData = targetSheet.getDataRange().getDisplayValues();
+        for (var m = currentData.length - 1; m >= 1; m--) {
+          if (currentData[m][0] === requestData.date && currentData[m][2].toString().trim() === requestData.name.toString().trim()) {
+            targetSheet.deleteRow(m + 1);
+          }
+        }
+      }
+      JSON_STRING_REPLY = JSON.stringify({ status: "deleted" });
+    }
+
+    // ACTION 4: AI SMART AUTO-ROSTER VIA GEMINI FREE API
+    if (requestData.action === "ai_generate") {
+      var targetWeekMonday = requestData.targetWeekMonday;
+      var historyLogs = [];
+      if (targetSheet) {
+        var historicalRows = targetSheet.getDataRange().getDisplayValues();
+        var startIdx = Math.max(1, historicalRows.length - 60);
+        for (var h = startIdx; h < historicalRows.length; h++) {
+          if (historicalRows[h][2] && historicalRows[h][0] && historicalRows[h][0].trim() !== "") {
+            var dayOfWeekName = "ShortDay";
+            try {
+              dayOfWeekName = new Date(historicalRows[h][0]).toLocaleDateString('en-US', {weekday: 'short'});
+            } catch(e) {}
+            
+            historyLogs.push({
+              dayName: dayOfWeekName,
+              name: historicalRows[h][2].trim(),
+              from: historicalRows[h][3],
+              to: historicalRows[h][4]
+            });
+          }
+        }
+      }
+
+      var aiSystemInstruction = "You are an expert roster manager for Anatolya Kebabs shop. Analyze past patterns (which employee works which days, standard start/end times like 9:30a-5:00p, Thursday lates, Saturday early starts) and create a realistic roster forecast for the target week. Return standard ISO date configurations inside a raw JSON array matching this exact object format schema: [{\"date\":\"YYYY-MM-DD\",\"name\":\"StaffName\",\"from\":\"HH:MM\",\"to\":\"HH:MM\"}]. Do not wrap the response in markdown code blocks or add text conversation, return pure raw JSON array text.";
+      var aiPrompt = "Historical Shift Patterns:\n" + JSON.stringify(historyLogs) + "\n\nTarget Week Starting Monday: " + targetWeekMonday + "\nGenerate next week's schedule array:";
+      
+      var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
+      
+      var payloadData = {
+        "contents": [{ "parts": [{ "text": aiSystemInstruction + "\n\n" + aiPrompt }] }],
+        "generationConfig": { "responseMimeType": "application/json" }
+      };
+      var options = {
+        "method": "POST",
+        "contentType": "application/json",
+        "payload": JSON.stringify(payloadData),
+        "muteHttpExceptions": true
+      };
+      
+      var response = UrlFetchApp.fetch(endpoint, options);
+      var responseText = response.getContentText();
+      var parsedResponse = JSON.parse(responseText);
+      
+      if (!parsedResponse.candidates || parsedResponse.candidates.length === 0) {
+        throw new Error("Gemini API returned an empty or error response: " + responseText);
+      }
+      
+      var aiCleanTextResult = parsedResponse.candidates[0].content.parts[0].text;
+      aiCleanTextResult = aiCleanTextResult.replace(/```json/gi, "").replace(/```/g, "").trim();
+      
+      var draftedShiftsArray = JSON.parse(aiCleanTextResult);
+
+      if (targetSheet && Array.isArray(draftedShiftsArray)) {
+        draftedShiftsArray.forEach(function(s) {
+          if (!s.date || !s.name || !s.from || !s.to) return;
+          
+          var staffRateCash = 25.00, staffRateTax = 30.00;
+          if (staffSheet) {
+             var sRows = staffSheet.getDataRange().getValues();
+             for(var z=1; z<sRows.length; z++) {
+                if(sRows[z][0] && sRows[z][0].toString().trim() === s.name.trim()) {
+                   staffRateCash = Number(sRows[z][1]) || 25.00;
+                   staffRateTax = Number(sRows[z][2]) || 30.00;
+                   break;
+                }
+             }
+          }
+
+          var startSplit = s.from.split(':').map(Number);
+          var endSplit = s.to.split(':').map(Number);
+          var minDiff = (endSplit[0]*60 + endSplit[1]) - (startSplit[0]*60 + startSplit[1]);
+          if (minDiff < 0) minDiff += 24*60;
+          
+          var totalHrs = (minDiff / 60);
+
+          targetSheet.appendRow([s.date, targetWeekMonday, s.name.trim(), s.from, s.to, staffRateCash, staffRateTax, totalHrs, 0, totalHrs]);
+        });
+      }
+
+      JSON_STRING_REPLY = JSON.stringify({ status: "success", count: draftedShiftsArray.length });
+    }
+
+    // ACTION 5: EMAIL INVOICE EXTRACTION ENGINE (UPDATED WITH REGISTRY LOOKUP)
+    if (requestData.action === "extract_invoices") {
+      var countProcessed = processGmailInvoicesEngine(GEMINI_API_KEY);
+      JSON_STRING_REPLY = JSON.stringify({ status: "success", processed: countProcessed });
+    }
+    
+  } catch (error) {
+    JSON_STRING_REPLY = JSON.stringify({ status: "error", message: error.toString() });
+  }
+  
+  return ContentService.createTextOutput(JSON_STRING_REPLY).setMimeType(ContentService.MimeType.JSON);
+}
+
+function processGmailInvoicesEngine(apiKey) {
+  if (!apiKey || apiKey === "") {
+    apiKey = "AQ.Ab8RN6L0cH9G0uhwn6kcJwXWjyy0D5bGgDkPPsb_BesxEoY-Fg"; // <-- Ensure your fresh key is here
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var invoiceSheet = ss.getSheetByName("Invoices");
+  if (!invoiceSheet) {
+    invoiceSheet = ss.insertSheet("Invoices");
+    // Added a hidden tracking column at the very end for our unique email fingerprint
+    invoiceSheet.appendRow(["Process Date", "Supplier Name", "Fixed Bank Details", "Invoice Number", "Invoice Date", "Total Amount", "Email Thread Link", "Email Fingerprint"]);
+  }
+  
+  var supplierSheet = ss.getSheetByName("Suppliers");
+  var supplierRegistry = {};
+  var emailFilters = [];
+  
+  if (supplierSheet) {
+    var sData = supplierSheet.getDataRange().getValues();
+    for (var r = 1; r < sData.length; r++) {
+      if (sData[r][0]) {
+        var emailKey = sData[r][0].toString().toLowerCase().trim();
+        supplierRegistry[emailKey] = {
+          name: sData[r][1] || "Registered Supplier",
+          bank: sData[r][2] || "N/A"
+        };
+        emailFilters.push("from:" + emailKey);
+      }
+    }
+  }
+  
+  if (emailFilters.length === 0) {
+    Logger.log("DEBUG: No supplier emails found in the Suppliers registry tab.");
+    return 0;
+  }
+  
+  // 1. BUILD A LOOKUP MAP OF EXISTING FINGERPRINTS FROM THE SHEET
+  var existingFingerprints = {};
+  var invData = invoiceSheet.getDataRange().getValues();
+  
+  // Check if your sheet has the 8th column header, add it if missing
+  if (invData.length > 0 && invData[0].length < 8) {
+    invoiceSheet.getRange(1, 8).setValue("Email Fingerprint");
+  }
+
+  for (var k = 1; k < invData.length; k++) {
+    if (invData[k][7]) { // 8th Column (Index 7) holds the Fingerprint string
+      existingFingerprints[invData[k][7].toString().trim()] = true;
+    }
+  }
+  
+  // Clear-cut search window from June 1st, 2026, forward
+  var startDateStr = "2026/06/01"; 
+  var combinedQuery = "after:" + startDateStr + " (" + emailFilters.join(" OR ") + ")";
+  Logger.log("DEBUG: Querying supplier email archive: " + combinedQuery);
+  
+  var threads = GmailApp.search(combinedQuery, 0, 50);
+  Logger.log("DEBUG: Located " + threads.length + " total supplier threads since " + startDateStr);
+  
+  // Process oldest first to reconstruct your records cleanly
+  threads.reverse(); 
+  var processedCount = 0;
+  
+  for (var i = 0; i < threads.length; i++) {
+    var messages = threads[i].getMessages();
+    var lastMessage = messages[messages.length - 1];
+    
+    // 2. PARSE HEADER PARAMETERS
+    var rawSender = lastMessage.getFrom(); 
+    var emailMatch = rawSender.match(/<([^>]+)>/);
+    var senderEmail = (emailMatch ? emailMatch[1] : rawSender).toLowerCase().trim();
+    
+    var emailDate = lastMessage.getDate().getTime().toString(); // Exact millisecond timestamp
+    var emailSubject = lastMessage.getSubject().trim().toLowerCase();
+    
+    // Create the unique header string fingerprint
+    var emailFingerprint = senderEmail + "_" + emailDate + "_" + emailSubject;
+    
+    var registeredSupplier = supplierRegistry[senderEmail];
+    var verifiedName = registeredSupplier ? registeredSupplier.name : "Unregistered: " + senderEmail;
+    var verifiedBank = registeredSupplier ? registeredSupplier.bank : "N/A";
+    
+    // 3. STEP 1 CHECK: Is this specific email already recorded?
+    if (existingFingerprints[emailFingerprint]) {
+      Logger.log("DEBUG [Thread " + i + "]: Instant Skip - Header fingerprint matches existing sheet entry.");
+      continue;
+    }
+    
+    // 4. STEP 2 CHECK: Does it actually have a PDF attached?
+    var attachments = lastMessage.getAttachments();
+    var pdfBlob = null;
+    for (var j = 0; j < attachments.length; j++) {
+      if (attachments[j].getContentType() === "application/pdf") {
+        pdfBlob = attachments[j];
+        break;
+      }
+    }
+    
+    if (!pdfBlob) {
+      Logger.log("DEBUG [Thread " + i + "]: Skipped - No PDF attachment found from " + verifiedName);
+      continue;
+    }
+    
+    // 5. MANDATORY PACING DELAY: 20-second pause before hitting Gemini
+    Logger.log("Pacing API limits... Waiting 20 seconds before processing " + verifiedName + "'s PDF...");
+    Utilities.sleep(20000);
+    
+    var base64PdfData = Utilities.base64Encode(pdfBlob.getBytes());
+    var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+    
+    var aiInstruction = "You are a data extraction utility. Analyze the attached invoice PDF file layout. Find the absolute invoice number, invoice date, and total balance due from the document. For the total amount, extract it strictly as a clean decimal number (e.g., 1450.50). Strip out any currency symbols like $, commas, or tax breakdowns. Output details exclusively in raw JSON format template structure: {\"invoiceNo\":\"Num\",\"date\":\"YYYY-MM-DD\",\"total\":0.00}. Keep explanations empty.";
+    
+    var payloadData = {
+      "systemInstruction": { "parts": [{ "text": aiInstruction }] },
+      "contents": [{ 
+        "parts": [
+          { "text": "Extract fields from this attached invoice PDF document data:" },
+          { 
+            "inlineData": { "mimeType": "application/pdf", "data": base64PdfData }
+          }
+        ] 
+      }],
+      "generationConfig": { "responseMimeType": "application/json" }
+    };
+    
+    var options = {
+      "method": "POST",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payloadData),
+      "muteHttpExceptions": true
+    };
+    
+    try {
+      var response = UrlFetchApp.fetch(endpoint, options);
+      var responseCode = response.getResponseCode();
+      var responseText = response.getContentText();
+      
+      if (responseCode === 429 || responseText.indexOf("RESOURCE_EXHAUSTED") > -1) {
+        Logger.log("⚠️ QUOTA CEILING REACHED. Stopping execution loop. Run again in 60 seconds to catch the remaining emails.");
+        break; 
+      }
+      
+      var parsedResponse = JSON.parse(responseText);
+      if (!parsedResponse.candidates || parsedResponse.candidates.length === 0) {
+        Logger.log("DEBUG [Thread " + i + "]: Refused by API. Skipping.");
+        continue;
+      }
+      
+      var textOut = parsedResponse.candidates[0].content.parts[0].text;
+      textOut = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
+      
+      var data = JSON.parse(textOut);
+      
+      if (!data || !data.total || Number(data.total) <= 0) {
+        Logger.log("DEBUG [Thread " + i + "]: Skipped - Total amount extracted was invalid or zero.");
+        continue;
+      }
+      
+      // 6. RECORD DATA + FINGERPRINT EXTENSION TO SHEET
+      invoiceSheet.appendRow([
+        new Date().toISOString().split('T')[0],
+        verifiedName,
+        verifiedBank,
+        data.invoiceNo || "N/A",
+        data.date || "N/A",
+        Number(data.total) || 0,
+        threads[i].getPermalink(),
+        emailFingerprint // Stamped into Column 8 to lock out future scans
+      ]);
+      
+      processedCount++;
+      Logger.log("DEBUG [Thread " + i + "]: SUCCESS! Logged invoice for " + verifiedName + " | Total: " + data.total);
+      
+    } catch(err) {
+      Logger.log("DEBUG [Thread " + i + "]: Execution error inside loop processing: " + err.toString());
+    }
+  }
+  return processedCount;
+}
+
+/*function triggerPermissionPopup() {
+  UrlFetchApp.fetch("https://google.com");
+}*/

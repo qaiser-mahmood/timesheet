@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatolya Kebabs Weekly Roster</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        input[type="time"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            min-height: 40px;
+        }
+        .roster-share-active #mainTitle {
+            text-align: center;
+            width: 100%;
+            font-size: 1.25rem;
+        }
+        .roster-share-active .hide-on-share {
+            display: none !important;
+        }
+        .roster-share-active #weekRangeContainer {
+            justify-content: center !important;
+            text-align: center !important;
+            margin-left: auto;
+            margin-right: auto;
+            background-color: transparent !important;
+            border: none !important;
+            font-size: 13px !important;
+        }
+        .roster-share-active th {
+            background-color: #4b5563 !important;
+            color: #ffffff !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
+    <div id="appContainer" class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
+        
+        <!-- Header Module -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
+            <div class="flex items-center gap-1.5 shrink-0">
+                <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-800 tracking-tight whitespace-nowrap">Anatolya Kebabs Roster</h1>
+            </div>
+            
+            <div class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
+                <button type="button" id="invoiceSyncBtn" onclick="triggerInvoiceExtraction()" class="hide-on-share bg-amber-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    📥 Sync Invoices
+                </button>
+                <button type="button" id="aiGenerateBtn" onclick="runAiRosterGeneration()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    ✨ AI Auto-Fill Week
+                </button>
+                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    👁️ View Roster
+                </button>
+            </div>
+        </div>
+        
+        <!-- Entry Form -->
+        <form id="payForm" class="hide-on-share space-y-4 max-w-full">
+            <div class="grid grid-cols-3 gap-3 items-end">
+                <div class="w-full">
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Staff</label>
+                    <select id="staffName" onchange="applyStaffRateDefaults()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white text-xs h-10">
+                        <option value="">Loading Staff...</option>
+                    </select>
+                </div>
+                <div class="w-full">
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">From</label>
+                    <input type="time" id="startTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white text-xs h-10 box-border">
+                </div>
+                <div class="w-full">
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">To</label>
+                    <input type="time" id="endTime" required onchange="calculateHoursFromTime()" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm px-2 py-1.5 border bg-white text-xs h-10 box-border">
+                </div>
+            </div>
+
+            <div class="w-full">
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1.5">Select Day</label>
+                <div id="daySelectorGrid" class="grid grid-cols-7 gap-1"></div>
+                <input type="hidden" id="date" required>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 items-end">
+                <div>
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Total Hours</label>
+                    <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
+                </div>
+                <div>
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Cash Rate ($)</label>
+                    <input type="number" id="payRate" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
+                </div>
+                <div>
+                    <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Tax Rate ($)</label>
+                    <input type="number" id="taxPayRate" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" id="submitBtn" class="flex-1 bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition text-xs shadow-sm flex items-center justify-center">Log Shift</button>
+                <button type="button" id="deleteBtn" onclick="deleteSelectedShift()" class="w-1/4 bg-red-100 text-red-700 border border-red-200 p-3 rounded-md font-semibold hover:bg-red-200 transition text-xs shadow-sm flex items-center justify-center">Delete</button>
+            </div>
+        </form>
+
+        <hr class="hide-on-share border-gray-300 my-4">
+
+        <!-- Weekly Tax Capping Box -->
+        <div class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-3">
+            <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1">Weekly Tax-Limit Auto Splitter</h3>
+            <div class="grid grid-cols-3 gap-2 items-end">
+                <div>
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase">Staff Target</label>
+                    <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-blue-200 p-2 border bg-white text-xs h-9">
+                        <option value="">Loading Staff...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase">Target Tax Hours</label>
+                    <input type="number" id="bulkTaxHours" step="0.1" placeholder="e.g. 24" class="mt-1 block w-full rounded-md border-blue-200 p-2 border bg-white text-xs h-9">
+                </div>
+                <button type="button" onclick="distributeWeeklyTaxHours()" class="bg-blue-700 text-white font-bold rounded-md text-xs hover:bg-blue-800 transition shadow-sm h-9 flex items-center justify-center">Apply Week Tax</button>
+            </div>
+        </div>
+
+        <!-- Weekly Summary Dashboard -->
+        <div class="space-y-3">
+            <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
+                <h2 class="hide-on-share text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
+                <div class="flex items-center gap-1.5">
+                    <label class="hide-on-share text-[10px] font-bold text-gray-500 uppercase">Week:</label>
+                    <input type="date" id="filterWeek" onchange="syncDashboardWeekFilter()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
+                </div>
+            </div>
+
+            <div id="weekRangeContainer" class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px]">
+                <span id="weekRangeDisplay" class="font-bold text-blue-950 mx-auto">-</span>
+                <span class="hide-on-share bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px]">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
+            </div>
+            
+            <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
+                <table class="min-w-full divide-y divide-gray-200 text-[10px] table-fixed">
+                    <thead class="bg-gray-800 text-white">
+                        <tr>
+                            <th class="w-16 px-1 py-1.5 text-left font-bold tracking-tight">Staff</th>
+                            <th class="w-10 text-center font-normal">Mon</th>
+                            <th class="w-10 text-center font-normal">Tue</th>
+                            <th class="w-10 text-center font-normal">Wed</th>
+                            <th class="w-10 text-center font-normal">Thu</th>
+                            <th class="w-10 text-center font-normal">Fri</th>
+                            <th class="w-10 text-center font-normal">Sat</th>
+                            <th class="w-10 text-center font-normal">Sun</th>
+                            <th class="hide-on-share w-11 text-center font-bold bg-blue-900/60">Tax H</th>
+                            <th class="hide-on-share w-11 text-center font-bold bg-emerald-900/60">Cash H</th>
+                            <th class="hide-on-share w-12 text-right pr-1 font-bold bg-slate-700">Cash</th>
+                            <th class="hide-on-share w-12 text-right pr-1 font-bold bg-slate-700">Tax</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weeklyTableBody" class="divide-y divide-gray-200 bg-white"></tbody>
+                    <tfoot id="tableFinancialFooter" class="hide-on-share bg-gray-100 font-bold divide-y divide-gray-200 text-[9px]">
+                        <tr id="weeklyTableFoot"></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";
+        const ESTIMATED_TAX_RATE = 0.15; 
+
+        let isShareModeActive = false;
+        const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
+        document.getElementById('filterWeek').value = todayStr;
+        
+        let dataStore = [];
+        let staffRegistry = [];
+
+        function toggleRosterShareMode() {
+            const app = document.getElementById('appContainer');
+            const title = document.getElementById('mainTitle');
+            const btn = document.getElementById('shareModeBtn');
+            isShareModeActive = !isShareModeActive;
+            
+            if (isShareModeActive) {
+                app.classList.add('roster-share-active');
+                title.innerText = "Anatolya Kebabs Weekly Roster";
+                btn.innerText = "🛠️ Back to Dashboard";
+                btn.className = "bg-gray-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-gray-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
+            } else {
+                app.classList.remove('roster-share-active');
+                title.innerText = "Anatolya Kebabs Roster";
+                btn.innerText = "👁️ View Roster";
+                btn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
+            }
+            renderWeeklyTable();
+        }
+
+        function cleanDateStr(d) {
+            if (!d) return "";
+            let str = d.toString().trim();
+            if (str.includes('T')) return str.split('T')[0];
+            const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+            return match ? match[0] : str;
+        }
+
+        async function loadCloudData() {
+            try {
+                const res = await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "get" })
+                });
+                const responseObj = await res.json();
+                
+                if (responseObj.staff && Array.isArray(responseObj.staff)) {
+                    staffRegistry = responseObj.staff.map(s => {
+                        if (s.name) s.name = s.name.toString().trim();
+                        return s;
+                    });
+                    populateStaffDropdowns();
+                }
+                if (responseObj.logs && Array.isArray(responseObj.logs)) {
+                    dataStore = responseObj.logs.map(log => {
+                        if (log.name) log.name = log.name.toString().trim();
+                        if (log.date) log.date = cleanDateStr(log.date);
+                        if (log.weekCommencing) log.weekCommencing = cleanDateStr(log.weekCommencing);
+                        
+                        log.totalHours = log.totalHours ? parseFloat(log.totalHours) : 0;
+                        log.cashHours = log.cashHours !== undefined ? parseFloat(log.cashHours) : 0;
+                        log.taxHours = (log.taxHours !== undefined && log.taxHours !== null && log.taxHours !== '') ? parseFloat(log.taxHours) : log.totalHours;
+                        return log;
+                    });
+                }
+            } catch (e) { console.error(e); }
+            renderWeeklyTable();
+            generateDaySelectors();
+        }
+
+        async function triggerInvoiceExtraction() {
+            const btn = document.getElementById('invoiceSyncBtn');
+            btn.innerText = "⏳ Extracting...";
+            btn.disabled = true;
+            try {
+                const res = await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "extract_invoices" })
+                });
+                const responseObj = await res.json();
+                if(responseObj.status === "success") {
+                    alert(`Extraction Complete! Processed and logged ${responseObj.processed} new supplier invoices to your Spreadsheet layout.`);
+                } else {
+                    alert("Extraction Note: " + responseObj.message);
+                }
+            } catch(e) {
+                alert("Gmail extraction pipeline connection failed.");
+            }
+            btn.innerText = "📥 Sync Invoices";
+            btn.disabled = false;
+        }
+
+        async function runAiRosterGeneration() {
+            const filterWeekVal = document.getElementById('filterWeek').value;
+            if(!filterWeekVal) return alert("Select a date context first.");
+            const activeMonStr = getMondayString(filterWeekVal);
+            
+            if(!confirm(`Use Gemini Free AI to scan historical patterns and auto-populate the week commencing ${activeMonStr}?`)) return;
+            
+            const btn = document.getElementById('aiGenerateBtn');
+            btn.innerText = "⚡ Analyzing...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(SHEET_API_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain" },
+                    body: JSON.stringify({ action: "ai_generate", targetWeekMonday: activeMonStr })
+                });
+                const responseObj = await res.json();
+                if(responseObj.status === "success") {
+                    alert(`Success! Generated ${responseObj.count} predicted slots for your team.`);
+                } else {
+                    alert("Error: " + responseObj.message);
+                }
+            } catch(e) {
+                alert("Connection failed.");
+            }
+            btn.innerText = "✨ AI Auto-Fill Week";
+            btn.disabled = false;
+            loadCloudData();
+        }
+
+        function populateStaffDropdowns() {
+            const picker = document.getElementById('staffName');
+            const bulkPicker = document.getElementById('bulkStaffName');
+            const previouslySelectedStaff = picker.value;
+            const previouslySelectedBulk = bulkPicker.value;
+            
+            picker.innerHTML = ''; bulkPicker.innerHTML = '';
+            staffRegistry.forEach(person => {
+                let opt1 = document.createElement('option'); opt1.text = person.name; opt1.value = person.name;
+                picker.add(opt1);
+                let opt2 = document.createElement('option'); opt2.text = person.name; opt2.value = person.name;
+                bulkPicker.add(opt2);
+            });
+            
+            if (previouslySelectedStaff && staffRegistry.some(p => p.name === previouslySelectedStaff)) {
+                picker.value = previouslySelectedStaff;
+            }
+            if (previouslySelectedBulk && staffRegistry.some(p => p.name === previouslySelectedBulk)) {
+                bulkPicker.value = previouslySelectedBulk;
+            }
+            applyStaffRateDefaults();
+        }
+
+        function applyStaffRateDefaults() {
+            const currentSelected = document.getElementById('staffName').value;
+            const staffObj = staffRegistry.find(p => p.name === currentSelected);
+            if (staffObj) {
+                document.getElementById('payRate').value = parseFloat(staffObj.cashRate).toFixed(2);
+                document.getElementById('taxPayRate').value = parseFloat(staffObj.taxRate).toFixed(2);
+            }
+        }
+
+        function generateDaySelectors() {
+            const baseWeekDate = document.getElementById('filterWeek').value;
+            if (!baseWeekDate) return;
+            const startMonday = getMondayString(baseWeekDate);
+            const gridContainer = document.getElementById('daySelectorGrid');
+            gridContainer.innerHTML = '';
+            const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const currentSelectedDate = document.getElementById('date').value;
+
+            weekdays.forEach((dayName, idx) => {
+                const currentDayIso = addDaysString(startMonday, idx);
+                const isSelected = (currentSelectedDate === currentDayIso);
+                const dayNum = currentDayIso.split('-')[2];
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `flex flex-col items-center justify-center p-1 rounded-md border text-center transition ${isSelected ? 'bg-blue-600 text-white border-blue-600 font-bold' : 'bg-gray-50 text-gray-700 border-gray-200'}`;
+                button.innerHTML = `<span class="text-[9px] uppercase font-semibold">${dayName}</span><span class="text-xs font-bold">${dayNum}</span>`;
+                button.onclick = () => selectDayInline(currentDayIso);
+                gridContainer.appendChild(button);
+            });
+            if (!currentSelectedDate || getMondayString(currentSelectedDate) !== startMonday) selectDayInline(startMonday);
+        }
+
+        function selectDayInline(targetIsoDate) {
+            document.getElementById('date').value = targetIsoDate;
+            const baseWeekDate = document.getElementById('filterWeek').value;
+            const startMonday = getMondayString(baseWeekDate);
+            const gridContainer = document.getElementById('daySelectorGrid');
+            const buttons = gridContainer.querySelectorAll('button');
+            
+            for (let i = 0; i < 7; i++) {
+                const loopDayIso = addDaysString(startMonday, i);
+                const btn = buttons[i];
+                if (btn) {
+                    if (loopDayIso === targetIsoDate) {
+                        btn.className = "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-blue-600 text-white border-blue-600 font-bold";
+                    } else {
+                        btn.className = "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
+                    }
+                }
+            }
+            applyDefaultShiftTimes();
+        }
+
+        function syncDashboardWeekFilter() {
+            generateDaySelectors();
+            renderWeeklyTable();
+        }
+
+        async function distributeWeeklyTaxHours() {
+            const staffTarget = document.getElementById('bulkStaffName').value;
+            let targetTaxAllocation = parseFloat(document.getElementById('bulkTaxHours').value);
+            const activeWeekStart = getMondayString(document.getElementById('filterWeek').value);
+            if (isNaN(targetTaxAllocation) || targetTaxAllocation < 0 || !staffTarget) return;
+
+            let currentWeekShifts = dataStore.filter(entry => 
+                entry.date && entry.name && 
+                cleanDateStr(entry.weekCommencing) === activeWeekStart && 
+                entry.name.toString().trim() === staffTarget.trim()
+            );
+            if (currentWeekShifts.length === 0) return;
+
+            for (let shift of currentWeekShifts) {
+                let shiftTotal = Number(shift.totalHours);
+                if (targetTaxAllocation >= shiftTotal) {
+                    shift.taxHours = shiftTotal; shift.cashHours = 0; targetTaxAllocation -= shiftTotal;
+                } else if (targetTaxAllocation > 0) {
+                    shift.taxHours = targetTaxAllocation; shift.cashHours = Math.max(0, shiftTotal - targetTaxAllocation); targetTaxAllocation = 0;
+                } else {
+                    shift.taxHours = 0; shift.cashHours = shiftTotal;
+                }
+            }
+            renderWeeklyTable();
+            for (let updatedShift of currentWeekShifts) {
+                try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: updatedShift }), redirect: "follow" }); } catch(e){}
+            }
+            document.getElementById('bulkTaxHours').value = '';
+            loadCloudData();
+        }
+
+        function applyDefaultShiftTimes() {
+            const dateInput = document.getElementById('date').value;
+            if (!dateInput) return;
+            const [year, month, day] = dateInput.split('-').map(Number);
+            const dayOfWeek = new Date(year, month - 1, day).getDay(); 
+            let defaultStart = "09:30"; let defaultEnd = "17:00";
+            if (dayOfWeek === 6) defaultStart = "09:00";
+            if (dayOfWeek === 4) defaultEnd = "19:00";
+            document.getElementById('startTime').value = defaultStart;
+            document.getElementById('endTime').value = defaultEnd;
+            calculateHoursFromTime();
+        }
+
+        function calculateHoursFromTime() {
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            if (!start || !end) return;
+            const [startH, startM] = start.split(':').map(Number);
+            const [endH, endM] = end.split(':').map(Number);
+            let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+            if (diffMinutes < 0) diffMinutes += 24 * 60;
+            document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
+        }
+
+        document.getElementById('payForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const total = parseFloat(document.getElementById('totalHours').value);
+            const currentStaff = document.getElementById('staffName').value.toString().trim();
+            if (isNaN(total) || !currentStaff) return;
+            const chosenDate = cleanDateStr(document.getElementById('date').value);
+
+            const matchedPrevious = dataStore.find(entry => cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff);
+            let savedCashHours = matchedPrevious && matchedPrevious.cashHours !== undefined ? Number(matchedPrevious.cashHours) : 0;
+            let savedTaxHours = matchedPrevious && matchedPrevious.taxHours !== undefined ? Number(matchedPrevious.taxHours) : total;
+
+            const newEntry = {
+                date: chosenDate, weekCommencing: getMondayString(chosenDate), name: currentStaff,
+                from: document.getElementById('startTime').value, to: document.getElementById('endTime').value,
+                cashRate: parseFloat(document.getElementById('payRate').value), taxRate: parseFloat(document.getElementById('taxPayRate').value),
+                totalHours: total, cashHours: savedCashHours, taxHours: savedTaxHours
+            };
+
+            const existingIndex = dataStore.findIndex(entry => cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff);
+            if (existingIndex !== -1) { dataStore[existingIndex] = newEntry; } else { dataStore.push(newEntry); }
+            renderWeeklyTable();
+            try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: newEntry }), redirect: "follow" }); } catch (err) {}
+            loadCloudData();
+        });
+
+        async function deleteSelectedShift() {
+            const chosenDate = cleanDateStr(document.getElementById('date').value);
+            const currentStaff = document.getElementById('staffName').value.toString().trim();
+            if (!chosenDate || !currentStaff || !confirm(`Delete record?`)) return;
+
+            dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
+            renderWeeklyTable();
+            try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "delete", date: chosenDate, name: currentStaff }), redirect: "follow" }); } catch (err) {}
+            loadCloudData();
+        }
+
+        function getMondayString(dateString) {
+            const [partsYear, partsMonth, partsDay] = dateString.split('-').map(Number);
+            let d = new Date(Date.UTC(partsYear, partsMonth - 1, partsDay));
+            let day = d.getUTCDay(); 
+            let daysToSubtract = (day === 0) ? 6 : (day - 1);
+            return new Date(Date.UTC(partsYear, partsMonth - 1, partsDay - daysToSubtract)).toISOString().split('T')[0];
+        }
+
+        function addDaysString(dateString, days) {
+            const [y, m, d] = dateString.split('-').map(Number);
+            return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0];
+        }
+
+        function formatDisplayDateStr(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return `${d.toString().padStart(2,'0')}/${m.toString().padStart(2,'0')}/${y}`;
+        }
+
+        function convertTimeStr(t) {
+            if (!t) return '—';
+            let str = t.toString().trim();
+            if (!str || str === '—' || str === '-') return '—';
+            
+            if (str.includes(':')) {
+                let parts = str.split(':');
+                let h = parseInt(parts[0], 10);
+                let m = parseInt(parts[1], 10);
+                if (isNaN(h) || isNaN(m)) return '—';
+                let ampm = h >= 12 ? 'p' : 'a'; 
+                h = h % 12 || 12;
+                return `${h}:${m.toString().padStart(2, '0')}${ampm}`;
+            }
+            return str;
+        }
+
+        function renderWeeklyTable() {
+            const filterWeekVal = document.getElementById('filterWeek').value;
+            const tableBody = document.getElementById('weeklyTableBody');
+            const tableFoot = document.getElementById('weeklyTableFoot');
+            if (!filterWeekVal) return;
+
+            const startMondayStr = getMondayString(filterWeekVal);
+            document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(addDaysString(startMondayStr, 6))}`;
+
+            let activeDatasetNames = dataStore
+                .filter(e => e.name && e.weekCommencing && cleanDateStr(e.weekCommencing) === startMondayStr)
+                .map(e => e.name);
+
+            let registryNames = staffRegistry.map(s => s.name);
+            let targetRenderList = [...new Set([...registryNames, ...activeDatasetNames])].filter(Boolean);
+            if (targetRenderList.length === 0) targetRenderList = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
+
+            let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
+            let macroTotals = { cashH: 0, taxH: 0, cashPayout: 0, taxPayout: 0, globalHours: 0 };
+            let tbodyHtml = '';
+
+            targetRenderList.forEach(staffName => {
+                let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
+                let staffCashH = 0; let staffTaxH = 0; let staffCashPay = 0; let staffTaxPay = 0;
+                let staffTotalHours = 0;
+
+                for (let i = 0; i < 7; i++) {
+                    const currentTargetDate = addDaysString(startMondayStr, i);
+                    
+                    const record = dataStore.find(entry => 
+                        entry.date && entry.name && 
+                        cleanDateStr(entry.date) === currentTargetDate && 
+                        entry.name.toString().trim() === staffName.toString().trim()
+                    );
+                    
+                    if (record) {
+                        staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
+                        
+                        let totalHoursFromRow = Number(record.totalHours || 0);
+                        let cashHoursFromRow = record.cashHours !== undefined ? Number(record.cashHours) : 0;
+                        
+                        // Tax H is dynamically calculated: total log hours minus cash split hours
+                        let taxHoursFromRow = Math.max(0, totalHoursFromRow - cashHoursFromRow);
+
+                        staffCashH += cashHoursFromRow; 
+                        staffTaxH += taxHoursFromRow; 
+                        staffCashPay += (cashHoursFromRow * Number(record.cashRate || 0));
+                        
+                        // Pay formula applies directly to dynamic split tax hours
+                        staffTaxPay += ((taxHoursFromRow * Number(record.taxRate || 0)) * (1 - ESTIMATED_TAX_RATE)) * 1.12;
+                        
+                        globalDailyTotals[i] += totalHoursFromRow; 
+                        staffTotalHours += totalHoursFromRow;
+                    } else {
+                        staffRowHtml += `<td class="p-0.5 text-center text-gray-300 border-r">—</td>`;
+                    }
+                }
+
+                macroTotals.cashH += staffCashH; 
+                macroTotals.taxH += staffTaxH;
+                macroTotals.cashPayout += staffCashPay; 
+                macroTotals.taxPayout += staffTaxPay;
+                macroTotals.globalHours += staffTotalHours;
+
+                if (!isShareModeActive) {
+                    staffRowHtml += `
+                        <td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${staffTaxH > 0 ? staffTaxH.toFixed(1) : '—'}</td>
+                        <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
+                        <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${staffCashPay > 0 ? staffCashPay.toFixed(0) : '—'}</td>
+                        <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${staffTaxPay > 0 ? staffTaxPay.toFixed(0) : '—'}</td>`;
+                }
+                tbodyHtml += `<tr>${staffRowHtml}</tr>`;
+            });
+
+            tableBody.innerHTML = tbodyHtml;
+            document.getElementById('grandTotalHoursHeader').innerText = macroTotals.globalHours.toFixed(1);
+
+            let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
+            globalDailyTotals.forEach(dayTotal => { tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) : '—'}</td>`; });
+            tfootHtml += `
+                <td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
+                <td class="text-center bg-emerald-100 text-emerald-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
+                <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
+                <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
+            tableFoot.innerHTML = tfootHtml;
+        }
+
+        loadCloudData();
+    </script>
+</body>
+</html>
