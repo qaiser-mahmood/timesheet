@@ -38,7 +38,6 @@
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
     <div id="appContainer" class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         
-        <!-- Header Module -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
             <div class="flex items-center gap-1.5 shrink-0">
                 <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-800 tracking-tight whitespace-nowrap">Anatolya Kebabs Roster</h1>
@@ -57,7 +56,6 @@
             </div>
         </div>
         
-        <!-- Entry Form -->
         <form id="payForm" class="hide-on-share space-y-4 max-w-full">
             <div class="grid grid-cols-3 gap-3 items-end">
                 <div class="w-full">
@@ -105,7 +103,6 @@
 
         <hr class="hide-on-share border-gray-300 my-4">
 
-        <!-- Weekly Tax Capping Box -->
         <div class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 space-y-3">
             <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1">Weekly Tax-Limit Auto Splitter</h3>
             <div class="grid grid-cols-3 gap-2 items-end">
@@ -123,7 +120,6 @@
             </div>
         </div>
 
-        <!-- Weekly Summary Dashboard -->
         <div class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
                 <h2 class="hide-on-share text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
@@ -250,7 +246,7 @@
                 });
                 const responseObj = await res.json();
                 if(responseObj.status === "success") {
-                    alert(`Extraction Complete! Processed and logged ${responseObj.processed} new supplier invoices to your Spreadsheet layout.`);
+                    alert(`Extraction Complete! Processed and logged ${responseObj.processed} new supplier invoices.`);
                 } else {
                     alert("Extraction Note: " + responseObj.message);
                 }
@@ -266,7 +262,7 @@
             if(!filterWeekVal) return alert("Select a date context first.");
             const activeMonStr = getMondayString(filterWeekVal);
             
-            if(!confirm(`Use Gemini Free AI to scan historical patterns and auto-populate the week commencing ${activeMonStr}?`)) return;
+            if(!confirm(`Use Gemini AI to scan historical patterns and auto-populate the week commencing ${activeMonStr}?`)) return;
             
             const btn = document.getElementById('aiGenerateBtn');
             btn.innerText = "⚡ Analyzing...";
@@ -280,7 +276,7 @@
                 });
                 const responseObj = await res.json();
                 if(responseObj.status === "success") {
-                    alert(`Success! Generated ${responseObj.count} predicted slots for your team.`);
+                    alert(`Success! Generated ${responseObj.count} predicted slots.`);
                 } else {
                     alert("Error: " + responseObj.message);
                 }
@@ -293,45 +289,38 @@
         }
 
         function populateStaffDropdowns() {
-    const picker = document.getElementById('staffName');
-    const bulkPicker = document.getElementById('bulkStaffName');
-    const previouslySelectedStaff = picker.value;
-    const previouslySelectedBulk = bulkPicker.value;
-    
-    // Clear current dropdowns
-    picker.innerHTML = ''; 
-    bulkPicker.innerHTML = '';
+            const picker = document.getElementById('staffName');
+            const bulkPicker = document.getElementById('bulkStaffName');
+            const previouslySelectedStaff = picker.value;
+            const previouslySelectedBulk = bulkPicker.value;
+            
+            picker.innerHTML = ''; 
+            bulkPicker.innerHTML = '';
 
-    // Filter registry: Only include staff where status is not 'Inactive'
-    // Note: Assuming your sheet provides a 'status' field. 
-    // If empty or undefined, we treat them as Active.
-    const activeStaff = staffRegistry.filter(s => 
-        !s.status || s.status.toString().toLowerCase() !== 'inactive'
-    );
-    
-    activeStaff.forEach(person => {
-        let opt1 = document.createElement('option'); opt1.text = person.name; opt1.value = person.name;
-        picker.add(opt1);
-        let opt2 = document.createElement('option'); opt2.text = person.name; opt2.value = person.name;
-        bulkPicker.add(opt2);
-    });
-    
-    // Maintain selection if still valid
-    if (previouslySelectedStaff && staffRegistry.some(p => p.name === previouslySelectedStaff)) {
-        picker.value = previouslySelectedStaff;
-    }
-    if (previouslySelectedBulk && staffRegistry.some(p => p.name === previouslySelectedBulk)) {
-        bulkPicker.value = previouslySelectedBulk;
-    }
-    applyStaffRateDefaults();
-}
+            const activeStaff = staffRegistry.filter(s => !s.status || s.status.toString().toLowerCase() !== 'inactive');
+            
+            activeStaff.forEach(person => {
+                let opt1 = document.createElement('option'); opt1.text = person.name; opt1.value = person.name;
+                picker.add(opt1);
+                let opt2 = document.createElement('option'); opt2.text = person.name; opt2.value = person.name;
+                bulkPicker.add(opt2);
+            });
+            
+            if (previouslySelectedStaff && staffRegistry.some(p => p.name === previouslySelectedStaff)) {
+                picker.value = previouslySelectedStaff;
+            }
+            if (previouslySelectedBulk && staffRegistry.some(p => p.name === previouslySelectedBulk)) {
+                bulkPicker.value = previouslySelectedBulk;
+            }
+            applyStaffRateDefaults();
+        }
 
         function applyStaffRateDefaults() {
             const currentSelected = document.getElementById('staffName').value;
             const staffObj = staffRegistry.find(p => p.name === currentSelected);
             if (staffObj) {
-                document.getElementById('payRate').value = parseFloat(staffObj.cashRate).toFixed(2);
-                document.getElementById('taxPayRate').value = parseFloat(staffObj.taxRate).toFixed(2);
+                document.getElementById('payRate').value = parseFloat(staffObj.cashRate || 0).toFixed(2);
+                document.getElementById('taxPayRate').value = parseFloat(staffObj.taxRate || 0).toFixed(2);
             }
         }
 
@@ -369,11 +358,9 @@
                 const loopDayIso = addDaysString(startMonday, i);
                 const btn = buttons[i];
                 if (btn) {
-                    if (loopDayIso === targetIsoDate) {
-                        btn.className = "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-blue-600 text-white border-blue-600 font-bold";
-                    } else {
-                        btn.className = "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
-                    }
+                    btn.className = (loopDayIso === targetIsoDate) ? 
+                        "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-blue-600 text-white border-blue-600 font-bold" : 
+                        "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
                 }
             }
             applyDefaultShiftTimes();
@@ -409,9 +396,8 @@
             }
             renderWeeklyTable();
             for (let updatedShift of currentWeekShifts) {
-                try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: updatedShift }), redirect: "follow" }); } catch(e){}
+                try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: updatedShift }) }); } catch(e){}
             }
-            document.getElementById('bulkTaxHours').value = '';
             loadCloudData();
         }
 
@@ -420,7 +406,7 @@
             if (!dateInput) return;
             const [year, month, day] = dateInput.split('-').map(Number);
             const dayOfWeek = new Date(year, month - 1, day).getDay(); 
-            let defaultStart = "09:30"; let defaultEnd = "17:00";
+            let defaultStart = "09:30", defaultEnd = "17:00";
             if (dayOfWeek === 6) defaultStart = "09:00";
             if (dayOfWeek === 4) defaultEnd = "19:00";
             document.getElementById('startTime').value = defaultStart;
@@ -432,11 +418,11 @@
             const start = document.getElementById('startTime').value;
             const end = document.getElementById('endTime').value;
             if (!start || !end) return;
-            const [startH, startM] = start.split(':').map(Number);
-            const [endH, endM] = end.split(':').map(Number);
-            let diffMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-            if (diffMinutes < 0) diffMinutes += 24 * 60;
-            document.getElementById('totalHours').value = (diffMinutes / 60).toFixed(1);
+            const [sH, sM] = start.split(':').map(Number);
+            const [eH, eM] = end.split(':').map(Number);
+            let diff = (eH * 60 + eM) - (sH * 60 + sM);
+            if (diff < 0) diff += 24 * 60;
+            document.getElementById('totalHours').value = (diff / 60).toFixed(1);
         }
 
         document.getElementById('payForm').addEventListener('submit', async function(e) {
@@ -447,20 +433,17 @@
             const chosenDate = cleanDateStr(document.getElementById('date').value);
 
             const matchedPrevious = dataStore.find(entry => cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff);
-            let savedCashHours = matchedPrevious && matchedPrevious.cashHours !== undefined ? Number(matchedPrevious.cashHours) : 0;
-            let savedTaxHours = matchedPrevious && matchedPrevious.taxHours !== undefined ? Number(matchedPrevious.taxHours) : total;
-
             const newEntry = {
                 date: chosenDate, weekCommencing: getMondayString(chosenDate), name: currentStaff,
                 from: document.getElementById('startTime').value, to: document.getElementById('endTime').value,
                 cashRate: parseFloat(document.getElementById('payRate').value), taxRate: parseFloat(document.getElementById('taxPayRate').value),
-                totalHours: total, cashHours: savedCashHours, taxHours: savedTaxHours
+                totalHours: total, cashHours: (matchedPrevious ? matchedPrevious.cashHours : 0), taxHours: (matchedPrevious ? matchedPrevious.taxHours : total)
             };
 
-            const existingIndex = dataStore.findIndex(entry => cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff);
-            if (existingIndex !== -1) { dataStore[existingIndex] = newEntry; } else { dataStore.push(newEntry); }
+            dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
+            dataStore.push(newEntry);
             renderWeeklyTable();
-            try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: newEntry }), redirect: "follow" }); } catch (err) {}
+            try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: newEntry }) }); } catch (err) {}
             loadCloudData();
         });
 
@@ -468,24 +451,24 @@
             const chosenDate = cleanDateStr(document.getElementById('date').value);
             const currentStaff = document.getElementById('staffName').value.toString().trim();
             if (!chosenDate || !currentStaff || !confirm(`Delete record?`)) return;
-
             dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
             renderWeeklyTable();
-            try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "delete", date: chosenDate, name: currentStaff }), redirect: "follow" }); } catch (err) {}
+            try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "delete", date: chosenDate, name: currentStaff }) }); } catch (err) {}
             loadCloudData();
         }
 
         function getMondayString(dateString) {
-            const [partsYear, partsMonth, partsDay] = dateString.split('-').map(Number);
-            let d = new Date(Date.UTC(partsYear, partsMonth - 1, partsDay));
-            let day = d.getUTCDay(); 
-            let daysToSubtract = (day === 0) ? 6 : (day - 1);
-            return new Date(Date.UTC(partsYear, partsMonth - 1, partsDay - daysToSubtract)).toISOString().split('T')[0];
+            const [y, m, d] = dateString.split('-').map(Number);
+            let date = new Date(Date.UTC(y, m - 1, d));
+            let day = date.getUTCDay();
+            date.setUTCDate(date.getUTCDate() - (day === 0 ? 6 : day - 1));
+            return date.toISOString().split('T')[0];
         }
 
         function addDaysString(dateString, days) {
             const [y, m, d] = dateString.split('-').map(Number);
-            return new Date(Date.UTC(y, m - 1, d + days)).toISOString().split('T')[0];
+            let date = new Date(Date.UTC(y, m - 1, d + days));
+            return date.toISOString().split('T')[0];
         }
 
         function formatDisplayDateStr(dateStr) {
@@ -494,107 +477,75 @@
         }
 
         function convertTimeStr(t) {
-            if (!t) return '—';
-            let str = t.toString().trim();
-            if (!str || str === '—' || str === '-') return '—';
-            
-            if (str.includes(':')) {
-                let parts = str.split(':');
-                let h = parseInt(parts[0], 10);
-                let m = parseInt(parts[1], 10);
-                if (isNaN(h) || isNaN(m)) return '—';
-                let ampm = h >= 12 ? 'p' : 'a'; 
-                h = h % 12 || 12;
-                return `${h}:${m.toString().padStart(2, '0')}${ampm}`;
-            }
-            return str;
+            if (!t || t === '—') return '—';
+            let [h, m] = t.split(':').map(Number);
+            let ampm = h >= 12 ? 'p' : 'a';
+            return `${h % 12 || 12}:${m.toString().padStart(2, '0')}${ampm}`;
         }
 
         function renderWeeklyTable() {
             const filterWeekVal = document.getElementById('filterWeek').value;
-            const tableBody = document.getElementById('weeklyTableBody');
-            const tableFoot = document.getElementById('weeklyTableFoot');
             if (!filterWeekVal) return;
-
             const startMondayStr = getMondayString(filterWeekVal);
             document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(addDaysString(startMondayStr, 6))}`;
 
-            let activeDatasetNames = dataStore
-                .filter(e => e.name && e.weekCommencing && cleanDateStr(e.weekCommencing) === startMondayStr)
-                .map(e => e.name);
+            const weekLogs = dataStore.filter(e => e.weekCommencing === startMondayStr);
+            const today = new Date().toISOString().split('T')[0];
+            const isHistoric = (startMondayStr < getMondayString(today));
 
-            let registryNames = staffRegistry.map(s => s.name);
-            let targetRenderList = [...new Set([...registryNames, ...activeDatasetNames])].filter(Boolean);
-            if (targetRenderList.length === 0) targetRenderList = ['Adhiraj', 'Aayush', 'Manisha', 'Sumina', 'Rekha'];
-
+            // Logic: If historic, use ONLY logs. If current/future, use registry + logs.
+            let targetRenderList = isHistoric ? 
+                [...new Set(weekLogs.map(e => e.name))] : 
+                [...new Set([...staffRegistry.map(s => s.name), ...weekLogs.map(e => e.name)])].filter(Boolean);
+            
             let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
             let macroTotals = { cashH: 0, taxH: 0, cashPayout: 0, taxPayout: 0, globalHours: 0 };
             let tbodyHtml = '';
 
             targetRenderList.forEach(staffName => {
                 let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
-                let staffCashH = 0; let staffTaxH = 0; let staffCashPay = 0; let staffTaxPay = 0;
-                let staffTotalHours = 0;
+                let sCashH = 0, sTaxH = 0, sCashP = 0, sTaxP = 0, sTotalH = 0;
 
                 for (let i = 0; i < 7; i++) {
                     const currentTargetDate = addDaysString(startMondayStr, i);
-                    
-                    const record = dataStore.find(entry => 
-                        entry.date && entry.name && 
-                        cleanDateStr(entry.date) === currentTargetDate && 
-                        entry.name.toString().trim() === staffName.toString().trim()
-                    );
+                    const record = weekLogs.find(e => e.date === currentTargetDate && e.name === staffName);
                     
                     if (record) {
                         staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
-                        
-                        let totalHoursFromRow = Number(record.totalHours || 0);
-                        let cashHoursFromRow = record.cashHours !== undefined ? Number(record.cashHours) : 0;
-                        
-                        // Tax H is dynamically calculated: total log hours minus cash split hours
-                        let taxHoursFromRow = Math.max(0, totalHoursFromRow - cashHoursFromRow);
-
-                        staffCashH += cashHoursFromRow; 
-                        staffTaxH += taxHoursFromRow; 
-                        staffCashPay += (cashHoursFromRow * Number(record.cashRate || 0));
-                        
-                        // Pay formula applies directly to dynamic split tax hours
-                        staffTaxPay += ((taxHoursFromRow * Number(record.taxRate || 0)) * (1 - ESTIMATED_TAX_RATE)) * 1.12;
-                        
-                        globalDailyTotals[i] += totalHoursFromRow; 
-                        staffTotalHours += totalHoursFromRow;
+                        sCashH += record.cashHours;
+                        sTaxH += (record.totalHours - record.cashHours);
+                        sCashP += (record.cashHours * record.cashRate);
+                        sTaxP += (((record.totalHours - record.cashHours) * record.taxRate) * (1 - ESTIMATED_TAX_RATE)) * 1.12;
+                        globalDailyTotals[i] += record.totalHours;
+                        sTotalH += record.totalHours;
                     } else {
                         staffRowHtml += `<td class="p-0.5 text-center text-gray-300 border-r">—</td>`;
                     }
                 }
 
-                macroTotals.cashH += staffCashH; 
-                macroTotals.taxH += staffTaxH;
-                macroTotals.cashPayout += staffCashPay; 
-                macroTotals.taxPayout += staffTaxPay;
-                macroTotals.globalHours += staffTotalHours;
+                macroTotals.cashH += sCashH; macroTotals.taxH += sTaxH;
+                macroTotals.cashPayout += sCashP; macroTotals.taxPayout += sTaxP;
+                macroTotals.globalHours += sTotalH;
 
                 if (!isShareModeActive) {
-                    staffRowHtml += `
-                        <td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${staffTaxH > 0 ? staffTaxH.toFixed(1) : '—'}</td>
-                        <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${staffCashH > 0 ? staffCashH.toFixed(1) : '—'}</td>
-                        <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${staffCashPay > 0 ? staffCashPay.toFixed(0) : '—'}</td>
-                        <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${staffTaxPay > 0 ? staffTaxPay.toFixed(0) : '—'}</td>`;
+                    staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${sTaxH > 0 ? sTaxH.toFixed(1) : '—'}</td>
+                                     <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${sCashH > 0 ? sCashH.toFixed(1) : '—'}</td>
+                                     <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${sCashP > 0 ? sCashP.toFixed(0) : '—'}</td>
+                                     <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${sTaxP > 0 ? sTaxP.toFixed(0) : '—'}</td>`;
                 }
                 tbodyHtml += `<tr>${staffRowHtml}</tr>`;
             });
 
-            tableBody.innerHTML = tbodyHtml;
+            document.getElementById('weeklyTableBody').innerHTML = tbodyHtml;
             document.getElementById('grandTotalHoursHeader').innerText = macroTotals.globalHours.toFixed(1);
-
+            
             let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
-            globalDailyTotals.forEach(dayTotal => { tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${dayTotal > 0 ? dayTotal.toFixed(1) : '—'}</td>`; });
-            tfootHtml += `
-                <td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
-                <td class="text-center bg-emerald-100 text-emerald-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
-                <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
-                <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
-            tableFoot.innerHTML = tfootHtml;
+            globalDailyTotals.forEach(d => tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${d > 0 ? d.toFixed(1) : '—'}</td>`);
+            tfootHtml += `<td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
+                          <td class="text-center bg-emerald-100 text-emerald-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
+                          <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
+                          <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
+            document.getElementById('weeklyTableFoot').innerHTML = tfootHtml;
         }
 
         loadCloudData();
