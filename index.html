@@ -6,33 +6,11 @@
     <title>Anatolya Kebabs Weekly Roster</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        input[type="time"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            min-height: 40px;
-        }
-        .roster-share-active #mainTitle {
-            text-align: center;
-            width: 100%;
-            font-size: 1.25rem;
-        }
-        .roster-share-active .hide-on-share {
-            display: none !important;
-        }
-        .roster-share-active #weekRangeContainer {
-            justify-content: center !important;
-            text-align: center !important;
-            margin-left: auto;
-            margin-right: auto;
-            background-color: transparent !important;
-            border: none !important;
-            font-size: 13px !important;
-        }
-        .roster-share-active th {
-            background-color: #4b5563 !important;
-            color: #ffffff !important;
-        }
+        input[type="time"] { -webkit-appearance: none; -moz-appearance: none; appearance: none; min-height: 40px; }
+        .roster-share-active #mainTitle { text-align: center; width: 100%; font-size: 1.25rem; }
+        .roster-share-active .hide-on-share { display: none !important; }
+        .roster-share-active #weekRangeContainer { justify-content: center !important; text-align: center !important; margin-left: auto; margin-right: auto; background-color: transparent !important; border: none !important; font-size: 13px !important; }
+        .roster-share-active th { background-color: #4b5563 !important; color: #ffffff !important; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
@@ -47,7 +25,6 @@
                 <button id="loginButton" type="button" class="hide-on-share bg-red-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     🔐 Login with Google
                 </button>
-
                 <button type="button" id="invoiceSyncBtn" onclick="triggerInvoiceExtraction()" class="hide-on-share bg-amber-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📥 Sync Invoices
                 </button>
@@ -163,58 +140,43 @@
                 </table>
             </div>
         </div>
-
     </div>
 
     <script type="module">
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-        import { 
-        getAuth,
-        GoogleAuthProvider,
-        signInWithPopup,
-        onAuthStateChanged,
-        signOut
-        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-
-
-        // Your web app's Firebase configuration
         const firebaseConfig = {
-        apiKey: "AIzaSyBrgiv5tNep-uYKdDjIWmC50JkiK4v6sAY",
-        authDomain: "anatolya-staff-portal.firebaseapp.com",
-        projectId: "anatolya-staff-portal",
-        storageBucket: "anatolya-staff-portal.firebasestorage.app",
-        messagingSenderId: "813217781129",
-        appId: "1:813217781129:web:7ec29defca0758c7f57d58"
+            apiKey: "AIzaSyBrgiv5tNep-uYKdDjIWmC50JkiK4v6sAY",
+            authDomain: "anatolya-staff-portal.firebaseapp.com",
+            projectId: "anatolya-staff-portal",
+            storageBucket: "anatolya-staff-portal.firebasestorage.app",
+            messagingSenderId: "813217781129",
+            appId: "1:813217781129:web:7ec29defca0758c7f57d58"
         };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-        document.getElementById("loginButton").onclick = async () => {
-            try {
-                await signInWithPopup(auth, provider);
-            } catch(error) {
-                alert(error.message);
-            }
-        };
 
-        onAuthStateChanged(auth, (user)=>{
-            if(user){
-                console.log("Logged in:", user.email);
-                document.getElementById("loginButton").style.display="none";
-                // HERE we will allow your existing Google Sheet loading code to run
+        // 1. Assign internal functions to window so the HTML can find them
+        window.toggleRosterShareMode = toggleRosterShareMode;
+        window.triggerInvoiceExtraction = triggerInvoiceExtraction;
+        window.runAiRosterGeneration = runAiRosterGeneration;
+        window.applyStaffRateDefaults = applyStaffRateDefaults;
+        window.calculateHoursFromTime = calculateHoursFromTime;
+        window.deleteSelectedShift = deleteSelectedShift;
+        window.distributeWeeklyTaxHours = distributeWeeklyTaxHours;
+        window.syncDashboardWeekFilter = syncDashboardWeekFilter;
 
-                const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";
-                const ESTIMATED_TAX_RATE = 0.15; 
-
-                let isShareModeActive = false;
-                const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
-                document.getElementById('filterWeek').value = todayStr;
-                
-                let dataStore = [];
-                let staffRegistry = [];
+        // 2. Core State
+        const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";
+        const ESTIMATED_TAX_RATE = 0.15;
+        let isShareModeActive = false;
+        let dataStore = [];
+        let staffRegistry = [];
+        const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
+        document.getElementById('filterWeek').value = todayStr;
 
                 function toggleRosterShareMode() {
                     const app = document.getElementById('appContainer');
@@ -591,10 +553,14 @@
                     document.getElementById('weeklyTableFoot').innerHTML = tfootHtml;
                 }
 
+        document.getElementById("loginButton").onclick = async () => {
+            try { await signInWithPopup(auth, provider); } catch(error) { alert(error.message); }
+        };
+
+        onAuthStateChanged(auth, (user)=>{
+            if(user){
+                document.getElementById("loginButton").style.display="none";
                 loadCloudData();
-            }
-            else{
-                console.log("Not logged in");
             }
         });
     </script>
