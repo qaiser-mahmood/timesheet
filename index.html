@@ -22,7 +22,7 @@
             </div>
 
             <div class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
-                <button id="loginButton" type="button" class="hide-on-share bg-red-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                <button id="authButton" type="button" class="hide-on-share bg-red-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     🔐 Login with Google
                 </button>
                 <button type="button" id="invoiceSyncBtn" onclick="triggerInvoiceExtraction()" class="hide-on-share bg-amber-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
@@ -144,7 +144,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBrgiv5tNep-uYKdDjIWmC50JkiK4v6sAY",
@@ -578,14 +578,34 @@
                     document.getElementById('weeklyTableFoot').innerHTML = tfootHtml;
                 }
 
-        document.getElementById("loginButton").onclick = async () => {
-            try { await signInWithPopup(auth, provider); } catch(error) { alert(error.message); }
+        document.getElementById("authButton").onclick = async () => {
+            const user = auth.currentUser;
+            if (user) {
+                // Logout
+                try {
+                    await signOut(auth);
+                } catch(error) {
+                    alert(error.message);
+                }
+            } else {
+                // Login
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch(error) {
+                    alert(error.message);
+                }
+            }
         };
 
         onAuthStateChanged(auth, (user)=>{
             if(user){
-                document.getElementById("loginButton").style.display="none";
+                document.getElementById("authButton").innerHTML = "🚪 Logout";
                 loadCloudData();
+            }else{
+
+                console.log("Not logged in");
+                document.getElementById("authButton").innerHTML = "🔐 Login with Google";
+
             }
         });
     </script>
