@@ -1,8 +1,10 @@
 function doPost(e) {
   var JSON_STRING_REPLY;
-  // Your Gemini API key remains securely placed here
-  var GEMINI_API_KEY = "AQ.Ab8RN6L0cH9G0uhwn6kcJwXWjyy0D5bGgDkPPsb_BesxEoY-Fg";
-  
+  // Gemini API key provided
+  const apiKey = PropertiesService
+  .getScriptProperties()
+  .getProperty("GEMINI_API_KEY");
+    
   try {
     var requestData = JSON.parse(e.postData.contents);
     var targetSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Roster");
@@ -44,7 +46,8 @@ function doPost(e) {
             dynamicStaff.push({
               name: staffRows[j][0].toString().trim(),
               cashRate: staffRows[j][1] || 25.00,
-              taxRate: staffRows[j][2] || 30.00
+              taxRate: staffRows[j][2] || 30.00,
+              status: staffRows[j][3] // Assuming column 4 is status
             });
           }
         }
@@ -90,22 +93,29 @@ function doPost(e) {
       JSON_STRING_REPLY = JSON.stringify({ status: "deleted" });
     }
 
-    // ACTION 4: AI SMART AUTO-ROSTER VIA GEMINI FREE API
+
+    // ACTION 4: AI SMART AUTO-ROSTER (WITH ACTIVE STAFF FILTER)
     if (requestData.action === "ai_generate") {
       var targetWeekMonday = requestData.targetWeekMonday;
+      
+      var activeStaffNames = [];
+      if (staffSheet) {
+        var sRows = staffSheet.getDataRange().getValues();
+        for(var z=1; z<sRows.length; z++) {
+          var status = sRows[z][3] ? sRows[z][3].toString().toLowerCase() : "";
+          if(sRows[z][0] && status !== "inactive") {
+            activeStaffNames.push(sRows[z][0].toString().trim());
+          }
+        }
+      }
+
       var historyLogs = [];
       if (targetSheet) {
         var historicalRows = targetSheet.getDataRange().getDisplayValues();
-        var startIdx = Math.max(1, historicalRows.length - 60);
+        var startIdx = Math.max(1, historicalRows.length - 40);
         for (var h = startIdx; h < historicalRows.length; h++) {
-          if (historicalRows[h][2] && historicalRows[h][0] && historicalRows[h][0].trim() !== "") {
-            var dayOfWeekName = "ShortDay";
-            try {
-              dayOfWeekName = new Date(historicalRows[h][0]).toLocaleDateString('en-US', {weekday: 'short'});
-            } catch(e) {}
-            
-            historyLogs.push({
-              dayName: dayOfWeekName,
+          if (historicalRows[h][2] && historicalRows[h][0]) {
+             historyLogs.push({
               name: historicalRows[h][2].trim(),
               from: historicalRows[h][3],
               to: historicalRows[h][4]
@@ -114,82 +124,68 @@ function doPost(e) {
         }
       }
 
-      var aiSystemInstruction = "You are an expert roster manager for Anatolya Kebabs shop. Analyze past patterns (which employee works which days, standard start/end times like 9:30a-5:00p, Thursday lates, Saturday early starts) and create a realistic roster forecast for the target week. Return standard ISO date configurations inside a raw JSON array matching this exact object format schema: [{\"date\":\"YYYY-MM-DD\",\"name\":\"StaffName\",\"from\":\"HH:MM\",\"to\":\"HH:MM\"}]. Do not wrap the response in markdown code blocks or add text conversation, return pure raw JSON array text.";
-      var aiPrompt = "Historical Shift Patterns:\n" + JSON.stringify(historyLogs) + "\n\nTarget Week Starting Monday: " + targetWeekMonday + "\nGenerate next week's schedule array:";
+      var aiSystemInstruction = 
+  "You are a strict constraint-satisfaction engine. " +
+  "TOTAL WEEKLY HOURS MUST BE BETWEEN 100 AND 102. " +
+  "DAILY LIMIT: Max 2 staff members. " +
+  "DAILY TARGET: 13 man-hours for Mon-Wed and Fri. " +
+  "PRIORITY: Constraints > Historical Patterns. If historical patterns exceed these constraints, IGNORE the history. " +
+  "ACTIVE STAFF ONLY: " + JSON.stringify(activeStaffNames) + ". " +
+  "OUTPUT: Return ONLY raw JSON array of objects: [{\"date\":\"YYYY-MM-DD\",\"name\":\"Name\",\"from\":\"HH:MM\",\"to\":\"HH:MM\"}].. No markdown, no filler.";
+
+
+      var aiPrompt = "Patterns: " + JSON.stringify(historyLogs) + "\nTarget Monday: " + targetWeekMonday;
       
-      var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + GEMINI_API_KEY;
-      
-      var payloadData = {
-        "contents": [{ "parts": [{ "text": aiSystemInstruction + "\n\n" + aiPrompt }] }],
-        "generationConfig": { "responseMimeType": "application/json" }
-      };
-      var options = {
+      var endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+      var response = UrlFetchApp.fetch(endpoint, {
         "method": "POST",
         "contentType": "application/json",
-        "payload": JSON.stringify(payloadData),
+        "payload": JSON.stringify({
+          "contents": [{ "parts": [{ "text": aiSystemInstruction + "\n" + aiPrompt }] }],
+          "generationConfig": { "responseMimeType": "application/json", 
+                                "temperature": 0.0, // Force deterministic, strict adherence
+                                "topP": 0.95 }
+        }),
         "muteHttpExceptions": true
-      };
+      });
       
-      var response = UrlFetchApp.fetch(endpoint, options);
-      var responseText = response.getContentText();
-      var parsedResponse = JSON.parse(responseText);
+      var responseObj = JSON.parse(response.getContentText());
       
-      if (!parsedResponse.candidates || parsedResponse.candidates.length === 0) {
-        throw new Error("Gemini API returned an empty or error response: " + responseText);
+      // Error Handling: Check if responseObj and candidates exist
+      if (!responseObj.candidates || responseObj.candidates.length === 0 || !responseObj.candidates[0].content) {
+        throw new Error("AI returned empty response or block: " + response.getContentText());
       }
       
-      var aiCleanTextResult = parsedResponse.candidates[0].content.parts[0].text;
-      aiCleanTextResult = aiCleanTextResult.replace(/```json/gi, "").replace(/```/g, "").trim();
-      
-      var draftedShiftsArray = JSON.parse(aiCleanTextResult);
+      var aiCleanTextResult = responseObj.candidates[0].content.parts[0].text;
+      var draftedShiftsArray = JSON.parse(aiCleanTextResult.replace(/```json/gi, "").replace(/```/g, ""));
 
       if (targetSheet && Array.isArray(draftedShiftsArray)) {
         draftedShiftsArray.forEach(function(s) {
-          if (!s.date || !s.name || !s.from || !s.to) return;
+          if (!s.name || !activeStaffNames.includes(s.name.trim())) return; 
           
-          var staffRateCash = 25.00, staffRateTax = 30.00;
-          if (staffSheet) {
-             var sRows = staffSheet.getDataRange().getValues();
-             for(var z=1; z<sRows.length; z++) {
-                if(sRows[z][0] && sRows[z][0].toString().trim() === s.name.trim()) {
-                   staffRateCash = Number(sRows[z][1]) || 25.00;
-                   staffRateTax = Number(sRows[z][2]) || 30.00;
-                   break;
-                }
-             }
-          }
-
           var startSplit = s.from.split(':').map(Number);
           var endSplit = s.to.split(':').map(Number);
-          var minDiff = (endSplit[0]*60 + endSplit[1]) - (startSplit[0]*60 + startSplit[1]);
-          if (minDiff < 0) minDiff += 24*60;
+          var totalHrs = ((endSplit[0]*60 + endSplit[1]) - (startSplit[0]*60 + startSplit[1])) / 60;
           
-          var totalHrs = (minDiff / 60);
-
-          targetSheet.appendRow([s.date, targetWeekMonday, s.name.trim(), s.from, s.to, staffRateCash, staffRateTax, totalHrs, 0, totalHrs]);
+          targetSheet.appendRow([s.date, targetWeekMonday, s.name.trim(), s.from, s.to, 25.00, 30.00, totalHrs, 0, totalHrs]);
         });
       }
-
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: draftedShiftsArray.length });
     }
 
-    // ACTION 5: EMAIL INVOICE EXTRACTION ENGINE (UPDATED WITH REGISTRY LOOKUP)
+    // ACTION 5: EMAIL INVOICE EXTRACTION
     if (requestData.action === "extract_invoices") {
-      var countProcessed = processGmailInvoicesEngine(GEMINI_API_KEY);
+      var countProcessed = processGmailInvoicesEngine(apiKey);
       JSON_STRING_REPLY = JSON.stringify({ status: "success", processed: countProcessed });
     }
     
   } catch (error) {
     JSON_STRING_REPLY = JSON.stringify({ status: "error", message: error.toString() });
   }
-  
   return ContentService.createTextOutput(JSON_STRING_REPLY).setMimeType(ContentService.MimeType.JSON);
 }
 
 function processGmailInvoicesEngine(apiKey) {
-  if (!apiKey || apiKey === "") {
-    apiKey = "AQ.Ab8RN6L0cH9G0uhwn6kcJwXWjyy0D5bGgDkPPsb_BesxEoY-Fg"; // <-- Ensure your fresh key is here
-  }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var invoiceSheet = ss.getSheetByName("Invoices");
