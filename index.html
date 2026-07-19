@@ -598,14 +598,14 @@
         };
 
         onAuthStateChanged(auth, (user)=>{
+            const authButton = document.getElementById("authButton");
             if(user){
-                document.getElementById("authButton").innerHTML = "🚪 Logout";
+                console.log(user.email);
+                authButton.innerHTML = "🚪 Logout";
                 loadCloudData();
             }else{
-
                 console.log("Not logged in");
-                document.getElementById("authButton").innerHTML = "🔐 Login with Google";
-
+                authButton.innerHTML = "🔐 Login with Google";
             }
         });
     </script>
