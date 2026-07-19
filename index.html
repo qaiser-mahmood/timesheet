@@ -179,6 +179,11 @@
         document.getElementById('filterWeek').value = todayStr;
 
                 function toggleRosterShareMode() {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        alert("Please login first to use this feature.");
+                        return; // Stop execution if not logged in
+                    }
                     const app = document.getElementById('appContainer');
                     const title = document.getElementById('mainTitle');
                     const btn = document.getElementById('shareModeBtn');
@@ -207,6 +212,12 @@
                 }
 
                 async function loadCloudData() {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        alert("Please login first to use this feature.");
+                        return; // Stop execution if not logged in
+                    }
+
                     try {
                         const res = await fetch(SHEET_API_URL, {
                             method: "POST",
@@ -240,6 +251,11 @@
                 }
 
                 async function triggerInvoiceExtraction() {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        alert("Please login first to use this feature.");
+                        return; // Stop execution if not logged in
+                    }
                     const btn = document.getElementById('invoiceSyncBtn');
                     btn.innerText = "⏳ Extracting...";
                     btn.disabled = true;
@@ -263,6 +279,11 @@
                 }
 
                 async function runAiRosterGeneration() {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        alert("Please login first to use this feature.");
+                        return; // Stop execution if not logged in
+                    }
                     const filterWeekVal = document.getElementById('filterWeek').value;
                     if(!filterWeekVal) return alert("Select a date context first.");
                     const activeMonStr = getMondayString(filterWeekVal);
@@ -294,6 +315,10 @@
                 }
 
                 function populateStaffDropdowns() {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        return; // Stop execution if not logged in
+                    }
                     const picker = document.getElementById('staffName');
                     const bulkPicker = document.getElementById('bulkStaffName');
                     const previouslySelectedStaff = picker.value;
