@@ -314,10 +314,6 @@
                 }
 
                 function populateStaffDropdowns() {
-                    const user = auth.currentUser;
-                    if (!user) {
-                        return; // Stop execution if not logged in
-                    }
                     const picker = document.getElementById('staffName');
                     const bulkPicker = document.getElementById('bulkStaffName');
                     const previouslySelectedStaff = picker.value;
@@ -607,6 +603,7 @@
                 staffRegistry = [];
                 // Clear tables / displayed data
                 document.getElementById("rosterTable").innerHTML = "";
+                populateStaffDropdowns();
                 console.log("Not logged in");
                 authButton.innerHTML = "🔐 Login with Google";
             }
