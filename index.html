@@ -603,7 +603,7 @@
                 dataStore = [];
                 staffRegistry = [];
                 // Clear tables / displayed data
-                document.getElementById("rosterTable").innerHTML = "";
+                document.querySelector("#rosterTable tbody").innerHTML = "";
                 populateStaffDropdowns();
                 console.log("Not logged in");
                 authButton.innerHTML = "🔐 Login with Google";
