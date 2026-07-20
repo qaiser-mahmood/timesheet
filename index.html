@@ -604,6 +604,7 @@
                 staffRegistry = [];
                 // Clear tables / displayed data
                 document.querySelector("#rosterTable tbody").innerHTML = "";
+                document.querySelector("tfoot").innerHTML = "";
                 populateStaffDropdowns();
                 console.log("Not logged in");
                 authButton.innerHTML = "🔐 Login with Google";
