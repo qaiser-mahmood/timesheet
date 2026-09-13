@@ -111,7 +111,7 @@
                 <span id="weekRangeDisplay" class="font-bold text-blue-950 mx-auto">-</span>
                 <div class="hide-on-share flex items-center gap-1.5 flex-wrap">
                     <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
-                    <span class="bg-emerald-700 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Paid: $<span id="grandTotalPayoutHeader">0</span> ($<span id="totalCashPayoutHeader">0</span> cash + $<span id="totalTaxPayoutHeader">0</span> tax)</span>
+                    <span class="bg-emerald-700 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Paid: $<span id="grandTotalPayoutHeader">0</span></span>
                 </div>
             </div>
             
@@ -616,10 +616,6 @@
     const totalPayout = macroTotals.cashPayout + macroTotals.taxPayout;
     const payoutEl = document.getElementById('grandTotalPayoutHeader');
     if (payoutEl) payoutEl.innerText = Math.round(totalPayout).toLocaleString();
-    const cashEl = document.getElementById('totalCashPayoutHeader');
-    if (cashEl) cashEl.innerText = Math.round(macroTotals.cashPayout).toLocaleString();
-    const taxEl = document.getElementById('totalTaxPayoutHeader');
-    if (taxEl) taxEl.innerText = Math.round(macroTotals.taxPayout).toLocaleString();
     
     let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
     globalDailyTotals.forEach(d => tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${d > 0 ? d.toFixed(1) : '—'}</td>`);
