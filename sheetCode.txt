@@ -54,10 +54,20 @@ function doPost(e) {
         var staffRows = staffSheet.getDataRange().getValues();
         for (var j = 1; j < staffRows.length; j++) {
           if (staffRows[j][0]) {
+            var sName = staffRows[j][0].toString().trim();
+            var rawCash = staffRows[j][1];
+            var rawTax = staffRows[j][2];
+            var isOwner = (sName.toLowerCase() === "qaiser");
+            
+            var cRate = (isOwner || rawCash === 0 || rawCash === "0") ? 0 : 
+                        (rawCash !== "" && rawCash !== null && !isNaN(rawCash) ? Number(rawCash) : 25.00);
+            var tRate = (isOwner || rawTax === 0 || rawTax === "0") ? 0 : 
+                        (rawTax !== "" && rawTax !== null && !isNaN(rawTax) ? Number(rawTax) : 30.00);
+
             dynamicStaff.push({
-              name: staffRows[j][0].toString().trim(),
-              cashRate: staffRows[j][1] || 25.00,
-              taxRate: staffRows[j][2] || 30.00,
+              name: sName,
+              cashRate: cRate,
+              taxRate: tRate,
               status: staffRows[j][3] // Assuming column 4 is status
             });
           }

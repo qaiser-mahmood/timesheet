@@ -256,6 +256,11 @@
                         if (responseObj.staff && Array.isArray(responseObj.staff)) {
                             staffRegistry = responseObj.staff.map(s => {
                                 if (s.name) s.name = s.name.toString().trim();
+                                const isOwner = (s.name && s.name.toLowerCase() === 'qaiser');
+                                s.cashRate = (isOwner || s.cashRate === 0 || s.cashRate === '0') ? 0 : 
+                                    (s.cashRate !== undefined && s.cashRate !== null && !isNaN(s.cashRate) ? Number(s.cashRate) : 25.00);
+                                s.taxRate = (isOwner || s.taxRate === 0 || s.taxRate === '0') ? 0 : 
+                                    (s.taxRate !== undefined && s.taxRate !== null && !isNaN(s.taxRate) ? Number(s.taxRate) : 30.00);
                                 return s;
                             });
                             populateStaffDropdowns();
@@ -265,6 +270,12 @@
                                 if (log.name) log.name = log.name.toString().trim();
                                 if (log.date) log.date = cleanDateStr(log.date);
                                 if (log.weekCommencing) log.weekCommencing = cleanDateStr(log.weekCommencing);
+                                
+                                const isOwner = (log.name && log.name.toLowerCase() === 'qaiser');
+                                if (isOwner) {
+                                    log.cashRate = 0;
+                                    log.taxRate = 0;
+                                }
                                 
                                 log.totalHours = log.totalHours ? parseFloat(log.totalHours) : 0;
                                 log.cashHours = log.cashHours !== undefined ? parseFloat(log.cashHours) : 0;
@@ -392,8 +403,11 @@
                     const currentSelected = document.getElementById('staffName').value;
                     const staffObj = staffRegistry.find(p => p.name === currentSelected);
                     if (staffObj) {
-                        document.getElementById('payRate').value = parseFloat(staffObj.cashRate || 0).toFixed(2);
-                        document.getElementById('taxPayRate').value = parseFloat(staffObj.taxRate || 0).toFixed(2);
+                        const isOwner = (staffObj.name && staffObj.name.toLowerCase().trim() === 'qaiser');
+                        const cRate = isOwner ? 0 : parseFloat(staffObj.cashRate !== undefined && staffObj.cashRate !== null ? staffObj.cashRate : 0);
+                        const tRate = isOwner ? 0 : parseFloat(staffObj.taxRate !== undefined && staffObj.taxRate !== null ? staffObj.taxRate : 0);
+                        document.getElementById('payRate').value = cRate.toFixed(2);
+                        document.getElementById('taxPayRate').value = tRate.toFixed(2);
                     }
                 }
 
@@ -505,12 +519,15 @@
                     if (isNaN(total) || !currentStaff) return;
                     const chosenDate = cleanDateStr(document.getElementById('date').value);
 
-                    const matchedPrevious = dataStore.find(entry => cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff);
+                    const isOwner = (currentStaff.toLowerCase().trim() === 'qaiser');
                     const newEntry = {
                         date: chosenDate, weekCommencing: getMondayString(chosenDate), name: currentStaff,
                         from: document.getElementById('startTime').value, to: document.getElementById('endTime').value,
-                        cashRate: parseFloat(document.getElementById('payRate').value), taxRate: parseFloat(document.getElementById('taxPayRate').value),
-                        totalHours: total, cashHours: (matchedPrevious ? matchedPrevious.cashHours : 0), taxHours: (matchedPrevious ? matchedPrevious.taxHours : total)
+                        cashRate: isOwner ? 0 : parseFloat(document.getElementById('payRate').value || 0),
+                        taxRate: isOwner ? 0 : parseFloat(document.getElementById('taxPayRate').value || 0),
+                        totalHours: total,
+                        cashHours: isOwner ? 0 : (matchedPrevious ? matchedPrevious.cashHours : 0),
+                        taxHours: isOwner ? 0 : (matchedPrevious ? matchedPrevious.taxHours : total)
                     };
 
                     dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
@@ -575,7 +592,8 @@
     let tbodyHtml = '';
 
     targetRenderList.forEach(staffName => {
-        let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
+        const isOwner = (staffName.toLowerCase().trim() === 'qaiser');
+        let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}${isOwner ? ' <span class="text-[8px] font-normal text-amber-600 block leading-none">(Owner)</span>' : ''}</td>`;
         let sCashH = 0, sTaxH = 0, sCashP = 0, sTaxP = 0, sTotalH = 0;
 
         for (let i = 0; i < 7; i++) {
@@ -584,29 +602,46 @@
             
             if (record) {
                 staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
-                sCashH += record.cashHours;
-                sTaxH += (record.totalHours - record.cashHours);
-                sCashP += (record.cashHours * record.cashRate);
                 
-                // --- UPDATED TAX PAY CALCULATION ---
-                sTaxP += ((record.totalHours - record.cashHours) * record.taxRate) * 1.12;
+                const recCashRate = isOwner ? 0 : Number(record.cashRate || 0);
+                const recTaxRate = isOwner ? 0 : Number(record.taxRate || 0);
+                const recCashH = isOwner ? 0 : record.cashHours;
+                const recTaxH = isOwner ? 0 : (record.totalHours - record.cashHours);
 
-                globalDailyTotals[i] += record.totalHours;
+                sCashH += recCashH;
+                sTaxH += recTaxH;
+                sCashP += (recCashH * recCashRate);
+                sTaxP += (recTaxH * recTaxRate) * 1.12;
+
+                if (!isOwner) {
+                    globalDailyTotals[i] += record.totalHours;
+                }
                 sTotalH += record.totalHours;
             } else {
                 staffRowHtml += `<td class="p-0.5 text-center text-gray-300 border-r">—</td>`;
             }
         }
 
-        macroTotals.cashH += sCashH; macroTotals.taxH += sTaxH;
-        macroTotals.cashPayout += sCashP; macroTotals.taxPayout += sTaxP;
-        macroTotals.globalHours += sTotalH;
+        if (!isOwner) {
+            macroTotals.cashH += sCashH;
+            macroTotals.taxH += sTaxH;
+            macroTotals.cashPayout += sCashP;
+            macroTotals.taxPayout += sTaxP;
+            macroTotals.globalHours += sTotalH;
+        }
 
         if (!isShareModeActive) {
-            staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${sTaxH > 0 ? sTaxH.toFixed(1) : '—'}</td>
-                            <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${sCashH > 0 ? sCashH.toFixed(1) : '—'}</td>
-                            <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${sCashP > 0 ? sCashP.toFixed(0) : '—'}</td>
-                            <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${sTaxP > 0 ? sTaxP.toFixed(0) : '—'}</td>`;
+            if (isOwner) {
+                staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-gray-400 border-r">—</td>
+                                <td class="text-center font-semibold bg-emerald-50/70 text-gray-400 border-r">—</td>
+                                <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30 border-r">—</td>
+                                <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30">—</td>`;
+            } else {
+                staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${sTaxH > 0 ? sTaxH.toFixed(1) : '—'}</td>
+                                <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${sCashH > 0 ? sCashH.toFixed(1) : '—'}</td>
+                                <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${sCashP > 0 ? sCashP.toFixed(0) : '—'}</td>
+                                <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${sTaxP > 0 ? sTaxP.toFixed(0) : '—'}</td>`;
+            }
         }
         tbodyHtml += `<tr>${staffRowHtml}</tr>`;
     });
