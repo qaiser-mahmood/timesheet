@@ -1,3 +1,7 @@
+function doGet(e) {
+  return doPost(e);
+}
+
 function doPost(e) {
   var JSON_STRING_REPLY;
   // Gemini API key provided
@@ -6,7 +10,18 @@ function doPost(e) {
   .getProperty("GEMINI_API_KEY");
     
   try {
-    var requestData = JSON.parse(e.postData.contents);
+    var requestData = {};
+    if (e && e.postData && e.postData.contents) {
+      try {
+        requestData = JSON.parse(e.postData.contents);
+      } catch (parseErr) {
+        requestData = { action: "get" };
+      }
+    } else if (e && e.parameter && Object.keys(e.parameter).length > 0) {
+      requestData = e.parameter;
+    } else {
+      requestData = { action: "get" };
+    }
     var targetSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Roster");
     var staffSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Staff");
 

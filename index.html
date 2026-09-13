@@ -207,6 +207,40 @@
                     return match ? match[0] : str;
                 }
 
+                async function callSheetApi(payload, retries = 2) {
+                    for (let attempt = 1; attempt <= retries + 1; attempt++) {
+                        try {
+                            const res = await fetch(SHEET_API_URL, {
+                                method: "POST",
+                                headers: { "Content-Type": "text/plain" },
+                                body: JSON.stringify(payload),
+                                redirect: "follow",
+                                credentials: "omit"
+                            });
+
+                            const text = await res.text();
+                            if (!text || text.trim().startsWith("<")) {
+                                if (attempt <= retries) {
+                                    console.warn(`Attempt ${attempt} received HTML from Google Apps Script. Retrying in 1.5s...`);
+                                    await new Promise(resolve => setTimeout(resolve, 1500));
+                                    continue;
+                                }
+                                console.error("Non-JSON response from Google Apps Script:", text);
+                                throw new Error("Received HTML from Google Apps Script instead of JSON. If you are signed into multiple Google accounts, please try in an incognito window or verify that the Google Apps Script Web App is deployed with access set to 'Anyone'.");
+                            }
+
+                            return JSON.parse(text);
+                        } catch (err) {
+                            if (attempt <= retries && !err.message.includes("multiple Google accounts")) {
+                                console.warn(`callSheetApi attempt ${attempt} error: ${err.message}. Retrying...`);
+                                await new Promise(resolve => setTimeout(resolve, 1500));
+                                continue;
+                            }
+                            throw err;
+                        }
+                    }
+                }
+
                 async function loadCloudData() {
                     const user = auth.currentUser;
                     if (!user) {
@@ -214,12 +248,7 @@
                     }
 
                     try {
-                        const res = await fetch(SHEET_API_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "text/plain" },
-                            body: JSON.stringify({ action: "get" })
-                        });
-                        const responseObj = await res.json();
+                        const responseObj = await callSheetApi({ action: "get" });
                         
                         if (responseObj.staff && Array.isArray(responseObj.staff)) {
                             staffRegistry = responseObj.staff.map(s => {
@@ -240,7 +269,10 @@
                                 return log;
                             });
                         }
-                    } catch (e) { console.error(e); }
+                    } catch (e) {
+                        console.error("loadCloudData error:", e);
+                        alert(e.message || "Failed to load timesheet data.");
+                    }
                     renderWeeklyTable();
                     generateDaySelectors();
                 }
@@ -263,19 +295,14 @@
                     btn.disabled = true;
 
                     try {
-                        const res = await fetch(SHEET_API_URL, {
-                            method: "POST",
-                            headers: { "Content-Type": "text/plain" },
-                            body: JSON.stringify({ action: "ai_generate", targetWeekMonday: activeMonStr })
-                        });
-                        const responseObj = await res.json();
+                        const responseObj = await callSheetApi({ action: "ai_generate", targetWeekMonday: activeMonStr });
                         if(responseObj.status === "success") {
                             alert(`Success! Generated ${responseObj.count} predicted slots.`);
                         } else {
                             alert("Error: " + responseObj.message);
                         }
                     } catch(e) {
-                        alert("Connection failed.");
+                        alert(e.message || "Connection failed.");
                     }
                     btn.innerText = "✨ AI Auto-Fill Week";
                     btn.disabled = false;
@@ -390,7 +417,7 @@
                     }
                     renderWeeklyTable();
                     for (let updatedShift of currentWeekShifts) {
-                        try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: updatedShift }) }); } catch(e){}
+                        try { await callSheetApi({ action: "save", entry: updatedShift }); } catch(e){ console.error(e); }
                     }
                     loadCloudData();
                 }
@@ -437,7 +464,7 @@
                     dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
                     dataStore.push(newEntry);
                     renderWeeklyTable();
-                    try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "save", entry: newEntry }) }); } catch (err) {}
+                    try { await callSheetApi({ action: "save", entry: newEntry }); } catch (err) { console.error(err); }
                     loadCloudData();
                 });
 
@@ -447,7 +474,7 @@
                     if (!chosenDate || !currentStaff || !confirm(`Delete record?`)) return;
                     dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
                     renderWeeklyTable();
-                    try { await fetch(SHEET_API_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action: "delete", date: chosenDate, name: currentStaff }) }); } catch (err) {}
+                    try { await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff }); } catch (err) { console.error(err); }
                     loadCloudData();
                 }
 
