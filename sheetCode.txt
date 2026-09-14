@@ -73,7 +73,31 @@ function doPost(e) {
           }
         }
       }
-      JSON_STRING_REPLY = JSON.stringify({ logs: logs, staff: dynamicStaff });
+      var salesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("HourlySales");
+      var salesData = [];
+      if (salesSheet) {
+        var salesRows = salesSheet.getDataRange().getDisplayValues();
+        for (var s = 1; s < salesRows.length; s++) {
+          if (salesRows[s][0]) {
+            var cleanSalesDate = salesRows[s][0];
+            if (cleanSalesDate.includes('/')) {
+              try { cleanSalesDate = new Date(salesRows[s][0]).toISOString().split('T')[0]; } catch(e){}
+            }
+            var parsedHourly = {};
+            try {
+              parsedHourly = JSON.parse(salesRows[s][2]);
+            } catch(e){}
+            salesData.push({
+              date: cleanSalesDate,
+              totalSales: Number(salesRows[s][1]) || 0,
+              hourly: parsedHourly,
+              updatedAt: salesRows[s][3] || ""
+            });
+          }
+        }
+      }
+
+      JSON_STRING_REPLY = JSON.stringify({ logs: logs, staff: dynamicStaff, sales: salesData });
     }
     
     // ACTION 2: SAVE ENTRY
@@ -183,6 +207,36 @@ function doPost(e) {
         }
       }
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: copiedCount });
+    }
+
+    // ACTION 5: SAVE HOURLY SALES
+    if (requestData.action === "save_hourly_sales") {
+      var salesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("HourlySales");
+      if (!salesSheet) {
+        salesSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("HourlySales");
+        salesSheet.appendRow(["Date", "Total Sales", "Hourly JSON", "Last Updated"]);
+      }
+      var sDate = requestData.date;
+      var sTotal = Number(requestData.totalSales) || 0;
+      var sHourlyJson = typeof requestData.hourly === "string" ? requestData.hourly : JSON.stringify(requestData.hourly || {});
+      var sUpdated = new Date().toISOString();
+
+      var existingSalesRows = salesSheet.getDataRange().getDisplayValues();
+      var targetRow = -1;
+      for (var r = 1; r < existingSalesRows.length; r++) {
+        if (existingSalesRows[r][0] === sDate) {
+          targetRow = r + 1;
+          break;
+        }
+      }
+
+      var salesPayload = [sDate, sTotal, sHourlyJson, sUpdated];
+      if (targetRow !== -1) {
+        salesSheet.getRange(targetRow, 1, 1, 4).setValues([salesPayload]);
+      } else {
+        salesSheet.appendRow(salesPayload);
+      }
+      JSON_STRING_REPLY = JSON.stringify({ status: "success", date: sDate, totalSales: sTotal });
     }
 
     

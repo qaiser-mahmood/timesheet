@@ -28,6 +28,9 @@
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Previous Week
                 </button>
+                <button type="button" id="eposSyncBtn" onclick="openEposModal()" class="hide-on-share bg-purple-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-purple-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    ⚡ Epos Sales
+                </button>
                 <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     👁️ View Roster
                 </button>
@@ -140,6 +143,99 @@
                 </table>
             </div>
         </div>
+
+        <!-- Hourly Sales vs Roster Alignment (Hide on Share) -->
+        <div id="hourlySalesSection" class="hide-on-share bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-4 space-y-3 shadow-md">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1">
+                        📊 Hourly Sales & Staff Alignment
+                    </span>
+                    <span id="salesSelectedDayBadge" class="bg-purple-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                        -
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <button type="button" onclick="openEposModal()" class="text-[10px] bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm">
+                        ⚡ Setup / Sync Epos
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary KPI Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</div>
+                    <div id="kpiSalesTotal" class="text-sm sm:text-base font-extrabold text-emerald-400">$0.00</div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
+                    <div id="kpiWagesTotal" class="text-sm sm:text-base font-extrabold text-blue-400">$0.00</div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Labor Cost %</div>
+                    <div id="kpiLaborPercent" class="text-sm sm:text-base font-extrabold text-slate-400">—</div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
+                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Peak Sales Hour</div>
+                    <div id="kpiPeakHour" class="text-sm sm:text-base font-extrabold text-purple-300">—</div>
+                </div>
+            </div>
+
+            <!-- Visual Bar Chart -->
+            <div id="hourlyChartContainer" class="space-y-1 pt-1">
+                <!-- Dynamically populated bars -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Epos Bookmarklet & Import Modal -->
+    <div id="eposModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-6 space-y-4">
+            <div class="flex items-center justify-between border-b pb-3">
+                <h3 class="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-1.5">
+                    ⚡ Epos Now Sales Sync
+                </h3>
+                <button type="button" onclick="closeEposModal()" class="text-gray-400 hover:text-gray-700 text-lg font-bold">✕</button>
+            </div>
+
+            <!-- Bookmarklet Instructions -->
+            <div class="space-y-2.5 text-xs text-gray-700">
+                <div class="font-bold text-purple-900 bg-purple-50 p-2.5 rounded-lg border border-purple-200">
+                    📱 <b>Safari Bookmarklet (iPhone & Desktop)</b>: Syncs hourly sales straight from Epos Now with 1 tap.
+                </div>
+                
+                <ol class="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed pl-1 text-gray-600">
+                    <li>Tap the button below to copy the Bookmarklet Code.</li>
+                    <li>In Safari, bookmark any page (tap Share ➔ <b>Add Bookmark</b> ➔ name it <b>⚡ Sync Epos</b>).</li>
+                    <li>Tap Safari Bookmarks ➔ <b>Edit</b> ➔ tap <b>⚡ Sync Epos</b> ➔ delete the URL and paste the copied code ➔ tap <b>Done</b>.</li>
+                    <li>Whenever you're on your Epos Now <b>Transactions</b> page in Safari, just tap that bookmark!</li>
+                </ol>
+
+                <div class="pt-1">
+                    <button type="button" id="copyBookmarkletBtn" onclick="copyBookmarkletCode()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5">
+                        📋 Copy Safari Bookmarklet Code
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-gray-200"></div>
+                <span class="flex-shrink mx-2 text-[10px] text-gray-400 uppercase font-bold">Or</span>
+                <div class="flex-grow border-t border-gray-200"></div>
+            </div>
+
+            <!-- Manual CSV Upload fallback -->
+            <div class="space-y-2">
+                <label class="block text-[11px] font-bold text-gray-700 uppercase">📁 Upload Downloaded Transactions CSV</label>
+                <input type="file" id="eposCsvFileInput" accept=".csv" onchange="handleEposCsvFileSelect(event)" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer border border-gray-200 rounded-md p-1">
+                <div id="csvUploadStatus" class="text-[10px] text-gray-500 italic">Select any Epos Now transactions CSV file to sync.</div>
+            </div>
+
+            <div class="pt-2 border-t flex justify-end">
+                <button type="button" onclick="closeEposModal()" class="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs font-bold rounded-md transition">Close</button>
+            </div>
+        </div>
     </div>
 
     <script type="module">
@@ -167,6 +263,10 @@
         window.deleteSelectedShift = deleteSelectedShift;
         window.distributeWeeklyTaxHours = distributeWeeklyTaxHours;
         window.syncDashboardWeekFilter = syncDashboardWeekFilter;
+        window.openEposModal = openEposModal;
+        window.closeEposModal = closeEposModal;
+        window.copyBookmarkletCode = copyBookmarkletCode;
+        window.handleEposCsvFileSelect = handleEposCsvFileSelect;
 
         // 2. Core State
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";
@@ -174,6 +274,7 @@
         let isShareModeActive = false;
         let dataStore = [];
         let staffRegistry = [];
+        let hourlySalesStore = [];
         const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
         document.getElementById('filterWeek').value = todayStr;
 
@@ -283,12 +384,23 @@
                                 return log;
                             });
                         }
+                        if (responseObj.sales && Array.isArray(responseObj.sales)) {
+                            hourlySalesStore = responseObj.sales.map(s => {
+                                if (s.date) s.date = cleanDateStr(s.date);
+                                s.totalSales = Number(s.totalSales) || 0;
+                                if (typeof s.hourly === 'string') {
+                                    try { s.hourly = JSON.parse(s.hourly); } catch(e) { s.hourly = {}; }
+                                }
+                                return s;
+                            });
+                        }
                     } catch (e) {
                         console.error("loadCloudData error:", e);
                         alert(e.message || "Failed to load timesheet data.");
                     }
                     renderWeeklyTable();
                     generateDaySelectors();
+                    renderHourlySalesView();
                 }
 
 
@@ -451,6 +563,7 @@
                         }
                     }
                     applyDefaultShiftTimes();
+                    renderHourlySalesView(targetIsoDate);
                 }
 
                 function syncDashboardWeekFilter() {
@@ -659,7 +772,386 @@
                 <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
                 <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
     document.getElementById('weeklyTableFoot').innerHTML = tfootHtml;
+    renderHourlySalesView();
 }
+
+        function openEposModal() {
+            const user = auth.currentUser;
+            if (!user) {
+                alert("Please login first to use this feature.");
+                return;
+            }
+            const modal = document.getElementById('eposModal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeEposModal() {
+            const modal = document.getElementById('eposModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function copyBookmarkletCode() {
+            const bookmarkletCode = `javascript:(async function(){const S="https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";const b=document.createElement('div');b.style.position='fixed';b.style.top='16px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='14px 22px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 25px rgba(0,0,0,0.5)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif';b.style.fontSize='14px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.transition='all 0.3s ease';b.innerHTML='⚡ Scanning Epos Now Sales...';document.body.appendChild(b);function u(m,s,e){b.innerHTML=m;if(s)b.style.backgroundColor='#065f46';if(e)b.style.backgroundColor='#991b1b';}try{let tx=[];const tbls=Array.from(document.querySelectorAll('table'));let tb=null;for(const t of tbls){const txt=t.innerText.toLowerCase();if((txt.includes('date')||txt.includes('time'))&&(txt.includes('amount')||txt.includes('total')||txt.includes('net')||txt.includes('gross')||txt.includes('$')||txt.includes('£'))){tb=t;break;}}if(tb){const rows=Array.from(tb.querySelectorAll('tr'));if(rows.length>1){const ths=Array.from(rows[0].querySelectorAll('th,td')).map(c=>c.innerText.trim().toLowerCase());let di=ths.findIndex(h=>h.includes('date')||h.includes('time')||h.includes('created'));let ai=ths.findIndex(h=>h.includes('total')||h.includes('amount')||h.includes('net')||h.includes('gross')||h.includes('value'));for(let r=1;r<rows.length;r++){const cells=Array.from(rows[r].querySelectorAll('td,th')).map(c=>c.innerText.trim());if(cells.length<2)continue;let ds=di!==-1?cells[di]:'';let as=ai!==-1?cells[ai]:'';if(!ds||!as){for(let c of cells){if(!ds&&(/\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4}/.test(c)||/\\d{4}-\\d{2}-\\d{2}/.test(c)))ds=c;else if(!as&&/[\\$£€]?\\s*-?\\d+[\\.,]\\d{2}/.test(c))as=c;}}if(ds&&as)tx.push({d:ds,a:as});}}}if(tx.length===0){const lines=document.body.innerText.split('\\n');for(let l of lines){const dm=l.match(/(\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4}(?:\\s+\\d{1,2}:\\d{2}(?::\\d{2})?(?:\\s*[APap][Mm])?)?|\\d{4}-\\d{2}-\\d{2}(?:T|\\s+)\\d{1,2}:\\d{2}(?::\\d{2})?)/);const am=l.match(/[\\$£€]\\s*(-?\\d+(?:\\.\\d{2})?)/);if(dm&&am)tx.push({d:dm[1],a:am[1]});}}if(tx.length===0){u('⚠️ No transactions found on this page.<br><span style="font-size:11px;font-weight:normal;">Make sure you are viewing the Epos Now Transactions list.</span>',false,true);setTimeout(()=>b.remove(),5000);return;}let hB={};let dC={};let tot=0;tx.forEach(item=>{let amt=parseFloat(item.a.replace(/[^0-9.-]+/g,''))||0;let iso='';const dm=item.d.match(/(\\d{4})-(\\d{2})-(\\d{2})/);const ddm=item.d.match(/(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})/);if(dm)iso=dm[0];else if(ddm){let dy=ddm[1].padStart(2,'0');let mo=ddm[2].padStart(2,'0');let yr=ddm[3].length===2?'20'+ddm[3]:ddm[3];iso=\`\${yr}-\${mo}-\${dy}\`;}if(iso)dC[iso]=(dC[iso]||0)+1;let hr=null;const tm=item.d.match(/(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([AaPp][Mm])?/);if(tm){let h=parseInt(tm[1],10);const pm=tm[3]&&tm[3].toUpperCase()==='PM';const am=tm[3]&&tm[3].toUpperCase()==='AM';if(pm&&h<12)h+=12;if(am&&h===12)h=0;hr=h;}if(hr!==null){let k=hr.toString().padStart(2,'0')+':00';hB[k]=(hB[k]||0)+amt;tot+=amt;}});let domDate='';let maxC=0;for(let d in dC){if(dC[d]>maxC){maxC=dC[d];domDate=d;}}if(!domDate)domDate=new Date().toISOString().split('T')[0];tot=Math.round(tot*100)/100;for(let k in hB)hB[k]=Math.round(hB[k]*100)/100;u(\`⏳ Syncing $\${tot.toFixed(2)} (\${domDate}) to Timesheet...\`);await fetch(S,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_hourly_sales',date:domDate,totalSales:tot,hourly:hB})});u(\`✅ Synced $\${tot.toFixed(2)} for \${domDate} across \${Object.keys(hB).length} hours!\`,true);setTimeout(()=>b.remove(),4500);}catch(err){u(\`❌ Error: \${err.message}\`,false,true);setTimeout(()=>b.remove(),5000);}})();`;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(bookmarkletCode).then(() => {
+                    showCopyFeedback();
+                }).catch(() => {
+                    fallbackCopy(bookmarkletCode);
+                });
+            } else {
+                fallbackCopy(bookmarkletCode);
+            }
+        }
+
+        function showCopyFeedback() {
+            const btn = document.getElementById('copyBookmarkletBtn');
+            if (btn) {
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✅ Copied to Clipboard!';
+                btn.className = 'w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.className = 'w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5';
+                }, 3000);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showCopyFeedback();
+            } catch (err) {
+                alert("Please copy the bookmarklet code manually.");
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function handleEposCsvFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('csvUploadStatus');
+            if (statusEl) {
+                statusEl.innerText = "Reading file...";
+                statusEl.className = "text-[10px] text-purple-600 font-bold";
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const csvText = e.target.result;
+                    await parseEposCsvAndSave(csvText);
+                } catch(err) {
+                    console.error("CSV parse error:", err);
+                    if (statusEl) {
+                        statusEl.innerText = `❌ Error: ${err.message}`;
+                        statusEl.className = "text-[10px] text-rose-600 font-bold";
+                    }
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function splitCsvRow(row) {
+            let results = [];
+            let cur = '';
+            let inQuotes = false;
+            for (let i = 0; i < row.length; i++) {
+                let c = row[i];
+                if (c === '"') {
+                    inQuotes = !inQuotes;
+                } else if (c === ',' && !inQuotes) {
+                    results.push(cur.trim());
+                    cur = '';
+                } else {
+                    cur += c;
+                }
+            }
+            results.push(cur.trim());
+            return results;
+        }
+
+        async function parseEposCsvAndSave(csvText) {
+            const statusEl = document.getElementById('csvUploadStatus');
+            const lines = csvText.split(/\\r?\\n/).filter(line => line.trim().length > 0);
+            if (lines.length < 2) {
+                throw new Error("CSV file is empty or has only one row.");
+            }
+
+            const headers = splitCsvRow(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+            let dateIdx = headers.findIndex(h => h.includes('date') || h.includes('time') || h.includes('created'));
+            let amtIdx = headers.findIndex(h => h.includes('total') || h.includes('amount') || h.includes('net') || h.includes('gross') || h.includes('subtotal'));
+
+            let hourlyBuckets = {};
+            let dateCounts = {};
+            let totalSales = 0;
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = splitCsvRow(lines[i]);
+                let dateStr = dateIdx !== -1 ? cols[dateIdx] : '';
+                let amtStr = amtIdx !== -1 ? cols[amtIdx] : '';
+
+                if (!dateStr || !amtStr) {
+                    for (let c of cols) {
+                        if (!dateStr && (/\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4}/.test(c) || /\\d{4}-\\d{2}-\\d{2}/.test(c))) {
+                            dateStr = c;
+                        } else if (!amtStr && /[\\$£€]?\\s*-?\\d+[\\.,]\\d{2}/.test(c)) {
+                            amtStr = c;
+                        }
+                    }
+                }
+
+                if (!dateStr || !amtStr) continue;
+
+                let cleanAmt = parseFloat(amtStr.replace(/[^0-9.-]+/g, '')) || 0;
+
+                let isoDate = '';
+                const dm = dateStr.match(/(\\d{4})-(\\d{2})-(\\d{2})/);
+                const ddm = dateStr.match(/(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})/);
+                if (dm) {
+                    isoDate = dm[0];
+                } else if (ddm) {
+                    let day = ddm[1].padStart(2, '0');
+                    let month = ddm[2].padStart(2, '0');
+                    let year = ddm[3].length === 2 ? '20' + ddm[3] : ddm[3];
+                    isoDate = `${year}-${month}-${day}`;
+                }
+
+                if (isoDate) {
+                    dateCounts[isoDate] = (dateCounts[isoDate] || 0) + 1;
+                }
+
+                let hour = null;
+                const tm = dateStr.match(/(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([AaPp][Mm])?/);
+                if (tm) {
+                    let h = parseInt(tm[1], 10);
+                    const isPm = tm[3] && tm[3].toUpperCase() === 'PM';
+                    const isAm = tm[3] && tm[3].toUpperCase() === 'AM';
+                    if (isPm && h < 12) h += 12;
+                    if (isAm && h === 12) h = 0;
+                    hour = h;
+                }
+
+                if (hour !== null) {
+                    let hKey = hour.toString().padStart(2, '0') + ':00';
+                    hourlyBuckets[hKey] = (hourlyBuckets[hKey] || 0) + cleanAmt;
+                    totalSales += cleanAmt;
+                }
+            }
+
+            let dominantDate = '';
+            let maxCnt = 0;
+            for (let d in dateCounts) {
+                if (dateCounts[d] > maxCnt) {
+                    maxCnt = dateCounts[d];
+                    dominantDate = d;
+                }
+            }
+
+            if (!dominantDate) {
+                throw new Error("Could not detect transaction dates in CSV file.");
+            }
+
+            totalSales = Math.round(totalSales * 100) / 100;
+            for (let h in hourlyBuckets) {
+                hourlyBuckets[h] = Math.round(hourlyBuckets[h] * 100) / 100;
+            }
+
+            if (statusEl) {
+                statusEl.innerText = `⏳ Saving $${totalSales.toFixed(2)} (${dominantDate}) to cloud...`;
+                statusEl.className = "text-[10px] text-purple-600 font-bold";
+            }
+
+            await callSheetApi({
+                action: "save_hourly_sales",
+                date: dominantDate,
+                totalSales: totalSales,
+                hourly: hourlyBuckets
+            });
+
+            hourlySalesStore = hourlySalesStore.filter(s => cleanDateStr(s.date) !== dominantDate);
+            hourlySalesStore.push({
+                date: dominantDate,
+                totalSales: totalSales,
+                hourly: hourlyBuckets,
+                updatedAt: new Date().toISOString()
+            });
+
+            if (statusEl) {
+                statusEl.innerText = `✅ Successfully saved $${totalSales.toFixed(2)} for ${dominantDate}!`;
+                statusEl.className = "text-[10px] text-emerald-600 font-bold";
+            }
+
+            selectDayInline(dominantDate);
+        }
+
+        function convertHourStr(hStr) {
+            if (!hStr) return '';
+            let [h] = hStr.split(':').map(Number);
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            let h12 = h % 12 || 12;
+            return `${h12} ${ampm}`;
+        }
+
+        function renderHourlySalesView(targetDate) {
+            if (isShareModeActive) return;
+            
+            if (!targetDate) {
+                targetDate = document.getElementById('date').value;
+            }
+            if (!targetDate) {
+                const filterWeekVal = document.getElementById('filterWeek').value;
+                targetDate = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
+            }
+            targetDate = cleanDateStr(targetDate);
+            
+            const badgeEl = document.getElementById('salesSelectedDayBadge');
+            if (badgeEl) {
+                badgeEl.innerText = formatDisplayDateStr(targetDate);
+            }
+
+            const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === targetDate);
+            const hourlyData = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
+            const totalDaySales = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
+
+            const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to);
+
+            let totalDayLaborCost = 0;
+            dayShifts.forEach(shift => {
+                const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                if (!isOwner) {
+                    const cRate = Number(shift.cashRate) || 0;
+                    const tRate = Number(shift.taxRate) || 0;
+                    const cHours = Number(shift.cashHours) || 0;
+                    const tHours = (shift.taxHours !== undefined && shift.taxHours !== null && shift.taxHours !== '') ? 
+                        Number(shift.taxHours) : (Number(shift.totalHours || 0) - cHours);
+                    totalDayLaborCost += (cHours * cRate) + (tHours * tRate * 1.12);
+                }
+            });
+
+            const kpiSales = document.getElementById('kpiSalesTotal');
+            const kpiWages = document.getElementById('kpiWagesTotal');
+            const kpiLabor = document.getElementById('kpiLaborPercent');
+            const kpiPeak = document.getElementById('kpiPeakHour');
+
+            if (kpiSales) kpiSales.innerText = `$${totalDaySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiWages) kpiWages.innerText = `$${totalDayLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            if (kpiLabor) {
+                if (totalDaySales > 0) {
+                    const laborPct = (totalDayLaborCost / totalDaySales) * 100;
+                    let colorClass = "text-emerald-400";
+                    if (laborPct > 35) colorClass = "text-rose-400";
+                    else if (laborPct >= 30) colorClass = "text-amber-400";
+                    kpiLabor.className = `text-sm sm:text-base font-extrabold ${colorClass}`;
+                    kpiLabor.innerText = `${laborPct.toFixed(1)}%`;
+                } else {
+                    kpiLabor.className = `text-sm sm:text-base font-extrabold text-slate-400`;
+                    kpiLabor.innerText = "—";
+                }
+            }
+
+            let peakHour = "—";
+            let maxHourSale = 0;
+            for (const [hKey, amt] of Object.entries(hourlyData)) {
+                const numAmt = Number(amt) || 0;
+                if (numAmt > maxHourSale) {
+                    maxHourSale = numAmt;
+                    peakHour = `${convertHourStr(hKey)} ($${Math.round(numAmt)})`;
+                }
+            }
+            if (kpiPeak) kpiPeak.innerText = peakHour;
+
+            const container = document.getElementById('hourlyChartContainer');
+            if (!container) return;
+
+            let startHour = 9;
+            let endHour = 22;
+
+            for (const hKey of Object.keys(hourlyData)) {
+                const hNum = parseInt(hKey.split(':')[0], 10);
+                if (!isNaN(hNum)) {
+                    if (hNum < startHour) startHour = Math.max(0, hNum);
+                    if (hNum > endHour) endHour = Math.min(23, hNum);
+                }
+            }
+
+            dayShifts.forEach(shift => {
+                if (shift.from) {
+                    const [sH] = shift.from.split(':').map(Number);
+                    if (!isNaN(sH) && sH < startHour) startHour = Math.max(0, sH);
+                }
+                if (shift.to) {
+                    const [eH] = shift.to.split(':').map(Number);
+                    if (!isNaN(eH) && eH > endHour) endHour = Math.min(23, eH);
+                }
+            });
+
+            const maxSaleForScale = Math.max(maxHourSale, 50);
+
+            let rowsHtml = '';
+            for (let h = startHour; h <= endHour; h++) {
+                const hKey = h.toString().padStart(2, '0') + ':00';
+                const saleAmt = Number(hourlyData[hKey] || 0);
+                const barWidthPct = Math.round((saleAmt / maxSaleForScale) * 100);
+
+                const staffOnShift = dayShifts.filter(shift => {
+                    if (!shift.from || !shift.to) return false;
+                    const [sH, sM] = shift.from.split(':').map(Number);
+                    const [eH, eM] = shift.to.split(':').map(Number);
+                    let sTotal = sH * 60 + sM;
+                    let eTotal = eH * 60 + eM;
+                    if (eTotal < sTotal) eTotal += 24 * 60;
+                    const hStart = h * 60;
+                    const hEnd = (h + 1) * 60;
+                    return (sTotal < hEnd && eTotal > hStart);
+                });
+
+                let staffPills = '';
+                if (staffOnShift.length > 0) {
+                    staffPills = staffOnShift.map(s => {
+                        const isOwner = (s.name && s.name.toLowerCase().trim() === 'qaiser');
+                        const badgeStyle = isOwner ? 
+                            'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 
+                            'bg-sky-500/20 text-sky-300 border border-sky-500/40';
+                        return `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeStyle} whitespace-nowrap">${s.name}</span>`;
+                    }).join('');
+                } else {
+                    staffPills = `<span class="text-[10px] text-slate-500 italic">No staff</span>`;
+                }
+
+                const hourLabel = convertHourStr(hKey);
+
+                rowsHtml += `
+                    <div class="flex items-center gap-2 py-1 border-b border-slate-800/60 last:border-0">
+                        <div class="w-12 shrink-0 text-[11px] font-bold text-slate-300 text-right pr-1">
+                            ${hourLabel}
+                        </div>
+                        <div class="flex-1 bg-slate-800/80 rounded-md h-7 relative flex items-center px-2 overflow-hidden">
+                            ${saleAmt > 0 ? `
+                                <div class="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-600 to-indigo-500 rounded-md opacity-85 transition-all duration-300" style="width: ${Math.max(barWidthPct, 4)}%;"></div>
+                                <span class="relative z-10 text-[11px] font-extrabold text-white drop-shadow-sm">$${saleAmt.toFixed(0)}</span>
+                            ` : `
+                                <span class="relative z-10 text-[10px] text-slate-500 font-semibold">$0</span>
+                            `}
+                        </div>
+                        <div class="w-36 sm:w-52 shrink-0 flex flex-wrap items-center justify-end gap-1 pl-1">
+                            ${staffPills}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = rowsHtml;
+        }
 
         document.getElementById("authButton").onclick = async () => {
             const user = auth.currentUser;
