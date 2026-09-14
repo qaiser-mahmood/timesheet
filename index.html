@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Anatolya Kebabs Weekly Roster</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -212,10 +215,12 @@
                     <li>Whenever you're on your Epos Now <b>Transactions</b> page in Safari, just tap that bookmark!</li>
                 </ol>
 
-                <div class="pt-1">
+                <div class="pt-1 space-y-1.5">
                     <button type="button" id="copyBookmarkletBtn" onclick="copyBookmarkletCode()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5">
-                        📋 Copy Safari Bookmarklet Code
+                        📋 Copy Safari Bookmarklet Code (v1.3)
                     </button>
+                    <div class="text-[10px] text-gray-500 font-semibold">Or tap below to select & copy manually:</div>
+                    <textarea id="bookmarkletCodeBox" readonly onclick="this.focus();this.select();" class="w-full h-16 text-[9px] font-mono bg-gray-50 border border-gray-300 rounded p-1.5 text-gray-600 select-all" placeholder="Loading bookmarklet code..."></textarea>
                 </div>
             </div>
 
@@ -775,6 +780,10 @@
     renderHourlySalesView();
 }
 
+        function getBookmarkletCodeString() {
+            return `javascript:(async function(){const S="https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";let b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='12px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='9999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='14px 22px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,sans-serif';b.style.fontSize='13px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.transition='all 0.3s ease';document.body.appendChild(b);}b.innerHTML='⚡ Scanning Epos Now Transactions...';b.style.backgroundColor='#1e1b4b';function sB(m,bg,cl){b.innerHTML=m;if(bg)b.style.backgroundColor=bg;if(cl)setTimeout(()=>b&&b.remove(),cl);}try{const fullText=document.body?document.body.innerText:'';const monthNames=["january","february","march","april","may","june","july","august","september","october","november","december"];let targetDate='';const dateMatch=fullText.match(/(?:Today|Yesterday|[A-Za-z]+)?[,\\s]*(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:\\s+(\\d{4}))?/i);const isoMatch=fullText.match(/(\\d{4})-(\\d{2})-(\\d{2})/);const ddmMatch=fullText.match(/(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})/);if(dateMatch){const day=dateMatch[1].padStart(2,'0');const mIdx=monthNames.indexOf(dateMatch[2].toLowerCase())+1;const month=mIdx.toString().padStart(2,'0');const year=dateMatch[3]||new Date().getFullYear().toString();targetDate=\`\${year}-\${month}-\${day}\`;}else if(isoMatch){targetDate=isoMatch[0];}else if(ddmMatch){let dy=ddmMatch[1].padStart(2,'0');let mo=ddmMatch[2].padStart(2,'0');let yr=ddmMatch[3].length===2?'20'+ddm[3]:ddm[3];targetDate=\`\${yr}-\${mo}-\${dy}\`;}else{targetDate=new Date().toISOString().split('T')[0];}const txRegex=/(?:(\\d+)\\s+items?\\s+)?\\$?\\s*([0-9]+\\.[0-9]{2})\\s+([0-9]{1,2}:[0-9]{2}\\s*[apAP][mM])/g;let match;let txCount=0;let totalSales=0;let hourlyBuckets={};while((match=txRegex.exec(fullText))!==null){txCount++;const amt=parseFloat(match[2]);const timeStr=match[3];const tMatch=timeStr.match(/(\\d{1,2}):(\\d{2})\\s*([apAP][mM])/);if(tMatch){let h=parseInt(tMatch[1],10);const ampm=tMatch[3].toUpperCase();if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;const hKey=h.toString().padStart(2,'0')+':00';hourlyBuckets[hKey]=(hourlyBuckets[hKey]||0)+amt;totalSales+=amt;}}if(txCount===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure transactions list is visible.</span>','#991b1b',5000);return;}totalSales=Math.round(totalSales*100)/100;for(let k in hourlyBuckets){hourlyBuckets[k]=Math.round(hourlyBuckets[k]*100)/100;}sB(\`⏳ Syncing $\${totalSales.toFixed(2)} (\${targetDate}) across \${txCount} transactions...\`);await fetch(S,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_hourly_sales',date:targetDate,totalSales:totalSales,hourly:hourlyBuckets})});sB(\`✅ Synced $\${totalSales.toFixed(2)} for \${targetDate} across \${Object.keys(hourlyBuckets).length} hours (\${txCount} txs)!\`,'#065f46',5000);}catch(err){sB(\`❌ Error: \${err.message}\`,'#991b1b',6000);}})();`;
+        }
+
         function openEposModal() {
             const user = auth.currentUser;
             if (!user) {
@@ -782,7 +791,11 @@
                 return;
             }
             const modal = document.getElementById('eposModal');
-            if (modal) modal.classList.remove('hidden');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const box = document.getElementById('bookmarkletCodeBox');
+                if (box) box.value = getBookmarkletCodeString();
+            }
         }
 
         function closeEposModal() {
@@ -791,7 +804,7 @@
         }
 
         function copyBookmarkletCode() {
-            const bookmarkletCode = `javascript:(async function(){const S="https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";let b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='12px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='9999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='14px 22px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,sans-serif';b.style.fontSize='13px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.transition='all 0.3s ease';document.body.appendChild(b);}b.innerHTML='⚡ Scanning Epos Now Transactions...';b.style.backgroundColor='#1e1b4b';function sB(m,bg,cl){b.innerHTML=m;if(bg)b.style.backgroundColor=bg;if(cl)setTimeout(()=>b&&b.remove(),cl);}try{const fullText=document.body?document.body.innerText:'';const monthNames=["january","february","march","april","may","june","july","august","september","october","november","december"];let targetDate='';const dateMatch=fullText.match(/(?:Today|Yesterday|[A-Za-z]+)?[,\\s]*(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:\\s+(\\d{4}))?/i);const isoMatch=fullText.match(/(\\d{4})-(\\d{2})-(\\d{2})/);const ddmMatch=fullText.match(/(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})/);if(dateMatch){const day=dateMatch[1].padStart(2,'0');const mIdx=monthNames.indexOf(dateMatch[2].toLowerCase())+1;const month=mIdx.toString().padStart(2,'0');const year=dateMatch[3]||new Date().getFullYear().toString();targetDate=\`\${year}-\${month}-\${day}\`;}else if(isoMatch){targetDate=isoMatch[0];}else if(ddmMatch){let dy=ddmMatch[1].padStart(2,'0');let mo=ddmMatch[2].padStart(2,'0');let yr=ddmMatch[3].length===2?'20'+ddm[3]:ddm[3];targetDate=\`\${yr}-\${mo}-\${dy}\`;}else{targetDate=new Date().toISOString().split('T')[0];}const txRegex=/(?:(\\d+)\\s+items?\\s+)?\\$?\\s*([0-9]+\\.[0-9]{2})\\s+([0-9]{1,2}:[0-9]{2}\\s*[apAP][mM])/g;let match;let txCount=0;let totalSales=0;let hourlyBuckets={};while((match=txRegex.exec(fullText))!==null){txCount++;const amt=parseFloat(match[2]);const timeStr=match[3];const tMatch=timeStr.match(/(\\d{1,2}):(\\d{2})\\s*([apAP][mM])/);if(tMatch){let h=parseInt(tMatch[1],10);const ampm=tMatch[3].toUpperCase();if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;const hKey=h.toString().padStart(2,'0')+':00';hourlyBuckets[hKey]=(hourlyBuckets[hKey]||0)+amt;totalSales+=amt;}}if(txCount===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure transactions list is visible.</span>','#991b1b',5000);return;}totalSales=Math.round(totalSales*100)/100;for(let k in hourlyBuckets){hourlyBuckets[k]=Math.round(hourlyBuckets[k]*100)/100;}sB(\`⏳ Syncing $\${totalSales.toFixed(2)} (\${targetDate}) across \${txCount} transactions...\`);await fetch(S,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_hourly_sales',date:targetDate,totalSales:totalSales,hourly:hourlyBuckets})});sB(\`✅ Synced $\${totalSales.toFixed(2)} for \${targetDate} across \${Object.keys(hourlyBuckets).length} hours (\${txCount} txs)!\`,'#065f46',5000);}catch(err){sB(\`❌ Error: \${err.message}\`,'#991b1b',6000);}})();`;
+            const bookmarkletCode = getBookmarkletCodeString();
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(bookmarkletCode).then(() => {
