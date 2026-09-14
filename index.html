@@ -14,6 +14,8 @@
         .roster-share-active .hide-on-share { display: none !important; }
         .roster-share-active #weekRangeContainer { justify-content: center !important; text-align: center !important; margin-left: auto; margin-right: auto; background-color: transparent !important; border: none !important; font-size: 13px !important; }
         .roster-share-active th { background-color: #4b5563 !important; color: #ffffff !important; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; display: inline-block; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
@@ -30,6 +32,9 @@
                 </button>
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Previous Week
+                </button>
+                <button type="button" id="cloudRefreshBtn" onclick="refreshCloudData(true)" class="hide-on-share bg-blue-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-blue-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap" title="Sync latest data from Google Sheet">
+                    <span class="cloud-refresh-icon inline-block">🔄</span> <span>Refresh</span>
                 </button>
                 <button type="button" id="eposSyncBtn" onclick="openEposModal()" class="hide-on-share bg-purple-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-purple-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     ⚡ Epos Sales
@@ -159,6 +164,9 @@
                     </span>
                 </div>
                 <div class="flex items-center gap-2 text-xs">
+                    <button type="button" onclick="refreshCloudData(true)" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white font-bold px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm border border-slate-600" title="Refresh sales data from Google Sheet">
+                        <span class="cloud-refresh-icon inline-block">🔄</span> <span>Refresh</span>
+                    </button>
                     <button type="button" onclick="openEposModal()" class="text-[10px] bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm">
                         ⚡ Setup / Sync Epos
                     </button>
@@ -272,6 +280,8 @@
         window.closeEposModal = closeEposModal;
         window.copyBookmarkletCode = copyBookmarkletCode;
         window.handleEposCsvFileSelect = handleEposCsvFileSelect;
+        window.refreshCloudData = refreshCloudData;
+        window.loadCloudData = loadCloudData;
 
         // 2. Core State
         const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";
@@ -350,14 +360,43 @@
                     }
                 }
 
-                async function loadCloudData() {
+                let isCloudLoading = false;
+                let lastCloudFetchTime = 0;
+
+                function setRefreshSpinners(spinning) {
+                    const icons = document.querySelectorAll('.cloud-refresh-icon');
+                    icons.forEach(icon => {
+                        if (spinning) {
+                            icon.classList.add('animate-spin');
+                        } else {
+                            icon.classList.remove('animate-spin');
+                        }
+                    });
+                }
+
+                async function refreshCloudData(force = false) {
+                    if (isCloudLoading) return;
+                    const now = Date.now();
+                    if (!force && (now - lastCloudFetchTime < 8000)) {
+                        return;
+                    }
+                    await loadCloudData({ silent: !force });
+                }
+
+                async function loadCloudData(options = {}) {
                     const user = auth.currentUser;
                     if (!user) {
                         return; // Stop execution if not logged in
                     }
+                    const silent = (options && options.silent === true);
+
+                    if (isCloudLoading) return;
+                    isCloudLoading = true;
+                    setRefreshSpinners(true);
 
                     try {
                         const responseObj = await callSheetApi({ action: "get" });
+                        lastCloudFetchTime = Date.now();
                         
                         if (responseObj.staff && Array.isArray(responseObj.staff)) {
                             staffRegistry = responseObj.staff.map(s => {
@@ -401,11 +440,17 @@
                         }
                     } catch (e) {
                         console.error("loadCloudData error:", e);
-                        alert(e.message || "Failed to load timesheet data.");
+                        if (!silent) {
+                            alert(e.message || "Failed to load timesheet data.");
+                        }
+                    } finally {
+                        isCloudLoading = false;
+                        setRefreshSpinners(false);
                     }
                     renderWeeklyTable();
                     generateDaySelectors();
-                    renderHourlySalesView();
+                    const activeDate = document.getElementById('date').value;
+                    renderHourlySalesView(activeDate || undefined);
                 }
 
 
@@ -569,11 +614,23 @@
                     }
                     applyDefaultShiftTimes();
                     renderHourlySalesView(targetIsoDate);
+
+                    // If sales data for this date is not yet loaded or last fetch > 15s, refresh cloud data in background
+                    const cleanTarget = cleanDateStr(targetIsoDate);
+                    const hasSales = hourlySalesStore.some(s => cleanDateStr(s.date) === cleanTarget);
+                    const now = Date.now();
+                    if (!hasSales || (now - lastCloudFetchTime > 15000)) {
+                        refreshCloudData(false);
+                    }
                 }
 
                 function syncDashboardWeekFilter() {
                     generateDaySelectors();
                     renderWeeklyTable();
+                    const now = Date.now();
+                    if (now - lastCloudFetchTime > 15000) {
+                        refreshCloudData(false);
+                    }
                 }
 
                 async function distributeWeeklyTaxHours() {
@@ -1195,13 +1252,29 @@
             }else{
                 dataStore = [];
                 staffRegistry = [];
-                // Clear tables / displayed data
-                // document.querySelector("#rosterTable tbody").innerHTML = "";
-                // document.querySelector("tfoot").innerHTML = "";
                 renderWeeklyTable();
                 populateStaffDropdowns();
                 console.log("Not logged in");
                 authButton.innerHTML = "🔐 Login with Google";
+            }
+        });
+
+        // Auto-refresh when user returns to this tab from Epos Now or another window
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && auth && auth.currentUser) {
+                const now = Date.now();
+                if (now - lastCloudFetchTime > 8000) {
+                    refreshCloudData(false);
+                }
+            }
+        });
+
+        window.addEventListener('focus', () => {
+            if (auth && auth.currentUser) {
+                const now = Date.now();
+                if (now - lastCloudFetchTime > 8000) {
+                    refreshCloudData(false);
+                }
             }
         });
     </script>
