@@ -253,6 +253,26 @@ function doPost(e) {
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: daysToSave.length });
     }
 
+    // ACTION 6: SAVE RAW TRANSACTIONS LOG
+    if (requestData.action === "save_raw_transactions" && requestData.transactions) {
+      var rawSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("RawTransactions");
+      if (!rawSheet) {
+        rawSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("RawTransactions");
+        rawSheet.appendRow(["Date", "Time", "Amount", "Reference / Raw Line", "Logged At"]);
+      }
+      var nowIso = new Date().toISOString();
+      var rawItems = requestData.transactions;
+      var rawPayloads = [];
+      for (var ti = 0; ti < rawItems.length; ti++) {
+        var it = rawItems[ti];
+        rawPayloads.push([it.date, it.time, it.amount, it.raw || "", nowIso]);
+      }
+      if (rawPayloads.length > 0) {
+        rawSheet.getRange(rawSheet.getLastRow() + 1, 1, rawPayloads.length, 5).setValues(rawPayloads);
+      }
+      JSON_STRING_REPLY = JSON.stringify({ status: "success", count: rawPayloads.length });
+    }
+
     
   } catch (error) {
     JSON_STRING_REPLY = JSON.stringify({ status: "error", message: error.toString() });
