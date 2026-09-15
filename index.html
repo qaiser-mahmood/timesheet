@@ -213,19 +213,19 @@
             <!-- Bookmarklet Instructions -->
             <div class="space-y-2.5 text-xs text-gray-700">
                 <div class="font-bold text-purple-900 bg-purple-50 p-2.5 rounded-lg border border-purple-200">
-                    📱 <b>Safari Bookmarklet (iPhone & Desktop)</b>: Syncs hourly sales straight from Epos Now with 1 tap.
+                    📱 <b>Safari Bookmarklet (v1.5 - Auto-Scroll & Deep Multi-Day)</b>: Automatically scrolls all containers, loads all entries, and separates every day.
                 </div>
                 
                 <ol class="list-decimal list-inside space-y-1.5 text-[11px] leading-relaxed pl-1 text-gray-600">
                     <li>Tap the button below to copy the Bookmarklet Code.</li>
                     <li>In Safari, bookmark any page (tap Share ➔ <b>Add Bookmark</b> ➔ name it <b>⚡ Sync Epos</b>).</li>
                     <li>Tap Safari Bookmarks ➔ <b>Edit</b> ➔ tap <b>⚡ Sync Epos</b> ➔ delete the URL and paste the copied code ➔ tap <b>Done</b>.</li>
-                    <li>Whenever you're on your Epos Now <b>Transactions</b> page in Safari, just tap that bookmark!</li>
+                    <li>Whenever you're on your Epos Now <b>Transactions</b> page in Safari, just tap that bookmark! It will auto-scroll, load all transactions, and sync each date individually.</li>
                 </ol>
 
                 <div class="pt-1 space-y-1.5">
                     <button type="button" id="copyBookmarkletBtn" onclick="copyBookmarkletCode()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5">
-                        📋 Copy Safari Bookmarklet Code (v1.3)
+                        📋 Copy Safari Bookmarklet Code (v1.5)
                     </button>
                     <div class="text-[10px] text-gray-500 font-semibold">Or tap below to select & copy manually:</div>
                     <textarea id="bookmarkletCodeBox" readonly onclick="this.focus();this.select();" class="w-full h-16 text-[9px] font-mono bg-gray-50 border border-gray-300 rounded p-1.5 text-gray-600 select-all" placeholder="Loading bookmarklet code..."></textarea>
@@ -838,7 +838,7 @@
 }
 
         function getBookmarkletCodeString() {
-            return `javascript:(async function(){var S="https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";var b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='12px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='9999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='14px 22px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,sans-serif';b.style.fontSize='13px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.transition='all 0.3s ease';document.body.appendChild(b);}b.innerHTML='⚡ Scanning Epos Now Transactions...';b.style.backgroundColor='#1e1b4b';function sB(m,bg,cl){b.innerHTML=m;if(bg)b.style.backgroundColor=bg;if(cl)setTimeout(function(){if(b)b.remove();},cl);}try{var fullText=document.body?document.body.innerText:'';var monthNames=["january","february","march","april","may","june","july","august","september","october","november","december"];var targetDate='';var dateMatch=fullText.match(/(?:Today|Yesterday|[A-Za-z]+)?[,\\s]*(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:\\s+(\\d{4}))?/i);var isoMatch=fullText.match(/(\\d{4})-(\\d{2})-(\\d{2})/);var ddmMatch=fullText.match(/(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})/);if(dateMatch){var day=dateMatch[1].padStart(2,'0');var mIdx=monthNames.indexOf(dateMatch[2].toLowerCase())+1;var month=mIdx.toString().padStart(2,'0');var year=dateMatch[3]||new Date().getFullYear().toString();targetDate=year+'-'+month+'-'+day;}else if(isoMatch){targetDate=isoMatch[0];}else if(ddmMatch){var dy=ddmMatch[1].padStart(2,'0');var mo=ddmMatch[2].padStart(2,'0');var yr=ddmMatch[3].length===2?'20'+ddmMatch[3]:ddmMatch[3];targetDate=yr+'-'+mo+'-'+dy;}else{targetDate=new Date().toISOString().split('T')[0];}var txRegex=/(?:(\\d+)\\s+items?\\s+)?\\$?\\s*([0-9]+\\.[0-9]{2})\\s+([0-9]{1,2}:[0-9]{2}\\s*[apAP][mM])/g;var match;var txCount=0;var totalSales=0;var hourlyBuckets={};while((match=txRegex.exec(fullText))!==null){txCount++;var amt=parseFloat(match[2]);var timeStr=match[3];var tMatch=timeStr.match(/(\\d{1,2}):(\\d{2})\\s*([apAP][mM])/);if(tMatch){var h=parseInt(tMatch[1],10);var ampm=tMatch[3].toUpperCase();if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;var hKey=h.toString().padStart(2,'0')+':00';hourlyBuckets[hKey]=(hourlyBuckets[hKey]||0)+amt;totalSales+=amt;}}if(txCount===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure transactions list is visible.</span>','#991b1b',5000);return;}totalSales=Math.round(totalSales*100)/100;for(var k in hourlyBuckets){hourlyBuckets[k]=Math.round(hourlyBuckets[k]*100)/100;}sB('⏳ Syncing $'+totalSales.toFixed(2)+' ('+targetDate+') across '+txCount+' transactions...');try{await fetch(S,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_hourly_sales',date:targetDate,totalSales:totalSales,hourly:hourlyBuckets})});sB('✅ Synced $'+totalSales.toFixed(2)+' for '+targetDate+' across '+Object.keys(hourlyBuckets).length+' hours ('+txCount+' txs)!','#065f46',5000);}catch(err){if(err&&((''+err).includes('Load failed')||(''+err).includes('Failed to fetch'))){sB('✅ Synced $'+totalSales.toFixed(2)+' for '+targetDate+' across '+Object.keys(hourlyBuckets).length+' hours ('+txCount+' txs)!','#065f46',5000);}else{sB('❌ Error: '+err.message,'#991b1b',6000);}}}catch(err){sB('❌ Error: '+err.message,'#991b1b',6000);}})();`;
+            return `javascript:(async function(){var S="https://script.google.com/macros/s/AKfycbxVODfv_WuL37ggqn5C06g42IImOIhjeozKwnJMe_DcwSGRBdRMsEvV1MNxEV0BAGavvg/exec";var b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='12px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='9999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='14px 22px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,sans-serif';b.style.fontSize='13px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.transition='all 0.3s ease';document.body.appendChild(b);}var stopAutoLoad=false;var diagInfo={};b.onclick=function(e){if(e.target&&e.target.id==='epos-copy-diag')return;stopAutoLoad=true;};function sB(m,bg,cl){if(!b)return;b.innerHTML=m;if(bg)b.style.backgroundColor=bg;if(cl)setTimeout(function(){if(b)b.remove();},cl);var dBtn=document.getElementById('epos-copy-diag');if(dBtn){dBtn.onclick=function(evt){evt.stopPropagation();var text=JSON.stringify(diagInfo,null,2);if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text);}else{prompt('Copy diagnostics:',text);}dBtn.innerText='✅ Copied Diagnostics!';};}}try{function getAllDocs(){var docs=[document];var ifrs=document.querySelectorAll('iframe');for(var i=0;i<ifrs.length;i++){try{var d=ifrs[i].contentDocument||ifrs[i].contentWindow.document;if(d&&d.body)docs.push(d);}catch(e){}}return docs;}function scrollAllToBottom(){try{window.scrollTo({top:9999999,behavior:'instant'});}catch(e){window.scrollTo(0,9999999);}var docs=getAllDocs();for(var di=0;di<docs.length;di++){var doc=docs[di];try{doc.documentElement.scrollTop=9999999;}catch(e){}try{doc.body.scrollTop=9999999;}catch(e){}var scrollables=doc.querySelectorAll('*');for(var s=0;s<scrollables.length;s++){var el=scrollables[s];if(el.scrollHeight>el.clientHeight+20&&el.clientHeight>60){try{el.scrollTop=el.scrollHeight;}catch(e){}}}}}function findMoreTxBtn(){var docs=getAllDocs();for(var di=0;di<docs.length;di++){var doc=docs[di];var primaryBtns=doc.querySelectorAll('button, a, [role="button"], input[type="button"]');for(var i=0;i<primaryBtns.length;i++){var btn=primaryBtns[i];if(btn.id==='epos-sync-banner'||(btn.closest&&btn.closest('#epos-sync-banner')))continue;var txt=(btn.innerText||btn.textContent||btn.value||'').trim().toLowerCase();if(txt.includes('more transaction')||txt.includes('load more')||txt.includes('show more')||txt.includes('more entries')){return btn;}}var allEls=doc.querySelectorAll('div, span, p, a, button');for(var j=0;j<allEls.length;j++){var el=allEls[j];if(el.id==='epos-sync-banner'||(el.closest&&el.closest('#epos-sync-banner')))continue;if(el.children.length>2)continue;var t=(el.innerText||el.textContent||'').trim().toLowerCase();if(t.includes('more transaction')||t==='more transactions'||t.includes('load more')){var pBtn=el.closest('button, a, [role="button"]');if(pBtn)return pBtn;var inBtn=el.querySelector('button, a, [role="button"]');if(inBtn)return inBtn;return el;}}}return null;}function clickBtn(el){try{el.scrollIntoView({behavior:'instant',block:'center'});}catch(e){}try{el.focus();}catch(e){}try{el.dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true}));}catch(e){}try{el.dispatchEvent(new MouseEvent('mouseup',{bubbles:true,cancelable:true}));}catch(e){}try{el.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));}catch(e){}try{el.click();}catch(e){}}var page=0;var maxPages=30;var consecutiveMiss=0;while(page<maxPages&&!stopAutoLoad){scrollAllToBottom();await new Promise(function(r){setTimeout(r,600);});var btn=findMoreTxBtn();if(btn){consecutiveMiss=0;page++;var btnLabel=(btn.innerText||btn.textContent||'More transactions').replace(/\\s+/g,' ').trim().slice(0,30);sB('⚡ Auto-loading ('+page+' pages)...<br><span style="font-size:11px;font-weight:normal;">Clicked: "'+btnLabel+'"</span><br><span style="font-size:10px;font-weight:normal;opacity:0.8;">(Tap banner to stop & sync now)</span>','#1e1b4b');clickBtn(btn);await new Promise(function(r){setTimeout(r,1400);});}else{consecutiveMiss++;if(consecutiveMiss>=2)break;await new Promise(function(r){setTimeout(r,600);});}}sB('⚡ Scanning all transactions across dates...','#1e1b4b');var docs=getAllDocs();var fullText='';for(var di=0;di<docs.length;di++){if(docs[di].body){fullText+=docs[di].body.innerText+'\\n';}}var monthNames=["january","february","march","april","may","june","july","august","september","october","november","december"];var shortMonths=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];function toIso(y,m,d){return String(y)+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}function parseAnyDate(str){if(!str)return null;var now=new Date();var curYear=now.getFullYear();if(/\\btoday\\b/i.test(str)){return toIso(curYear,now.getMonth()+1,now.getDate());}if(/\\byesterday\\b/i.test(str)){var yDate=new Date(now.getTime()-86400000);return toIso(yDate.getFullYear(),yDate.getMonth()+1,yDate.getDate());}var mIso=str.match(/\\b(\\d{4})-(\\d{2})-(\\d{2})\\b/);if(mIso)return mIso[0];var mWord1=str.match(/\\b(\\d{1,2})(?:st|nd|rd|th)?[\\s\\-\\/]+([A-Za-z]{3,9})(?:[\\s\\-\\/,]+(\\d{2,4}))?\\b/i);if(mWord1){var mStr=mWord1[2].toLowerCase();var mIdx=monthNames.indexOf(mStr);if(mIdx===-1)mIdx=shortMonths.indexOf(mStr.slice(0,3));if(mIdx!==-1){var yr=mWord1[3]?(mWord1[3].length===2?'20'+mWord1[3]:mWord1[3]):String(curYear);return toIso(yr,mIdx+1,mWord1[1]);}}var mWord2=str.match(/\\b([A-Za-z]{3,9})[\\s\\-\\/]+(\\d{1,2})(?:st|nd|rd|th)?(?:[\\s\\-\\/,]+(\\d{2,4}))?\\b/i);if(mWord2){var mStr2=mWord2[1].toLowerCase();var mIdx2=monthNames.indexOf(mStr2);if(mIdx2===-1)mIdx2=shortMonths.indexOf(mStr2.slice(0,3));if(mIdx2!==-1){var yr2=mWord2[3]?(mWord2[3].length===2?'20'+mWord2[3]:mWord2[3]):String(curYear);return toIso(yr2,mIdx2+1,mWord2[2]);}}var mSlash=str.match(/\\b(\\d{1,2})[\\/\\-\\.](\\d{1,2})(?:[\\/\\-\\.](\\d{2,4}))?\\b/);if(mSlash){var d=parseInt(mSlash[1],10);var mo=parseInt(mSlash[2],10);if(d>=1&&d<=31&&mo>=1&&mo<=12){var yr3=mSlash[3]?(mSlash[3].length===2?'20'+mSlash[3]:mSlash[3]):String(curYear);return toIso(yr3,mo,d);}}return null;}var datePatternRegex=/(?:\\b(?:Today|Yesterday)\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\b\\d{1,2}(?:st|nd|rd|th)?[\\s\\-\\/]+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:[\\s\\-\\/,]+\\d{2,4})?\\b|\\b(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[\\s\\-\\/]+\\d{1,2}(?:st|nd|rd|th)?(?:[\\s\\-\\/,]+\\d{2,4})?\\b|\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b)/gi;var dateMarkers=[];var dMatch;while((dMatch=datePatternRegex.exec(fullText))!==null){var iso=parseAnyDate(dMatch[0]);if(iso){dateMarkers.push({index:dMatch.index,date:iso,raw:dMatch[0]});}}var txRegex1=/(?:(\\d+)\\s+items?\\s+)?(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})\\s+([0-9]{1,2}:[0-9]{2}(?::\\d{2})?\\s*[apAP][mM]?)/g;var txRegex2=/([0-9]{1,2}:[0-9]{2}(?::\\d{2})?\\s*[apAP][mM]?)[^$\\n\\r0-9]{0,35}(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/g;var txList=[];var tMatch;while((tMatch=txRegex1.exec(fullText))!==null){var amt=parseFloat(tMatch[2]);var timeStr=tMatch[3];var tm=timeStr.match(/(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([apAP][mM])?/i);if(tm){var h=parseInt(tm[1],10);var ampm=tm[3]?tm[3].toUpperCase():'';if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;var hKey=String(h).padStart(2,'0')+':00';txList.push({index:tMatch.index,amount:amt,hour:hKey});}}if(txList.length===0){while((tMatch=txRegex2.exec(fullText))!==null){var timeStr2=tMatch[1];var amt2=parseFloat(tMatch[2]);var tm2=timeStr2.match(/(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([apAP][mM])?/i);if(tm2){var h2=parseInt(tm2[1],10);var ampm2=tm2[3]?tm2[3].toUpperCase():'';if(ampm2==='PM'&&h2<12)h2+=12;if(ampm2==='AM'&&h2===12)h2=0;var hKey2=String(h2).padStart(2,'0')+':00';txList.push({index:tMatch.index,amount:amt2,hour:hKey2});}}}var allBtns=[];var btnEls=document.querySelectorAll('button, a, [role="button"]');for(var bIdx=0;bIdx<Math.min(btnEls.length,30);bIdx++){var bText=(btnEls[bIdx].innerText||btnEls[bIdx].textContent||'').replace(/\\s+/g,' ').trim();if(bText)allBtns.push(bText);}diagInfo={url:window.location.href,title:document.title,batchesLoaded:page,buttonsFound:allBtns,dateMarkers:dateMarkers.map(function(dm){return dm.raw+' -> '+dm.date;}),txCount:txList.length,sampleText:fullText.replace(/\\s+/g,' ').slice(0,600)};if(txList.length===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure transactions list is visible.</span><br><button id="epos-copy-diag" style="margin-top:8px;background:#4f46e5;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer;">📋 Copy Diagnostic Data</button>','#991b1b',10000);return;}var defaultDate=dateMarkers.length>0?dateMarkers[0].date:(new Date().toISOString().split('T')[0]);var daysGroup={};for(var i=0;i<txList.length;i++){var tx=txList[i];var matchedDate=defaultDate;for(var j=dateMarkers.length-1;j>=0;j--){if(dateMarkers[j].index<=tx.index){matchedDate=dateMarkers[j].date;break;}}if(!daysGroup[matchedDate]){daysGroup[matchedDate]={totalSales:0,count:0,hourly:{}};}daysGroup[matchedDate].count++;daysGroup[matchedDate].totalSales+=tx.amount;daysGroup[matchedDate].hourly[tx.hour]=(daysGroup[matchedDate].hourly[tx.hour]||0)+tx.amount;}var sortedDays=Object.keys(daysGroup).sort().reverse();for(var d=0;d<sortedDays.length;d++){var dKey=sortedDays[d];daysGroup[dKey].totalSales=Math.round(daysGroup[dKey].totalSales*100)/100;for(var hk in daysGroup[dKey].hourly){daysGroup[dKey].hourly[hk]=Math.round(daysGroup[dKey].hourly[hk]*100)/100;}}diagInfo.groupedDays=daysGroup;var syncSummary=[];for(var sIdx=0;sIdx<sortedDays.length;sIdx++){var curDate=sortedDays[sIdx];var dData=daysGroup[curDate];sB('⏳ Syncing day '+(sIdx+1)+'/'+sortedDays.length+': '+curDate+' ($'+dData.totalSales.toFixed(2)+')...','#1e1b4b');try{await fetch(S,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_hourly_sales',date:curDate,totalSales:dData.totalSales,hourly:dData.hourly})});syncSummary.push(curDate+': $'+dData.totalSales.toFixed(2)+' ('+dData.count+' txs)');}catch(postErr){syncSummary.push(curDate+': $'+dData.totalSales.toFixed(2));}}sB('✅ Synced '+sortedDays.length+' day(s) ('+txList.length+' total txs)!<br><span style="font-size:11px;font-weight:normal;opacity:0.95;">'+syncSummary.join('<br>')+'</span><br><button id="epos-copy-diag" style="margin-top:8px;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:6px;font-size:10px;font-weight:bold;cursor:pointer;">📋 Copy Diagnostics</button>','#065f46',12000);}catch(err){sB('❌ Error: '+(err&&err.message?err.message:err)+'<br><button id="epos-copy-diag" style="margin-top:8px;background:#4f46e5;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer;">📋 Copy Diagnostic Data</button>','#991b1b',10000);}})();`;
         }
 
         function openEposModal() {
@@ -960,9 +960,7 @@
             let dateIdx = headers.findIndex(h => h.includes('date') || h.includes('time') || h.includes('created'));
             let amtIdx = headers.findIndex(h => h.includes('total') || h.includes('amount') || h.includes('net') || h.includes('gross') || h.includes('subtotal'));
 
-            let hourlyBuckets = {};
-            let dateCounts = {};
-            let totalSales = 0;
+            let daysMap = {}; // isoDate -> { totalSales: 0, hourly: {}, count: 0 }
 
             for (let i = 1; i < lines.length; i++) {
                 const cols = splitCsvRow(lines[i]);
@@ -971,9 +969,9 @@
 
                 if (!dateStr || !amtStr) {
                     for (let c of cols) {
-                        if (!dateStr && (/\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4}/.test(c) || /\\d{4}-\\d{2}-\\d{2}/.test(c))) {
+                        if (!dateStr && (/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(c) || /\d{4}-\\d{2}-\\d{2}/.test(c))) {
                             dateStr = c;
-                        } else if (!amtStr && /[\\$£€]?\\s*-?\\d+[\\.,]\\d{2}/.test(c)) {
+                        } else if (!amtStr && /[\$£€]?\s*-?\d+[\.,]\d{2}/.test(c)) {
                             amtStr = c;
                         }
                     }
@@ -984,8 +982,8 @@
                 let cleanAmt = parseFloat(amtStr.replace(/[^0-9.-]+/g, '')) || 0;
 
                 let isoDate = '';
-                const dm = dateStr.match(/(\\d{4})-(\\d{2})-(\\d{2})/);
-                const ddm = dateStr.match(/(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})/);
+                const dm = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+                const ddm = dateStr.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
                 if (dm) {
                     isoDate = dm[0];
                 } else if (ddm) {
@@ -995,12 +993,10 @@
                     isoDate = `${year}-${month}-${day}`;
                 }
 
-                if (isoDate) {
-                    dateCounts[isoDate] = (dateCounts[isoDate] || 0) + 1;
-                }
+                if (!isoDate) continue;
 
                 let hour = null;
-                const tm = dateStr.match(/(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([AaPp][Mm])?/);
+                const tm = dateStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([AaPp][Mm])?/);
                 if (tm) {
                     let h = parseInt(tm[1], 10);
                     const isPm = tm[3] && tm[3].toUpperCase() === 'PM';
@@ -1010,57 +1006,60 @@
                     hour = h;
                 }
 
+                if (!daysMap[isoDate]) {
+                    daysMap[isoDate] = { totalSales: 0, hourly: {}, count: 0 };
+                }
+
                 if (hour !== null) {
                     let hKey = hour.toString().padStart(2, '0') + ':00';
-                    hourlyBuckets[hKey] = (hourlyBuckets[hKey] || 0) + cleanAmt;
-                    totalSales += cleanAmt;
+                    daysMap[isoDate].hourly[hKey] = (daysMap[isoDate].hourly[hKey] || 0) + cleanAmt;
                 }
+                daysMap[isoDate].totalSales += cleanAmt;
+                daysMap[isoDate].count++;
             }
 
-            let dominantDate = '';
-            let maxCnt = 0;
-            for (let d in dateCounts) {
-                if (dateCounts[d] > maxCnt) {
-                    maxCnt = dateCounts[d];
-                    dominantDate = d;
-                }
-            }
-
-            if (!dominantDate) {
+            const parsedDates = Object.keys(daysMap).sort().reverse();
+            if (parsedDates.length === 0) {
                 throw new Error("Could not detect transaction dates in CSV file.");
             }
 
-            totalSales = Math.round(totalSales * 100) / 100;
-            for (let h in hourlyBuckets) {
-                hourlyBuckets[h] = Math.round(hourlyBuckets[h] * 100) / 100;
+            for (let d of parsedDates) {
+                daysMap[d].totalSales = Math.round(daysMap[d].totalSales * 100) / 100;
+                for (let h in daysMap[d].hourly) {
+                    daysMap[d].hourly[h] = Math.round(daysMap[d].hourly[h] * 100) / 100;
+                }
             }
 
             if (statusEl) {
-                statusEl.innerText = `⏳ Saving $${totalSales.toFixed(2)} (${dominantDate}) to cloud...`;
+                statusEl.innerText = `⏳ Saving ${parsedDates.length} day(s) to cloud...`;
                 statusEl.className = "text-[10px] text-purple-600 font-bold";
             }
 
-            await callSheetApi({
-                action: "save_hourly_sales",
-                date: dominantDate,
-                totalSales: totalSales,
-                hourly: hourlyBuckets
-            });
+            for (let d of parsedDates) {
+                await callSheetApi({
+                    action: "save_hourly_sales",
+                    date: d,
+                    totalSales: daysMap[d].totalSales,
+                    hourly: daysMap[d].hourly
+                });
 
-            hourlySalesStore = hourlySalesStore.filter(s => cleanDateStr(s.date) !== dominantDate);
-            hourlySalesStore.push({
-                date: dominantDate,
-                totalSales: totalSales,
-                hourly: hourlyBuckets,
-                updatedAt: new Date().toISOString()
-            });
+                hourlySalesStore = hourlySalesStore.filter(s => cleanDateStr(s.date) !== d);
+                hourlySalesStore.push({
+                    date: d,
+                    totalSales: daysMap[d].totalSales,
+                    hourly: daysMap[d].hourly,
+                    updatedAt: new Date().toISOString()
+                });
+            }
 
             if (statusEl) {
-                statusEl.innerText = `✅ Successfully saved $${totalSales.toFixed(2)} for ${dominantDate}!`;
+                statusEl.innerText = `✅ Successfully saved ${parsedDates.length} day(s) (${parsedDates.join(', ')})!`;
                 statusEl.className = "text-[10px] text-emerald-600 font-bold";
             }
 
-            selectDayInline(dominantDate);
+            if (parsedDates.length > 0) {
+                selectDayInline(parsedDates[0]);
+            }
         }
 
         function convertHourStr(hStr) {

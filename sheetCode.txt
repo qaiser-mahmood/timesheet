@@ -209,34 +209,48 @@ function doPost(e) {
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: copiedCount });
     }
 
-    // ACTION 5: SAVE HOURLY SALES
-    if (requestData.action === "save_hourly_sales") {
+    // ACTION 5: SAVE HOURLY SALES (Single or Multi-Day Batch)
+    if (requestData.action === "save_hourly_sales" || requestData.action === "save_multiple_hourly_sales") {
       var salesSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("HourlySales");
       if (!salesSheet) {
         salesSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("HourlySales");
         salesSheet.appendRow(["Date", "Total Sales", "Hourly JSON", "Last Updated"]);
       }
-      var sDate = requestData.date;
-      var sTotal = Number(requestData.totalSales) || 0;
-      var sHourlyJson = typeof requestData.hourly === "string" ? requestData.hourly : JSON.stringify(requestData.hourly || {});
       var sUpdated = new Date().toISOString();
-
       var existingSalesRows = salesSheet.getDataRange().getDisplayValues();
-      var targetRow = -1;
+      var dateToRow = {};
       for (var r = 1; r < existingSalesRows.length; r++) {
-        if (existingSalesRows[r][0] === sDate) {
-          targetRow = r + 1;
-          break;
+        if (existingSalesRows[r][0]) {
+          dateToRow[existingSalesRows[r][0]] = r + 1;
         }
       }
 
-      var salesPayload = [sDate, sTotal, sHourlyJson, sUpdated];
-      if (targetRow !== -1) {
-        salesSheet.getRange(targetRow, 1, 1, 4).setValues([salesPayload]);
-      } else {
-        salesSheet.appendRow(salesPayload);
+      var daysToSave = [];
+      if (requestData.days && Array.isArray(requestData.days)) {
+        daysToSave = requestData.days;
+      } else if (requestData.date) {
+        daysToSave.push({
+          date: requestData.date,
+          totalSales: requestData.totalSales,
+          hourly: requestData.hourly
+        });
       }
-      JSON_STRING_REPLY = JSON.stringify({ status: "success", date: sDate, totalSales: sTotal });
+
+      for (var d = 0; d < daysToSave.length; d++) {
+        var dayItem = daysToSave[d];
+        var sDate = dayItem.date;
+        var sTotal = Number(dayItem.totalSales) || 0;
+        var sHourlyJson = typeof dayItem.hourly === "string" ? dayItem.hourly : JSON.stringify(dayItem.hourly || {});
+        var salesPayload = [sDate, sTotal, sHourlyJson, sUpdated];
+
+        if (dateToRow[sDate]) {
+          salesSheet.getRange(dateToRow[sDate], 1, 1, 4).setValues([salesPayload]);
+        } else {
+          salesSheet.appendRow(salesPayload);
+          dateToRow[sDate] = salesSheet.getLastRow();
+        }
+      }
+      JSON_STRING_REPLY = JSON.stringify({ status: "success", count: daysToSave.length });
     }
 
     
