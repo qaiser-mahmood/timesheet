@@ -109,8 +109,9 @@ function doPost(e) {
       var entry = requestData.entry;
       var existingRows = targetSheet.getDataRange().getDisplayValues();
       var targetRowIndex = -1;
+      var targetName = (entry.name || "").toString().trim().toLowerCase();
       for (var k = 1; k < existingRows.length; k++) {
-        if (existingRows[k][0] === entry.date && existingRows[k][2].toString().trim() === entry.name.toString().trim()) {
+        if (existingRows[k][0] === entry.date && existingRows[k][2].toString().trim().toLowerCase() === targetName) {
           targetRowIndex = k + 1;
           break;
         }
@@ -122,6 +123,9 @@ function doPost(e) {
       } else {
         targetSheet.appendRow(payload);
       }
+      if (targetSheet.getLastRow() > 1) {
+        targetSheet.getRange(2, 1, targetSheet.getLastRow() - 1, 10).sort({ column: 1, ascending: true });
+      }
       JSON_STRING_REPLY = JSON.stringify({ status: "success" });
     }
     
@@ -129,8 +133,9 @@ function doPost(e) {
     if (requestData.action === "delete") {
       if (targetSheet) {
         var currentData = targetSheet.getDataRange().getDisplayValues();
+        var delName = (requestData.name || "").toString().trim().toLowerCase();
         for (var m = currentData.length - 1; m >= 1; m--) {
-          if (currentData[m][0] === requestData.date && currentData[m][2].toString().trim() === requestData.name.toString().trim()) {
+          if (currentData[m][0] === requestData.date && currentData[m][2].toString().trim().toLowerCase() === delName) {
             targetSheet.deleteRow(m + 1);
           }
         }
@@ -206,6 +211,9 @@ function doPost(e) {
           copiedCount++;
         }
       }
+      if (targetSheet.getLastRow() > 1) {
+        targetSheet.getRange(2, 1, targetSheet.getLastRow() - 1, 10).sort({ column: 1, ascending: true });
+      }
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: copiedCount });
     }
 
@@ -250,25 +258,50 @@ function doPost(e) {
           dateToRow[sDate] = salesSheet.getLastRow();
         }
       }
+      if (salesSheet.getLastRow() > 1) {
+        salesSheet.getRange(2, 1, salesSheet.getLastRow() - 1, 4).sort({ column: 1, ascending: true });
+      }
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: daysToSave.length });
     }
 
-    // ACTION 6: SAVE RAW TRANSACTIONS LOG
+    // ACTION 6: SAVE RAW TRANSACTIONS LOG (De-duplicated & Ascending Date Order)
     if (requestData.action === "save_raw_transactions" && requestData.transactions) {
       var rawSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("RawTransactions");
       if (!rawSheet) {
         rawSheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("RawTransactions");
         rawSheet.appendRow(["Date", "Time", "Amount", "Reference / Raw Line", "Logged At"]);
       }
+      var existingRaw = rawSheet.getDataRange().getDisplayValues();
+      var existingKeys = {};
+      for (var r = 1; r < existingRaw.length; r++) {
+        var eDate = existingRaw[r][0];
+        var eTime = existingRaw[r][1];
+        var eAmt = parseFloat(existingRaw[r][2]) || 0;
+        var eRaw = existingRaw[r][3] || "";
+        var key = (eDate + "|" + eTime + "|" + eAmt.toFixed(2) + "|" + eRaw).toLowerCase();
+        existingKeys[key] = true;
+      }
+
       var nowIso = new Date().toISOString();
       var rawItems = requestData.transactions;
       var rawPayloads = [];
       for (var ti = 0; ti < rawItems.length; ti++) {
         var it = rawItems[ti];
-        rawPayloads.push([it.date, it.time, it.amount, it.raw || "", nowIso]);
+        var itAmt = parseFloat(it.amount) || 0;
+        var itKey = (it.date + "|" + it.time + "|" + itAmt.toFixed(2) + "|" + (it.raw || "")).toLowerCase();
+        if (!existingKeys[itKey]) {
+          existingKeys[itKey] = true;
+          rawPayloads.push([it.date, it.time, itAmt, it.raw || "", nowIso]);
+        }
       }
       if (rawPayloads.length > 0) {
         rawSheet.getRange(rawSheet.getLastRow() + 1, 1, rawPayloads.length, 5).setValues(rawPayloads);
+      }
+      if (rawSheet.getLastRow() > 1) {
+        rawSheet.getRange(2, 1, rawSheet.getLastRow() - 1, 5).sort([
+          { column: 1, ascending: true },
+          { column: 2, ascending: true }
+        ]);
       }
       JSON_STRING_REPLY = JSON.stringify({ status: "success", count: rawPayloads.length });
     }
