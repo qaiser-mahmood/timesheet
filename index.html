@@ -33,9 +33,6 @@
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Previous Week
                 </button>
-                <button type="button" id="eposSyncBtn" onclick="openEposModal()" class="hide-on-share bg-purple-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-purple-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    ⚡ Epos Sales
-                </button>
                 <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     👁️ View Roster
                 </button>
@@ -174,57 +171,126 @@
             </div>
 
             <!-- Analytics Navigation Tabs -->
-            <div class="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs">
-                <button type="button" id="tabWeeklyTrendBtn" onclick="switchAnalyticsTab('weekly')" class="flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5">
-                    📈 7-Day Week Trend
+            <div class="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs overflow-x-auto">
+                <button type="button" id="tabRangeBtn" onclick="switchAnalyticsTab('range')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    📅 Date Range Chart
                 </button>
-                <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5">
+                <button type="button" id="tabCompareBtn" onclick="switchAnalyticsTab('compare')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    ⚖️ Compare Periods
+                </button>
+                <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
                     🔥 7-Day Hourly Heatmap
                 </button>
-                <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5">
+                <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
                     ⏱️ Single Day Breakdown
                 </button>
             </div>
 
-            <!-- VIEW 1: 7-Day Weekly Trend -->
-            <div id="analyticsWeeklyTrendContainer" class="space-y-4">
-                <!-- Weekly KPI Summary Grid -->
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Week Revenue</div>
-                        <div id="kpiWeekSales" class="text-base sm:text-lg font-black text-emerald-400">$0.00</div>
+            <!-- VIEW 1: Custom Date Range Chart -->
+            <div id="analyticsDateRangeContainer" class="space-y-4">
+                <!-- Date Range Picker & Quick Presets -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-bold text-slate-300">From:</span>
+                        <input type="date" id="chartRangeFrom" onchange="applyCustomDateRange()" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-purple-500">
+                        <span class="text-xs font-bold text-slate-300">To:</span>
+                        <input type="date" id="chartRangeTo" onchange="applyCustomDateRange()" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-purple-500">
+                        <button type="button" onclick="applyCustomDateRange()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm">
+                            Apply
+                        </button>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Week Staff Wages</div>
-                        <div id="kpiWeekWages" class="text-base sm:text-lg font-black text-sky-400">$0.00</div>
-                    </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Labor Cost %</div>
-                        <div id="kpiWeekLaborPct" class="text-base sm:text-lg font-black text-slate-400">—</div>
-                    </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Sales / Labor Hr (SPLH)</div>
-                        <div id="kpiWeekSplh" class="text-base sm:text-lg font-black text-amber-300">—</div>
-                    </div>
-                    <div class="col-span-2 sm:col-span-1 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Net Contribution</div>
-                        <div id="kpiWeekNetMargin" class="text-base sm:text-lg font-black text-purple-300">$0.00</div>
+                    <!-- Quick Presets -->
+                    <div class="flex items-center gap-1.5 flex-wrap text-[10px]">
+                        <span class="text-slate-400 font-bold">Presets:</span>
+                        <button type="button" onclick="setChartRangePreset('7d')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Last 7 Days</button>
+                        <button type="button" onclick="setChartRangePreset('14d')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Last 14 Days</button>
+                        <button type="button" onclick="setChartRangePreset('this_month')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">This Month</button>
+                        <button type="button" onclick="setChartRangePreset('last_month')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Last Month</button>
                     </div>
                 </div>
 
-                <!-- 7-Day Performance List -->
+                <!-- Range KPI Summary Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Range Total Sales</div>
+                        <div id="kpiRangeSales" class="text-base sm:text-lg font-black text-emerald-400">$0.00</div>
+                    </div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
+                        <div id="kpiRangeWages" class="text-base sm:text-lg font-black text-sky-400">$0.00</div>
+                    </div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Hours & SPLH</div>
+                        <div id="kpiRangeHoursSplh" class="text-base sm:text-lg font-black text-amber-300">0 hrs</div>
+                    </div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Net Contribution</div>
+                        <div id="kpiRangeNet" class="text-base sm:text-lg font-black text-purple-300">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- Day-by-Day Performance List -->
                 <div class="space-y-2">
                     <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
-                        <span>7-Day Performance (Mon – Sun)</span>
-                        <span>Click any day to view hourly staff alignment ➔</span>
+                        <span id="rangeDaysCountHeader">Daily Performance</span>
+                        <span>Click any day to inspect hourly details ➔</span>
                     </div>
-                    <div id="weeklyTrendCardsContainer" class="space-y-2">
-                        <!-- Populated by renderWeeklyTrendView() -->
+                    <div id="rangeTrendCardsContainer" class="space-y-2 max-h-[520px] overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW 2: 7-Day Hourly Heatmap -->
+            <!-- VIEW 2: Multi-Period Comparison Tool -->
+            <div id="analyticsCompareContainer" class="hidden space-y-4">
+                <!-- Comparison Controls & Mode Selector -->
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700/70 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-bold text-slate-300">Compare By:</span>
+                            <button type="button" id="btnCompModeDay" onclick="switchCompareMode('day')" class="px-3 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition">
+                                📅 Day vs Day
+                            </button>
+                            <button type="button" id="btnCompModeWeek" onclick="switchCompareMode('week')" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-700 text-slate-300 hover:text-white transition">
+                                📆 Week vs Week
+                            </button>
+                            <button type="button" id="btnCompModeMonth" onclick="switchCompareMode('month')" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-700 text-slate-300 hover:text-white transition">
+                                🗓️ Month vs Month
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Period Selectors Container -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                        <!-- Period A Picker -->
+                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-indigo-900/60 space-y-1">
+                            <div class="text-[10px] uppercase font-bold text-indigo-400 flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Period A (Baseline)
+                            </div>
+                            <div id="compPickerAContainer">
+                                <!-- Injected by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Period B Picker -->
+                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-emerald-900/60 space-y-1">
+                            <div class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Period B (Comparison)
+                            </div>
+                            <div id="compPickerBContainer">
+                                <!-- Injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Results Dashboard -->
+                <div id="comparisonResultsContainer" class="space-y-3">
+                    <!-- Populated dynamically by runComparison() -->
+                </div>
+            </div>
+
+            <!-- VIEW 3: 7-Day Hourly Heatmap -->
             <div id="analyticsHeatmapContainer" class="hidden space-y-3">
                 <!-- Heatmap Controls & Legend Header -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
@@ -286,10 +352,10 @@
                 </div>
             </div>
 
-            <!-- VIEW 3: Single Day Breakdown -->
+            <!-- VIEW 4: Single Day Breakdown -->
             <div id="analyticsDailyContainer" class="hidden space-y-3">
-                <!-- Summary KPI Cards -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <!-- Summary KPI Cards (3 Clean Cards, Labor % removed) -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</div>
                         <div id="kpiSalesTotal" class="text-sm sm:text-base font-extrabold text-emerald-400">$0.00</div>
@@ -297,10 +363,6 @@
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
                         <div id="kpiWagesTotal" class="text-sm sm:text-base font-extrabold text-blue-400">$0.00</div>
-                    </div>
-                    <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Labor Cost %</div>
-                        <div id="kpiLaborPercent" class="text-sm sm:text-base font-extrabold text-slate-400">—</div>
                     </div>
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Peak Sales Hour</div>
@@ -400,6 +462,10 @@
         window.switchAnalyticsTab = switchAnalyticsTab;
         window.setHeatmapMode = setHeatmapMode;
         window.drillIntoDay = drillIntoDay;
+        window.applyCustomDateRange = applyCustomDateRange;
+        window.setChartRangePreset = setChartRangePreset;
+        window.switchCompareMode = switchCompareMode;
+        window.runComparison = runComparison;
 
         // 2. Core State
         const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
@@ -1300,22 +1366,16 @@
             }
         }
 
-        let currentAnalyticsTab = 'weekly';
+        let currentAnalyticsTab = 'range';
         let currentHeatmapMode = 'active_week';
+        let currentCompareMode = 'day';
 
         function isShopOpenHour(dayOfWeek, hour) {
             // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
             if (hour < 9) return false;
-            if (dayOfWeek === 4) {
-                // Thu: open until 7:00 PM (hour 18 is 6-7 PM)
-                return hour <= 18;
-            }
-            if (dayOfWeek === 6) {
-                // Sat: 9:00 AM - 5:00 PM (open starting 9 AM sharp, closing 5 PM)
-                return hour <= 16;
-            }
-            // Mon-Wed, Fri, Sun: 9:30 AM - 5:00 PM (trading 9am-5pm)
-            return hour <= 16;
+            if (dayOfWeek === 4) return hour <= 18; // Thu open till 7pm
+            if (dayOfWeek === 6) return hour <= 16; // Sat 9am - 5pm
+            return hour <= 16; // 9:30am - 5pm
         }
 
         function getShopHoursDescription(dayOfWeek) {
@@ -1326,22 +1386,26 @@
 
         function switchAnalyticsTab(tabName) {
             currentAnalyticsTab = tabName;
-            const tabWeekly = document.getElementById('tabWeeklyTrendBtn');
+            const tabRange = document.getElementById('tabRangeBtn');
+            const tabCompare = document.getElementById('tabCompareBtn');
             const tabHeatmap = document.getElementById('tabHeatmapBtn');
             const tabDaily = document.getElementById('tabDailyBtn');
             
-            const contWeekly = document.getElementById('analyticsWeeklyTrendContainer');
+            const contRange = document.getElementById('analyticsDateRangeContainer');
+            const contCompare = document.getElementById('analyticsCompareContainer');
             const contHeatmap = document.getElementById('analyticsHeatmapContainer');
             const contDaily = document.getElementById('analyticsDailyContainer');
 
-            const activeClass = "flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5";
-            const inactiveClass = "flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5";
+            const activeClass = "flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5 whitespace-nowrap";
+            const inactiveClass = "flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap";
 
-            if (tabWeekly) tabWeekly.className = (tabName === 'weekly' ? activeClass : inactiveClass);
+            if (tabRange) tabRange.className = (tabName === 'range' ? activeClass : inactiveClass);
+            if (tabCompare) tabCompare.className = (tabName === 'compare' ? activeClass : inactiveClass);
             if (tabHeatmap) tabHeatmap.className = (tabName === 'heatmap' ? activeClass : inactiveClass);
             if (tabDaily) tabDaily.className = (tabName === 'daily' ? activeClass : inactiveClass);
 
-            if (contWeekly) contWeekly.classList.toggle('hidden', tabName !== 'weekly');
+            if (contRange) contRange.classList.toggle('hidden', tabName !== 'range');
+            if (contCompare) contCompare.classList.toggle('hidden', tabName !== 'compare');
             if (contHeatmap) contHeatmap.classList.toggle('hidden', tabName !== 'heatmap');
             if (contDaily) contDaily.classList.toggle('hidden', tabName !== 'daily');
 
@@ -1373,8 +1437,10 @@
 
         function renderCurrentAnalyticsView() {
             if (isShareModeActive) return;
-            if (currentAnalyticsTab === 'weekly') {
-                renderWeeklyTrendView();
+            if (currentAnalyticsTab === 'range') {
+                renderDateRangeView();
+            } else if (currentAnalyticsTab === 'compare') {
+                renderComparisonView();
             } else if (currentAnalyticsTab === 'heatmap') {
                 renderHourlyHeatmapView();
             } else {
@@ -1382,135 +1448,175 @@
             }
         }
 
-        function renderWeeklyTrendView() {
-            const filterWeekVal = document.getElementById('filterWeek').value;
-            const startMondayStr = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
-            
-            const badgeEl = document.getElementById('salesSelectedDayBadge');
-            if (badgeEl) {
-                const endSundayStr = addDaysString(startMondayStr, 6);
-                badgeEl.innerText = `Week: ${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(endSundayStr)}`;
+        // ==================== DATE RANGE VIEW ====================
+        function initDateRangeDefaults() {
+            const fromInput = document.getElementById('chartRangeFrom');
+            const toInput = document.getElementById('chartRangeTo');
+            if (fromInput && !fromInput.value) {
+                const now = new Date();
+                const toIso = now.toISOString().split('T')[0];
+                const fromDate = new Date(now.getTime() - 6 * 86400000);
+                const fromIso = fromDate.toISOString().split('T')[0];
+                fromInput.value = fromIso;
+                toInput.value = toIso;
+            }
+        }
+
+        function setChartRangePreset(preset) {
+            const fromInput = document.getElementById('chartRangeFrom');
+            const toInput = document.getElementById('chartRangeTo');
+            if (!fromInput || !toInput) return;
+
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth();
+
+            if (preset === '7d') {
+                toInput.value = now.toISOString().split('T')[0];
+                fromInput.value = new Date(now.getTime() - 6 * 86400000).toISOString().split('T')[0];
+            } else if (preset === '14d') {
+                toInput.value = now.toISOString().split('T')[0];
+                fromInput.value = new Date(now.getTime() - 13 * 86400000).toISOString().split('T')[0];
+            } else if (preset === 'this_month') {
+                fromInput.value = `${curY}-${String(curM + 1).padStart(2, '0')}-01`;
+                toInput.value = now.toISOString().split('T')[0];
+            } else if (preset === 'last_month') {
+                const prevMonthDate = new Date(curY, curM, 0); // last day of prev month
+                const prevY = prevMonthDate.getFullYear();
+                const prevM = prevMonthDate.getMonth() + 1;
+                fromInput.value = `${prevY}-${String(prevM).padStart(2, '0')}-01`;
+                toInput.value = prevMonthDate.toISOString().split('T')[0];
+            }
+            applyCustomDateRange();
+        }
+
+        function applyCustomDateRange() {
+            renderDateRangeView();
+        }
+
+        function getDatesInRange(startIso, endIso) {
+            const list = [];
+            let cur = new Date(startIso + 'T00:00:00Z');
+            const end = new Date(endIso + 'T00:00:00Z');
+            while (cur <= end) {
+                list.push(cur.toISOString().split('T')[0]);
+                cur.setUTCDate(cur.getUTCDate() + 1);
+            }
+            return list;
+        }
+
+        function renderDateRangeView() {
+            initDateRangeDefaults();
+            const fromInput = document.getElementById('chartRangeFrom');
+            const toInput = document.getElementById('chartRangeTo');
+            let startIso = fromInput ? fromInput.value : '';
+            let endIso = toInput ? toInput.value : '';
+
+            if (!startIso || !endIso) return;
+            if (startIso > endIso) {
+                const tmp = startIso; startIso = endIso; endIso = tmp;
+                fromInput.value = startIso; toInput.value = endIso;
             }
 
-            const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-            const dowIndices = [1, 2, 3, 4, 5, 6, 0];
+            const badgeEl = document.getElementById('salesSelectedDayBadge');
+            if (badgeEl) {
+                badgeEl.innerText = `Range: ${formatDisplayDateStr(startIso)} – ${formatDisplayDateStr(endIso)}`;
+            }
 
-            let weekTotalSales = 0;
-            let weekTotalLabor = 0;
-            let weekTotalHours = 0;
+            const dates = getDatesInRange(startIso, endIso);
+            const countHeader = document.getElementById('rangeDaysCountHeader');
+            if (countHeader) countHeader.innerText = `Daily Performance (${dates.length} days)`;
 
-            const dayDataList = [];
+            let rangeSales = 0;
+            let rangeWages = 0;
+            let rangeHours = 0;
 
-            for (let i = 0; i < 7; i++) {
-                const dayIso = addDaysString(startMondayStr, i);
-                const dayName = dayNames[i];
-                const dow = dowIndices[i];
+            const dayStatsList = [];
 
-                const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === dayIso);
-                const daySales = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
+            dates.forEach(dIso => {
+                const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
+                const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
 
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dayIso && entry.from && entry.to);
-                let dayLabor = 0;
-                let dayHours = 0;
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
+                let dWages = 0;
+                let dHours = 0;
 
                 dayShifts.forEach(shift => {
                     const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
                     const totH = Number(shift.totalHours) || 0;
-                    dayHours += totH;
+                    dHours += totH;
                     if (!isOwner) {
-                        const cRate = Number(shift.cashRate) || 0;
-                        const tRate = Number(shift.taxRate) || 0;
-                        const cHours = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
-                        const tHours = Math.max(0, totH - cHours);
-                        dayLabor += (cHours * cRate) + (tHours * tRate);
+                        const cr = Number(shift.cashRate) || 0;
+                        const tr = Number(shift.taxRate) || 0;
+                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const th = Math.max(0, totH - ch);
+                        dWages += (ch * cr) + (th * tr);
                     }
                 });
 
-                weekTotalSales += daySales;
-                weekTotalLabor += dayLabor;
-                weekTotalHours += dayHours;
+                rangeSales += sAmt;
+                rangeWages += dWages;
+                rangeHours += dHours;
 
-                const laborPct = daySales > 0 ? (dayLabor / daySales) * 100 : 0;
-                const splh = dayHours > 0 ? (daySales / dayHours) : 0;
-                const netMargin = daySales - dayLabor;
+                const splh = dHours > 0 ? (sAmt / dHours) : 0;
+                const net = sAmt - dWages;
 
-                dayDataList.push({
-                    dayIso,
+                const [y, m, d] = dIso.split('-').map(Number);
+                const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+                const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow];
+
+                dayStatsList.push({
+                    dIso,
                     dayName,
                     dow,
-                    daySales,
-                    dayLabor,
-                    dayHours,
-                    laborPct,
+                    sAmt,
+                    dWages,
+                    dHours,
                     splh,
-                    netMargin,
-                    staffCount: dayShifts.length,
+                    net,
                     hoursDesc: getShopHoursDescription(dow)
                 });
-            }
+            });
 
             // Update KPI Cards
-            const kpiSales = document.getElementById('kpiWeekSales');
-            const kpiWages = document.getElementById('kpiWeekWages');
-            const kpiLabor = document.getElementById('kpiWeekLaborPct');
-            const kpiSplh = document.getElementById('kpiWeekSplh');
-            const kpiNet = document.getElementById('kpiWeekNetMargin');
+            const kpiSales = document.getElementById('kpiRangeSales');
+            const kpiWages = document.getElementById('kpiRangeWages');
+            const kpiHoursSplh = document.getElementById('kpiRangeHoursSplh');
+            const kpiNet = document.getElementById('kpiRangeNet');
 
-            if (kpiSales) kpiSales.innerText = `$${weekTotalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (kpiWages) kpiWages.innerText = `$${weekTotalLabor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-            if (kpiLabor) {
-                if (weekTotalSales > 0) {
-                    const overallPct = (weekTotalLabor / weekTotalSales) * 100;
-                    let cClass = "text-emerald-400";
-                    if (overallPct > 35) cClass = "text-rose-400";
-                    else if (overallPct >= 30) cClass = "text-amber-300";
-                    kpiLabor.className = `text-base sm:text-lg font-black ${cClass}`;
-                    kpiLabor.innerText = `${overallPct.toFixed(1)}%`;
-                } else {
-                    kpiLabor.className = "text-base sm:text-lg font-black text-slate-400";
-                    kpiLabor.innerText = "—";
-                }
-            }
-
-            if (kpiSplh) {
-                const overallSplh = weekTotalHours > 0 ? (weekTotalSales / weekTotalHours) : 0;
-                kpiSplh.innerText = overallSplh > 0 ? `$${overallSplh.toFixed(0)} / hr` : "—";
+            if (kpiSales) kpiSales.innerText = `$${rangeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiWages) kpiWages.innerText = `$${rangeWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            
+            if (kpiHoursSplh) {
+                const avgSplh = rangeHours > 0 ? (rangeSales / rangeHours) : 0;
+                kpiHoursSplh.innerText = `${rangeHours.toFixed(1)} hrs (${avgSplh > 0 ? '$' + avgSplh.toFixed(0) + '/hr' : '—'})`;
             }
 
             if (kpiNet) {
-                const netWeek = weekTotalSales - weekTotalLabor;
-                kpiNet.innerText = `$${netWeek.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const netVal = rangeSales - rangeWages;
+                kpiNet.innerText = `$${netVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
 
             // Render Day Cards
-            const container = document.getElementById('weeklyTrendCardsContainer');
+            const container = document.getElementById('rangeTrendCardsContainer');
             if (!container) return;
 
-            const maxDaySale = Math.max(...dayDataList.map(d => d.daySales), 500);
+            const maxSale = Math.max(...dayStatsList.map(d => d.sAmt), 400);
 
             let cardsHtml = '';
-            dayDataList.forEach(item => {
-                const saleBarWidth = Math.round((item.daySales / maxDaySale) * 100);
-                const laborBarWidth = item.daySales > 0 ? Math.min(100, Math.round((item.dayLabor / item.daySales) * 100)) : 0;
-
-                let badgeColor = "bg-slate-700/60 text-slate-400 border-slate-600";
-                if (item.daySales > 0) {
-                    if (item.laborPct > 35) badgeColor = "bg-rose-950/80 text-rose-300 border-rose-800";
-                    else if (item.laborPct >= 30) badgeColor = "bg-amber-950/80 text-amber-300 border-amber-800";
-                    else badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-800";
-                }
+            dayStatsList.forEach(item => {
+                const saleBarWidth = Math.round((item.sAmt / maxSale) * 100);
 
                 cardsHtml += `
-                    <div class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 p-3 rounded-xl transition shadow-sm space-y-2 cursor-pointer" onclick="drillIntoDay('${item.dayIso}')" title="Click to view hourly staff alignment for ${item.dayName}">
+                    <div class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 p-3 rounded-xl transition shadow-sm space-y-2 cursor-pointer" onclick="drillIntoDay('${item.dIso}')" title="Click to view hourly breakdown for ${item.dayName}">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <span class="font-extrabold text-xs text-white">${item.dayName}</span>
-                                <span class="text-[10px] text-slate-400">${formatDisplayDateStr(item.dayIso)}</span>
+                                <span class="text-[10px] text-slate-400">${formatDisplayDateStr(item.dIso)}</span>
                                 <span class="text-[9px] px-2 py-0.5 rounded-full bg-slate-900/80 text-slate-400 border border-slate-800">${item.hoursDesc}</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-black text-emerald-400">$${item.daySales.toFixed(2)}</span>
+                                <span class="text-xs font-black text-emerald-400">$${item.sAmt.toFixed(2)}</span>
                                 <button type="button" class="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline">Inspect ➔</button>
                             </div>
                         </div>
@@ -1520,17 +1626,12 @@
                             <div class="bg-gradient-to-r from-purple-600 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${Math.max(saleBarWidth, 2)}%;"></div>
                         </div>
 
-                        <!-- Mini Metrics Row -->
+                        <!-- Metrics Row -->
                         <div class="flex items-center justify-between text-[10px] text-slate-300 pt-0.5">
                             <div class="flex items-center gap-3">
-                                <span>Wages: <b class="text-sky-300">$${item.dayLabor.toFixed(0)}</b> (${item.dayHours.toFixed(1)} hrs)</span>
+                                <span>Wages: <b class="text-sky-300">$${item.dWages.toFixed(0)}</b> (${item.dHours.toFixed(1)} hrs)</span>
                                 <span>SPLH: <b class="text-amber-300">${item.splh > 0 ? '$' + item.splh.toFixed(0) + '/hr' : '—'}</b></span>
-                                <span>Net: <b class="text-purple-300">$${item.netMargin.toFixed(0)}</b></span>
-                            </div>
-                            <div>
-                                <span class="px-2 py-0.5 rounded-md border text-[9px] font-extrabold ${badgeColor}">
-                                    Labor: ${item.daySales > 0 ? item.laborPct.toFixed(1) + '%' : '—'}
-                                </span>
+                                <span>Net: <b class="text-purple-300">$${item.net.toFixed(0)}</b></span>
                             </div>
                         </div>
                     </div>
@@ -1538,6 +1639,209 @@
             });
 
             container.innerHTML = cardsHtml;
+        }
+
+        // ==================== COMPARISON TOOL VIEW ====================
+        function switchCompareMode(mode) {
+            currentCompareMode = mode;
+            const btnDay = document.getElementById('btnCompModeDay');
+            const btnWeek = document.getElementById('btnCompModeWeek');
+            const btnMonth = document.getElementById('btnCompModeMonth');
+
+            const activeClass = "px-3 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition";
+            const inactiveClass = "px-3 py-1 rounded-lg text-xs font-bold bg-slate-700 text-slate-300 hover:text-white transition";
+
+            if (btnDay) btnDay.className = (mode === 'day' ? activeClass : inactiveClass);
+            if (btnWeek) btnWeek.className = (mode === 'week' ? activeClass : inactiveClass);
+            if (btnMonth) btnMonth.className = (mode === 'month' ? activeClass : inactiveClass);
+
+            renderComparisonPickers();
+            runComparison();
+        }
+
+        function renderComparisonPickers() {
+            const pA = document.getElementById('compPickerAContainer');
+            const pB = document.getElementById('compPickerBContainer');
+            if (!pA || !pB) return;
+
+            const todayIso = new Date().toISOString().split('T')[0];
+            const prevIso = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+
+            if (currentCompareMode === 'day') {
+                pA.innerHTML = `<input type="date" id="compDateA" value="${prevIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500">`;
+                pB.innerHTML = `<input type="date" id="compDateB" value="${todayIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500">`;
+            } else if (currentCompareMode === 'week') {
+                const curMon = getMondayString(todayIso);
+                const prevMon = addDaysString(curMon, -7);
+                pA.innerHTML = `<div class="flex items-center gap-1.5"><span class="text-[10px] text-slate-400">Week:</span><input type="date" id="compDateA" value="${prevMon}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500"></div>`;
+                pB.innerHTML = `<div class="flex items-center gap-1.5"><span class="text-[10px] text-slate-400">Week:</span><input type="date" id="compDateB" value="${curMon}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500"></div>`;
+            } else if (currentCompareMode === 'month') {
+                const curMonthStr = todayIso.substring(0, 7); // YYYY-MM
+                const d = new Date();
+                d.setMonth(d.getMonth() - 1);
+                const prevMonthStr = d.toISOString().substring(0, 7);
+                pA.innerHTML = `<input type="month" id="compDateA" value="${prevMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500">`;
+                pB.innerHTML = `<input type="month" id="compDateB" value="${curMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500">`;
+            }
+        }
+
+        function calculateMetricsForDates(dateList) {
+            let sales = 0;
+            let wages = 0;
+            let hours = 0;
+
+            dateList.forEach(dIso => {
+                const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
+                if (sRec) sales += Number(sRec.totalSales || 0);
+
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
+                dayShifts.forEach(shift => {
+                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                    const totH = Number(shift.totalHours) || 0;
+                    hours += totH;
+                    if (!isOwner) {
+                        const cr = Number(shift.cashRate) || 0;
+                        const tr = Number(shift.taxRate) || 0;
+                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const th = Math.max(0, totH - ch);
+                        wages += (ch * cr) + (th * tr);
+                    }
+                });
+            });
+
+            const splh = hours > 0 ? (sales / hours) : 0;
+            const net = sales - wages;
+
+            return { sales, wages, hours, splh, net, count: dateList.length };
+        }
+
+        function runComparison() {
+            const inputA = document.getElementById('compDateA');
+            const inputB = document.getElementById('compDateB');
+            if (!inputA || !inputB) return;
+
+            const valA = inputA.value;
+            const valB = inputB.value;
+            if (!valA || !valB) return;
+
+            let datesA = [];
+            let datesB = [];
+            let labelA = '';
+            let labelB = '';
+
+            if (currentCompareMode === 'day') {
+                datesA = [cleanDateStr(valA)];
+                datesB = [cleanDateStr(valB)];
+                labelA = formatDisplayDateStr(valA);
+                labelB = formatDisplayDateStr(valB);
+            } else if (currentCompareMode === 'week') {
+                const monA = getMondayString(valA);
+                const monB = getMondayString(valB);
+                datesA = [0,1,2,3,4,5,6].map(i => addDaysString(monA, i));
+                datesB = [0,1,2,3,4,5,6].map(i => addDaysString(monB, i));
+                labelA = `Week of ${formatDisplayDateStr(monA)}`;
+                labelB = `Week of ${formatDisplayDateStr(monB)}`;
+            } else if (currentCompareMode === 'month') {
+                // valA is 'YYYY-MM'
+                datesA = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valA));
+                datesB = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valB));
+                labelA = valA;
+                labelB = valB;
+            }
+
+            const metA = calculateMetricsForDates(datesA);
+            const metB = calculateMetricsForDates(datesB);
+
+            const container = document.getElementById('comparisonResultsContainer');
+            if (!container) return;
+
+            function formatDiff(vA, vB, isCurrency = true) {
+                const diff = vB - vA;
+                const pct = vA > 0 ? (diff / vA) * 100 : (vB > 0 ? 100 : 0);
+                const sign = diff >= 0 ? '+' : '';
+                const color = diff >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                const formattedDiff = isCurrency ? `${sign}$${Math.abs(diff).toFixed(0)}` : `${sign}${diff.toFixed(1)}`;
+                return `<span class="${color} font-bold">${formattedDiff} (${sign}${pct.toFixed(1)}%)</span>`;
+            }
+
+            container.innerHTML = `
+                <!-- Side-by-Side Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-indigo-950/40 border border-indigo-800/60 p-3.5 rounded-xl space-y-1">
+                        <div class="text-[11px] font-extrabold text-indigo-300 uppercase tracking-wide">Period A: ${labelA}</div>
+                        <div class="text-xl font-black text-white">$${metA.sales.toFixed(2)}</div>
+                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1">
+                            <span>Wages: <b>$${metA.wages.toFixed(0)}</b></span>
+                            <span>Hours: <b>${metA.hours.toFixed(1)}h</b></span>
+                            <span>SPLH: <b class="text-amber-300">$${metA.splh.toFixed(0)}/h</b></span>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-xl space-y-1">
+                        <div class="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wide">Period B: ${labelB}</div>
+                        <div class="text-xl font-black text-white">$${metB.sales.toFixed(2)}</div>
+                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1">
+                            <span>Wages: <b>$${metB.wages.toFixed(0)}</b></span>
+                            <span>Hours: <b>${metB.hours.toFixed(1)}h</b></span>
+                            <span>SPLH: <b class="text-amber-300">$${metB.splh.toFixed(0)}/h</b></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Variance Table -->
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow">
+                    <table class="w-full text-xs text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/50">
+                                <th class="p-2.5">Performance Metric</th>
+                                <th class="p-2.5 text-right">Period A</th>
+                                <th class="p-2.5 text-right">Period B</th>
+                                <th class="p-2.5 text-right">Variance (+ / -)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60 text-slate-200">
+                            <tr>
+                                <td class="p-2.5 font-bold">Total Sales Revenue</td>
+                                <td class="p-2.5 text-right font-extrabold">$${metA.sales.toFixed(2)}</td>
+                                <td class="p-2.5 text-right font-extrabold text-emerald-300">$${metB.sales.toFixed(2)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.sales, metB.sales, true)}</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold">Staff Labor Wages</td>
+                                <td class="p-2.5 text-right">$${metA.wages.toFixed(0)}</td>
+                                <td class="p-2.5 text-right">$${metB.wages.toFixed(0)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.wages, metB.wages, true)}</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold">Total Staff Hours Worked</td>
+                                <td class="p-2.5 text-right">${metA.hours.toFixed(1)} hrs</td>
+                                <td class="p-2.5 text-right">${metB.hours.toFixed(1)} hrs</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.hours, metB.hours, false)}</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold">Sales Per Labor Hour (SPLH)</td>
+                                <td class="p-2.5 text-right font-extrabold text-amber-300">$${metA.splh.toFixed(0)} / hr</td>
+                                <td class="p-2.5 text-right font-extrabold text-amber-300">$${metB.splh.toFixed(0)} / hr</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.splh, metB.splh, true)}</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold">Net Gross Margin (Sales − Wages)</td>
+                                <td class="p-2.5 text-right font-black text-purple-300">$${metA.net.toFixed(0)}</td>
+                                <td class="p-2.5 text-right font-black text-purple-300">$${metB.net.toFixed(0)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.net, metB.net, true)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderComparisonView() {
+            const pA = document.getElementById('compPickerAContainer');
+            if (pA && !pA.innerHTML.trim()) {
+                renderComparisonPickers();
+            }
+            runComparison();
         }
 
         function renderHourlyHeatmapView() {
@@ -1556,7 +1860,6 @@
             const dowIndices = [1, 2, 3, 4, 5, 6, 0];
             const hoursList = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
-            // If in historical mode: pre-compute averages for each DOW and hour
             const histAverages = {};
             if (currentHeatmapMode === 'historical') {
                 const dayBuckets = { 0:{ count: 0, hours: {}, total: 0 }, 1:{ count: 0, hours: {}, total: 0 }, 2:{ count: 0, hours: {}, total: 0 }, 3:{ count: 0, hours: {}, total: 0 }, 4:{ count: 0, hours: {}, total: 0 }, 5:{ count: 0, hours: {}, total: 0 }, 6:{ count: 0, hours: {}, total: 0 } };
@@ -1600,7 +1903,6 @@
 
                 const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === dayIso);
                 const actualHourly = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
-                const actualDayTotal = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
 
                 const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dayIso && entry.from && entry.to);
 
@@ -1685,8 +1987,7 @@
 
             tbody.innerHTML = tbodyHtml;
         }
-
-        function convertHourStr(hStr) {
+function convertHourStr(hStr) {
             if (!hStr) return '';
             let [h] = hStr.split(':').map(Number);
             let ampm = h >= 12 ? 'PM' : 'AM';
