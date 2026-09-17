@@ -1024,7 +1024,7 @@
                 sCashH += recCashH;
                 sTaxH += recTaxH;
                 sCashP += (recCashH * recCashRate);
-                sTaxP += (recTaxH * recTaxRate) * 1.12;
+                sTaxP += (recTaxH * recTaxRate);
 
                 if (!isOwner) {
                     globalDailyTotals[i] += record.totalHours;
@@ -1420,10 +1420,9 @@
                     if (!isOwner) {
                         const cRate = Number(shift.cashRate) || 0;
                         const tRate = Number(shift.taxRate) || 0;
-                        const cHours = Number(shift.cashHours) || 0;
-                        const tHours = (shift.taxHours !== undefined && shift.taxHours !== null && shift.taxHours !== '') ? 
-                            Number(shift.taxHours) : (totH - cHours);
-                        dayLabor += (cHours * cRate) + (tHours * tRate * 1.12);
+                        const cHours = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const tHours = Math.max(0, totH - cHours);
+                        dayLabor += (cHours * cRate) + (tHours * tRate);
                     }
                 });
 
@@ -1722,12 +1721,12 @@
             dayShifts.forEach(shift => {
                 const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
                 if (!isOwner) {
+                    const totH = Number(shift.totalHours) || 0;
                     const cRate = Number(shift.cashRate) || 0;
                     const tRate = Number(shift.taxRate) || 0;
-                    const cHours = Number(shift.cashHours) || 0;
-                    const tHours = (shift.taxHours !== undefined && shift.taxHours !== null && shift.taxHours !== '') ? 
-                        Number(shift.taxHours) : (Number(shift.totalHours || 0) - cHours);
-                    totalDayLaborCost += (cHours * cRate) + (tHours * tRate * 1.12);
+                    const cHours = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                    const tHours = Math.max(0, totH - cHours);
+                    totalDayLaborCost += (cHours * cRate) + (tHours * tRate);
                 }
             });
 
