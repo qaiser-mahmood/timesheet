@@ -151,55 +151,171 @@
             </div>
         </div>
 
-        <!-- Hourly Sales vs Roster Alignment (Hide on Share) -->
-        <div id="hourlySalesSection" class="hide-on-share bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-4 space-y-3 shadow-md">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-2">
+        <!-- Hourly Sales & Analytics Intelligence (Hide on Share) -->
+        <div id="hourlySalesSection" class="hide-on-share bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-5 space-y-4 shadow-xl border border-slate-800">
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1">
-                        📊 Hourly Sales & Staff Alignment
+                    <span class="text-sm sm:text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
+                        📊 Sales & Labor Intelligence
                     </span>
-                    <span id="salesSelectedDayBadge" class="bg-purple-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                    <span id="salesSelectedDayBadge" class="bg-purple-600/90 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm">
                         -
                     </span>
                 </div>
                 <div class="flex items-center gap-2 text-xs">
-                    <button type="button" onclick="refreshCloudData(true)" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white font-bold px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm border border-slate-600" title="Refresh sales data from Google Sheet">
-                        <span class="cloud-refresh-icon inline-block">🔄</span> <span>Refresh</span>
+                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Refresh data from database">
+                        <span class="cloud-refresh-icon inline-block">🔄</span> <span>Sync</span>
                     </button>
-                    <button type="button" onclick="openEposModal()" class="text-[10px] bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1 rounded transition flex items-center gap-1 shadow-sm">
+                    <button type="button" onclick="openEposModal()" class="text-[11px] bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                         ⚡ Setup / Sync Epos
                     </button>
                 </div>
             </div>
 
-            <!-- Summary KPI Cards -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
-                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</div>
-                    <div id="kpiSalesTotal" class="text-sm sm:text-base font-extrabold text-emerald-400">$0.00</div>
+            <!-- Analytics Navigation Tabs -->
+            <div class="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs">
+                <button type="button" id="tabWeeklyTrendBtn" onclick="switchAnalyticsTab('weekly')" class="flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5">
+                    📈 7-Day Week Trend
+                </button>
+                <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5">
+                    🔥 7-Day Hourly Heatmap
+                </button>
+                <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5">
+                    ⏱️ Single Day Breakdown
+                </button>
+            </div>
+
+            <!-- VIEW 1: 7-Day Weekly Trend -->
+            <div id="analyticsWeeklyTrendContainer" class="space-y-4">
+                <!-- Weekly KPI Summary Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Week Revenue</div>
+                        <div id="kpiWeekSales" class="text-base sm:text-lg font-black text-emerald-400">$0.00</div>
+                    </div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Week Staff Wages</div>
+                        <div id="kpiWeekWages" class="text-base sm:text-lg font-black text-sky-400">$0.00</div>
+                    </div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Labor Cost %</div>
+                        <div id="kpiWeekLaborPct" class="text-base sm:text-lg font-black text-slate-400">—</div>
+                    </div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Sales / Labor Hr (SPLH)</div>
+                        <div id="kpiWeekSplh" class="text-base sm:text-lg font-black text-amber-300">—</div>
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Net Contribution</div>
+                        <div id="kpiWeekNetMargin" class="text-base sm:text-lg font-black text-purple-300">$0.00</div>
+                    </div>
                 </div>
-                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
-                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
-                    <div id="kpiWagesTotal" class="text-sm sm:text-base font-extrabold text-blue-400">$0.00</div>
-                </div>
-                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
-                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Labor Cost %</div>
-                    <div id="kpiLaborPercent" class="text-sm sm:text-base font-extrabold text-slate-400">—</div>
-                </div>
-                <div class="bg-slate-800/80 border border-slate-700/80 p-2 rounded-lg">
-                    <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Peak Sales Hour</div>
-                    <div id="kpiPeakHour" class="text-sm sm:text-base font-extrabold text-purple-300">—</div>
+
+                <!-- 7-Day Performance List -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
+                        <span>7-Day Performance (Mon – Sun)</span>
+                        <span>Click any day to view hourly staff alignment ➔</span>
+                    </div>
+                    <div id="weeklyTrendCardsContainer" class="space-y-2">
+                        <!-- Populated by renderWeeklyTrendView() -->
+                    </div>
                 </div>
             </div>
 
-            <!-- Visual Bar Chart -->
-            <div id="hourlyChartContainer" class="space-y-1 pt-1">
-                <!-- Dynamically populated bars -->
+            <!-- VIEW 2: 7-Day Hourly Heatmap -->
+            <div id="analyticsHeatmapContainer" class="hidden space-y-3">
+                <!-- Heatmap Controls & Legend Header -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-slate-300">Display Mode:</span>
+                        <button type="button" id="btnHeatmapActiveWeek" onclick="setHeatmapMode('active_week')" class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white shadow-sm transition">
+                            📅 Selected Week (Actuals & Staff)
+                        </button>
+                        <button type="button" id="btnHeatmapHistorical" onclick="setHeatmapMode('historical')" class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 transition">
+                            📊 Historical Averages (Roster Guide)
+                        </button>
+                    </div>
+                    <!-- Legend -->
+                    <div class="flex items-center gap-1 text-[9px] font-semibold text-slate-300 flex-wrap">
+                        <span class="text-slate-400">Scale:</span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-900/80 border border-slate-800 text-slate-500">Closed</span>
+                        <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-400">$0</span>
+                        <span class="px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-900 text-indigo-300">&lt;$100</span>
+                        <span class="px-1.5 py-0.5 rounded bg-indigo-900/90 border border-indigo-700 text-white">$100–$200</span>
+                        <span class="px-1.5 py-0.5 rounded bg-purple-800/90 border border-purple-600 text-white font-bold">$200–$350</span>
+                        <span class="px-1.5 py-0.5 rounded bg-emerald-700 border border-emerald-500 text-white font-extrabold">$350+ Rush</span>
+                    </div>
+                </div>
+
+                <!-- Operating Hours Reference Note -->
+                <div class="text-[10px] text-slate-400 italic px-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>🕒 <b>Shop Trading Hours:</b></span>
+                    <span>Mon–Wed: 9:30am–5pm</span>
+                    <span class="text-amber-300 font-semibold">Thu: 9:30am–7pm (Late Night)</span>
+                    <span>Fri: 9:30am–5pm</span>
+                    <span class="text-sky-300 font-semibold">Sat: 9am–5pm (Early Open)</span>
+                    <span>Sun: 9:30am–5pm</span>
+                </div>
+
+                <!-- Heatmap Table Matrix -->
+                <div class="overflow-x-auto rounded-xl border border-slate-700/80 shadow-inner bg-slate-950/60">
+                    <table class="w-full text-[11px] border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-900/90 border-b border-slate-700/80 text-slate-300 text-[10px] uppercase font-bold">
+                                <th class="p-2 text-left w-24 sticky left-0 bg-slate-900 z-10">Day</th>
+                                <th class="p-1 text-center">9 AM</th>
+                                <th class="p-1 text-center">10 AM</th>
+                                <th class="p-1 text-center">11 AM</th>
+                                <th class="p-1 text-center">12 PM</th>
+                                <th class="p-1 text-center">1 PM</th>
+                                <th class="p-1 text-center">2 PM</th>
+                                <th class="p-1 text-center">3 PM</th>
+                                <th class="p-1 text-center">4 PM</th>
+                                <th class="p-1 text-center">5 PM</th>
+                                <th class="p-1 text-center">6 PM</th>
+                                <th class="p-1 text-center">7 PM</th>
+                                <th class="p-2 text-right w-20">Day Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heatmapTableBody">
+                            <!-- Populated by renderHourlyHeatmapView() -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW 3: Single Day Breakdown -->
+            <div id="analyticsDailyContainer" class="hidden space-y-3">
+                <!-- Summary KPI Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</div>
+                        <div id="kpiSalesTotal" class="text-sm sm:text-base font-extrabold text-emerald-400">$0.00</div>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
+                        <div id="kpiWagesTotal" class="text-sm sm:text-base font-extrabold text-blue-400">$0.00</div>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Labor Cost %</div>
+                        <div id="kpiLaborPercent" class="text-sm sm:text-base font-extrabold text-slate-400">—</div>
+                    </div>
+                    <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Peak Sales Hour</div>
+                        <div id="kpiPeakHour" class="text-sm sm:text-base font-extrabold text-purple-300">—</div>
+                    </div>
+                </div>
+
+                <!-- Visual Bar Chart -->
+                <div id="hourlyChartContainer" class="space-y-1 pt-1">
+                    <!-- Dynamically populated bars -->
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- Epos Bookmarklet & Import Modal -->
+<!-- Epos Bookmarklet & Import Modal -->
     <div id="eposModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-6 space-y-4">
             <div class="flex items-center justify-between border-b pb-3">
@@ -281,6 +397,9 @@
         window.handleEposCsvFileSelect = handleEposCsvFileSelect;
         window.refreshCloudData = refreshCloudData;
         window.loadCloudData = loadCloudData;
+        window.switchAnalyticsTab = switchAnalyticsTab;
+        window.setHeatmapMode = setHeatmapMode;
+        window.drillIntoDay = drillIntoDay;
 
         // 2. Core State
         const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
@@ -953,7 +1072,7 @@
                 <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
                 <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
     document.getElementById('weeklyTableFoot').innerHTML = tfootHtml;
-    renderHourlySalesView();
+    renderCurrentAnalyticsView();
 }
 
         function getBookmarkletCodeString() {
@@ -1179,6 +1298,393 @@
             if (parsedDates.length > 0) {
                 selectDayInline(parsedDates[0]);
             }
+        }
+
+        let currentAnalyticsTab = 'weekly';
+        let currentHeatmapMode = 'active_week';
+
+        function isShopOpenHour(dayOfWeek, hour) {
+            // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+            if (hour < 9) return false;
+            if (dayOfWeek === 4) {
+                // Thu: open until 7:00 PM (hour 18 is 6-7 PM)
+                return hour <= 18;
+            }
+            if (dayOfWeek === 6) {
+                // Sat: 9:00 AM - 5:00 PM (open starting 9 AM sharp, closing 5 PM)
+                return hour <= 16;
+            }
+            // Mon-Wed, Fri, Sun: 9:30 AM - 5:00 PM (trading 9am-5pm)
+            return hour <= 16;
+        }
+
+        function getShopHoursDescription(dayOfWeek) {
+            if (dayOfWeek === 4) return "9:30 AM – 7:00 PM (Late Night)";
+            if (dayOfWeek === 6) return "9:00 AM – 5:00 PM (Early Open)";
+            return "9:30 AM – 5:00 PM";
+        }
+
+        function switchAnalyticsTab(tabName) {
+            currentAnalyticsTab = tabName;
+            const tabWeekly = document.getElementById('tabWeeklyTrendBtn');
+            const tabHeatmap = document.getElementById('tabHeatmapBtn');
+            const tabDaily = document.getElementById('tabDailyBtn');
+            
+            const contWeekly = document.getElementById('analyticsWeeklyTrendContainer');
+            const contHeatmap = document.getElementById('analyticsHeatmapContainer');
+            const contDaily = document.getElementById('analyticsDailyContainer');
+
+            const activeClass = "flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5";
+            const inactiveClass = "flex-1 py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5";
+
+            if (tabWeekly) tabWeekly.className = (tabName === 'weekly' ? activeClass : inactiveClass);
+            if (tabHeatmap) tabHeatmap.className = (tabName === 'heatmap' ? activeClass : inactiveClass);
+            if (tabDaily) tabDaily.className = (tabName === 'daily' ? activeClass : inactiveClass);
+
+            if (contWeekly) contWeekly.classList.toggle('hidden', tabName !== 'weekly');
+            if (contHeatmap) contHeatmap.classList.toggle('hidden', tabName !== 'heatmap');
+            if (contDaily) contDaily.classList.toggle('hidden', tabName !== 'daily');
+
+            renderCurrentAnalyticsView();
+        }
+
+        function setHeatmapMode(mode) {
+            currentHeatmapMode = mode;
+            const btnActive = document.getElementById('btnHeatmapActiveWeek');
+            const btnHist = document.getElementById('btnHeatmapHistorical');
+            if (btnActive && btnHist) {
+                if (mode === 'active_week') {
+                    btnActive.className = "px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white shadow-sm transition";
+                    btnHist.className = "px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 transition";
+                } else {
+                    btnHist.className = "px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-600 text-white shadow-sm transition";
+                    btnActive.className = "px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-700 text-slate-300 hover:text-white hover:bg-slate-600 transition";
+                }
+            }
+            renderHourlyHeatmapView();
+        }
+
+        function drillIntoDay(targetIso) {
+            const dateInput = document.getElementById('date');
+            if (dateInput) dateInput.value = targetIso;
+            switchAnalyticsTab('daily');
+            renderHourlySalesView(targetIso);
+        }
+
+        function renderCurrentAnalyticsView() {
+            if (isShareModeActive) return;
+            if (currentAnalyticsTab === 'weekly') {
+                renderWeeklyTrendView();
+            } else if (currentAnalyticsTab === 'heatmap') {
+                renderHourlyHeatmapView();
+            } else {
+                renderHourlySalesView();
+            }
+        }
+
+        function renderWeeklyTrendView() {
+            const filterWeekVal = document.getElementById('filterWeek').value;
+            const startMondayStr = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
+            
+            const badgeEl = document.getElementById('salesSelectedDayBadge');
+            if (badgeEl) {
+                const endSundayStr = addDaysString(startMondayStr, 6);
+                badgeEl.innerText = `Week: ${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(endSundayStr)}`;
+            }
+
+            const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const dowIndices = [1, 2, 3, 4, 5, 6, 0];
+
+            let weekTotalSales = 0;
+            let weekTotalLabor = 0;
+            let weekTotalHours = 0;
+
+            const dayDataList = [];
+
+            for (let i = 0; i < 7; i++) {
+                const dayIso = addDaysString(startMondayStr, i);
+                const dayName = dayNames[i];
+                const dow = dowIndices[i];
+
+                const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === dayIso);
+                const daySales = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
+
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dayIso && entry.from && entry.to);
+                let dayLabor = 0;
+                let dayHours = 0;
+
+                dayShifts.forEach(shift => {
+                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                    const totH = Number(shift.totalHours) || 0;
+                    dayHours += totH;
+                    if (!isOwner) {
+                        const cRate = Number(shift.cashRate) || 0;
+                        const tRate = Number(shift.taxRate) || 0;
+                        const cHours = Number(shift.cashHours) || 0;
+                        const tHours = (shift.taxHours !== undefined && shift.taxHours !== null && shift.taxHours !== '') ? 
+                            Number(shift.taxHours) : (totH - cHours);
+                        dayLabor += (cHours * cRate) + (tHours * tRate * 1.12);
+                    }
+                });
+
+                weekTotalSales += daySales;
+                weekTotalLabor += dayLabor;
+                weekTotalHours += dayHours;
+
+                const laborPct = daySales > 0 ? (dayLabor / daySales) * 100 : 0;
+                const splh = dayHours > 0 ? (daySales / dayHours) : 0;
+                const netMargin = daySales - dayLabor;
+
+                dayDataList.push({
+                    dayIso,
+                    dayName,
+                    dow,
+                    daySales,
+                    dayLabor,
+                    dayHours,
+                    laborPct,
+                    splh,
+                    netMargin,
+                    staffCount: dayShifts.length,
+                    hoursDesc: getShopHoursDescription(dow)
+                });
+            }
+
+            // Update KPI Cards
+            const kpiSales = document.getElementById('kpiWeekSales');
+            const kpiWages = document.getElementById('kpiWeekWages');
+            const kpiLabor = document.getElementById('kpiWeekLaborPct');
+            const kpiSplh = document.getElementById('kpiWeekSplh');
+            const kpiNet = document.getElementById('kpiWeekNetMargin');
+
+            if (kpiSales) kpiSales.innerText = `$${weekTotalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiWages) kpiWages.innerText = `$${weekTotalLabor.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            if (kpiLabor) {
+                if (weekTotalSales > 0) {
+                    const overallPct = (weekTotalLabor / weekTotalSales) * 100;
+                    let cClass = "text-emerald-400";
+                    if (overallPct > 35) cClass = "text-rose-400";
+                    else if (overallPct >= 30) cClass = "text-amber-300";
+                    kpiLabor.className = `text-base sm:text-lg font-black ${cClass}`;
+                    kpiLabor.innerText = `${overallPct.toFixed(1)}%`;
+                } else {
+                    kpiLabor.className = "text-base sm:text-lg font-black text-slate-400";
+                    kpiLabor.innerText = "—";
+                }
+            }
+
+            if (kpiSplh) {
+                const overallSplh = weekTotalHours > 0 ? (weekTotalSales / weekTotalHours) : 0;
+                kpiSplh.innerText = overallSplh > 0 ? `$${overallSplh.toFixed(0)} / hr` : "—";
+            }
+
+            if (kpiNet) {
+                const netWeek = weekTotalSales - weekTotalLabor;
+                kpiNet.innerText = `$${netWeek.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+
+            // Render Day Cards
+            const container = document.getElementById('weeklyTrendCardsContainer');
+            if (!container) return;
+
+            const maxDaySale = Math.max(...dayDataList.map(d => d.daySales), 500);
+
+            let cardsHtml = '';
+            dayDataList.forEach(item => {
+                const saleBarWidth = Math.round((item.daySales / maxDaySale) * 100);
+                const laborBarWidth = item.daySales > 0 ? Math.min(100, Math.round((item.dayLabor / item.daySales) * 100)) : 0;
+
+                let badgeColor = "bg-slate-700/60 text-slate-400 border-slate-600";
+                if (item.daySales > 0) {
+                    if (item.laborPct > 35) badgeColor = "bg-rose-950/80 text-rose-300 border-rose-800";
+                    else if (item.laborPct >= 30) badgeColor = "bg-amber-950/80 text-amber-300 border-amber-800";
+                    else badgeColor = "bg-emerald-950/80 text-emerald-300 border-emerald-800";
+                }
+
+                cardsHtml += `
+                    <div class="bg-slate-800/80 hover:bg-slate-800 border border-slate-700/70 p-3 rounded-xl transition shadow-sm space-y-2 cursor-pointer" onclick="drillIntoDay('${item.dayIso}')" title="Click to view hourly staff alignment for ${item.dayName}">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <span class="font-extrabold text-xs text-white">${item.dayName}</span>
+                                <span class="text-[10px] text-slate-400">${formatDisplayDateStr(item.dayIso)}</span>
+                                <span class="text-[9px] px-2 py-0.5 rounded-full bg-slate-900/80 text-slate-400 border border-slate-800">${item.hoursDesc}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black text-emerald-400">$${item.daySales.toFixed(2)}</span>
+                                <button type="button" class="text-[10px] text-purple-400 hover:text-purple-300 font-bold underline">Inspect ➔</button>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full bg-slate-900 rounded-full h-3 overflow-hidden flex items-center p-0.5">
+                            <div class="bg-gradient-to-r from-purple-600 to-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${Math.max(saleBarWidth, 2)}%;"></div>
+                        </div>
+
+                        <!-- Mini Metrics Row -->
+                        <div class="flex items-center justify-between text-[10px] text-slate-300 pt-0.5">
+                            <div class="flex items-center gap-3">
+                                <span>Wages: <b class="text-sky-300">$${item.dayLabor.toFixed(0)}</b> (${item.dayHours.toFixed(1)} hrs)</span>
+                                <span>SPLH: <b class="text-amber-300">${item.splh > 0 ? '$' + item.splh.toFixed(0) + '/hr' : '—'}</b></span>
+                                <span>Net: <b class="text-purple-300">$${item.netMargin.toFixed(0)}</b></span>
+                            </div>
+                            <div>
+                                <span class="px-2 py-0.5 rounded-md border text-[9px] font-extrabold ${badgeColor}">
+                                    Labor: ${item.daySales > 0 ? item.laborPct.toFixed(1) + '%' : '—'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = cardsHtml;
+        }
+
+        function renderHourlyHeatmapView() {
+            const filterWeekVal = document.getElementById('filterWeek').value;
+            const startMondayStr = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
+            
+            const badgeEl = document.getElementById('salesSelectedDayBadge');
+            if (badgeEl) {
+                const endSundayStr = addDaysString(startMondayStr, 6);
+                badgeEl.innerText = (currentHeatmapMode === 'active_week') ?
+                    `Week: ${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(endSundayStr)}` :
+                    `Historical Average (113+ Days)`;
+            }
+
+            const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            const dowIndices = [1, 2, 3, 4, 5, 6, 0];
+            const hoursList = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+
+            // If in historical mode: pre-compute averages for each DOW and hour
+            const histAverages = {};
+            if (currentHeatmapMode === 'historical') {
+                const dayBuckets = { 0:{ count: 0, hours: {}, total: 0 }, 1:{ count: 0, hours: {}, total: 0 }, 2:{ count: 0, hours: {}, total: 0 }, 3:{ count: 0, hours: {}, total: 0 }, 4:{ count: 0, hours: {}, total: 0 }, 5:{ count: 0, hours: {}, total: 0 }, 6:{ count: 0, hours: {}, total: 0 } };
+                
+                hourlySalesStore.forEach(rec => {
+                    const [y, m, d] = rec.date.split('-').map(Number);
+                    const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+                    const bucket = dayBuckets[dow];
+                    bucket.count++;
+                    bucket.total += Number(rec.totalSales || 0);
+                    const hourly = rec.hourly || {};
+                    for (const [hKey, val] of Object.entries(hourly)) {
+                        const hNum = parseInt(hKey.split(':')[0], 10);
+                        if (!bucket.hours[hNum]) bucket.hours[hNum] = 0;
+                        bucket.hours[hNum] += Number(val || 0);
+                    }
+                });
+
+                dowIndices.forEach(dow => {
+                    const b = dayBuckets[dow];
+                    histAverages[dow] = {
+                        avgDayTotal: b.count > 0 ? (b.total / b.count) : 0,
+                        hours: {}
+                    };
+                    hoursList.forEach(h => {
+                        const sumH = b.hours[h] || 0;
+                        histAverages[dow].hours[h] = b.count > 0 ? (sumH / b.count) : 0;
+                    });
+                });
+            }
+
+            const tbody = document.getElementById('heatmapTableBody');
+            if (!tbody) return;
+
+            let tbodyHtml = '';
+
+            for (let dIdx = 0; dIdx < 7; dIdx++) {
+                const dow = dowIndices[dIdx];
+                const dayName = dayNames[dIdx];
+                const dayIso = addDaysString(startMondayStr, dIdx);
+
+                const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === dayIso);
+                const actualHourly = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
+                const actualDayTotal = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
+
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dayIso && entry.from && entry.to);
+
+                let rowCellsHtml = '';
+                let rowDisplayTotal = 0;
+
+                for (let h of hoursList) {
+                    const isOpen = isShopOpenHour(dow, h);
+                    let saleAmt = 0;
+                    let staffOnHour = [];
+
+                    if (currentHeatmapMode === 'active_week') {
+                        const hKey = h.toString().padStart(2, '0') + ':00';
+                        saleAmt = Number(actualHourly[hKey] || 0);
+                        rowDisplayTotal += saleAmt;
+
+                        staffOnHour = dayShifts.filter(shift => {
+                            if (!shift.from || !shift.to) return false;
+                            const [sH, sM] = shift.from.split(':').map(Number);
+                            const [eH, eM] = shift.to.split(':').map(Number);
+                            let sTotal = sH * 60 + sM;
+                            let eTotal = eH * 60 + eM;
+                            if (eTotal < sTotal) eTotal += 24 * 60;
+                            const hStart = h * 60;
+                            const hEnd = (h + 1) * 60;
+                            return (sTotal < hEnd && eTotal > hStart);
+                        });
+                    } else {
+                        saleAmt = histAverages[dow] ? (histAverages[dow].hours[h] || 0) : 0;
+                        rowDisplayTotal += saleAmt;
+                    }
+
+                    if (!isOpen) {
+                        rowCellsHtml += `
+                            <td class="p-1 text-center bg-slate-950/60 border border-slate-900/90 text-slate-600 text-[10px]" title="Closed during this hour">
+                                <span class="opacity-40">—</span>
+                            </td>
+                        `;
+                    } else {
+                        let cellBg = "bg-slate-900/80 border-slate-800 text-slate-400";
+                        if (saleAmt > 350) {
+                            cellBg = "bg-emerald-600/90 border-emerald-400 text-white font-extrabold shadow-sm";
+                        } else if (saleAmt > 200) {
+                            cellBg = "bg-purple-700/85 border-purple-500 text-white font-bold";
+                        } else if (saleAmt > 100) {
+                            cellBg = "bg-indigo-800/85 border-indigo-600 text-white font-semibold";
+                        } else if (saleAmt > 0) {
+                            cellBg = "bg-indigo-950/70 border-indigo-900/80 text-indigo-200";
+                        }
+
+                        const staffNames = staffOnHour.map(s => s.name).join(', ');
+                        const tooltipText = currentHeatmapMode === 'active_week' ?
+                            `${convertHourStr(h + ':00')}: $${saleAmt.toFixed(0)} | Staff (${staffOnHour.length}): ${staffNames || 'None'}` :
+                            `${convertHourStr(h + ':00')}: Historical Avg $${saleAmt.toFixed(0)}`;
+
+                        rowCellsHtml += `
+                            <td class="p-1 text-center border transition hover:scale-105 cursor-pointer ${cellBg}" title="${tooltipText}" onclick="drillIntoDay('${dayIso}')">
+                                <div class="text-[11px] leading-tight">$${saleAmt.toFixed(0)}</div>
+                                ${currentHeatmapMode === 'active_week' ? `
+                                    <div class="text-[9px] opacity-85 leading-none mt-0.5">
+                                        ${staffOnHour.length > 0 ? `👤${staffOnHour.length}` : `<span class="opacity-40">—</span>`}
+                                    </div>
+                                ` : ''}
+                            </td>
+                        `;
+                    }
+                }
+
+                tbodyHtml += `
+                    <tr class="hover:bg-slate-900/40 border-b border-slate-800/60">
+                        <td class="p-2 font-bold text-left sticky left-0 bg-slate-900 border-r border-slate-800 cursor-pointer text-white hover:text-purple-300" onclick="drillIntoDay('${dayIso}')">
+                            <div class="leading-none">${dayName}</div>
+                            <div class="text-[9px] text-slate-400 mt-0.5">${formatDisplayDateStr(dayIso)}</div>
+                        </td>
+                        ${rowCellsHtml}
+                        <td class="p-2 text-right font-black text-emerald-400 border-l border-slate-800 cursor-pointer" onclick="drillIntoDay('${dayIso}')">
+                            $${rowDisplayTotal.toFixed(0)}
+                        </td>
+                    </tr>
+                `;
+            }
+
+            tbody.innerHTML = tbodyHtml;
         }
 
         function convertHourStr(hStr) {
