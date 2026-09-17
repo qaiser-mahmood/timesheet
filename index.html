@@ -694,17 +694,25 @@
                     const chosenDate = cleanDateStr(document.getElementById('date').value);
 
                     const isOwner = (currentStaff.toLowerCase().trim() === 'qaiser');
+                    const matchedPrevious = dataStore.find(entry => 
+                        cleanDateStr(entry.date) === chosenDate && 
+                        entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()
+                    );
+
                     const newEntry = {
-                        date: chosenDate, weekCommencing: getMondayString(chosenDate), name: currentStaff,
-                        from: document.getElementById('startTime').value, to: document.getElementById('endTime').value,
+                        date: chosenDate,
+                        weekCommencing: getMondayString(chosenDate),
+                        name: currentStaff,
+                        from: document.getElementById('startTime').value,
+                        to: document.getElementById('endTime').value,
                         cashRate: isOwner ? 0 : parseFloat(document.getElementById('payRate').value || 0),
                         taxRate: isOwner ? 0 : parseFloat(document.getElementById('taxPayRate').value || 0),
                         totalHours: total,
-                        cashHours: isOwner ? 0 : (matchedPrevious ? matchedPrevious.cashHours : 0),
-                        taxHours: isOwner ? 0 : (matchedPrevious ? matchedPrevious.taxHours : total)
+                        cashHours: isOwner ? 0 : (matchedPrevious && matchedPrevious.cashHours !== undefined ? Number(matchedPrevious.cashHours) : 0),
+                        taxHours: isOwner ? 0 : (matchedPrevious && matchedPrevious.taxHours !== undefined ? Number(matchedPrevious.taxHours) : total)
                     };
 
-                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
+                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
                     dataStore.push(newEntry);
                     renderWeeklyTable();
                     try { await callSheetApi({ action: "save", entry: newEntry }); } catch (err) { console.error(err); }
@@ -715,7 +723,7 @@
                     const chosenDate = cleanDateStr(document.getElementById('date').value);
                     const currentStaff = document.getElementById('staffName').value.toString().trim();
                     if (!chosenDate || !currentStaff || !confirm(`Delete record?`)) return;
-                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name.toString().trim() === currentStaff));
+                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
                     renderWeeklyTable();
                     try { await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff }); } catch (err) { console.error(err); }
                     loadCloudData();
