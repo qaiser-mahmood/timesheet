@@ -33,6 +33,9 @@
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Previous Week
                 </button>
+                <button type="button" id="logExpenseHeaderBtn" onclick="openExpenseModal()" class="hide-on-share bg-amber-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    💸 Log Expense
+                </button>
                 <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     👁️ View Roster
                 </button>
@@ -164,6 +167,9 @@
                     <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Refresh data from database">
                         <span class="cloud-refresh-icon inline-block">🔄</span> <span>Sync</span>
                     </button>
+                    <button type="button" onclick="openExpenseModal()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        💸 Log Expense
+                    </button>
                     <button type="button" onclick="openEposModal()" class="text-[11px] bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                         ⚡ Setup / Sync Epos
                     </button>
@@ -177,6 +183,9 @@
                 </button>
                 <button type="button" id="tabCompareBtn" onclick="switchAnalyticsTab('compare')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
                     ⚖️ Compare Periods
+                </button>
+                <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    📋 Expenses Ledger
                 </button>
                 <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
                     🔥 7-Day Hourly Heatmap
@@ -210,23 +219,34 @@
                 </div>
 
                 <!-- Range KPI Summary Cards -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Range Total Sales</div>
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Gross Revenue</div>
                         <div id="kpiRangeSales" class="text-base sm:text-lg font-black text-emerald-400">$0.00</div>
                     </div>
                     <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Wages</div>
                         <div id="kpiRangeWages" class="text-base sm:text-lg font-black text-sky-400">$0.00</div>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Hours & SPLH</div>
-                        <div id="kpiRangeHoursSplh" class="text-base sm:text-lg font-black text-amber-300">0 hrs</div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm cursor-pointer hover:border-amber-500 transition" onclick="switchAnalyticsTab('expenses')" title="Click to view expense ledger">
+                        <div class="text-[9px] uppercase tracking-wider text-amber-400 font-bold flex items-center justify-between">
+                            <span>Expenses</span> <span class="text-[8px] underline">Details ➔</span>
+                        </div>
+                        <div id="kpiRangeExpenses" class="text-base sm:text-lg font-black text-amber-300">$0.00</div>
                     </div>
                     <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Net Contribution</div>
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Hours & SPLH</div>
+                        <div id="kpiRangeHoursSplh" class="text-base sm:text-lg font-black text-slate-300">0 hrs</div>
+                    </div>
+                    <div class="col-span-2 sm:col-span-1 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
+                        <div class="text-[9px] uppercase tracking-wider text-purple-300 font-bold">🏆 True Net Profit</div>
                         <div id="kpiRangeNet" class="text-base sm:text-lg font-black text-purple-300">$0.00</div>
                     </div>
+                </div>
+
+                <!-- Range Expense Categories Mini-Pills -->
+                <div id="rangeExpenseCategoryPills" class="flex items-center gap-1.5 overflow-x-auto text-[10px] pb-0.5">
+                    <!-- Populated dynamically -->
                 </div>
 
                 <!-- Day-by-Day Performance List -->
@@ -287,6 +307,47 @@
                 <!-- Comparison Results Dashboard -->
                 <div id="comparisonResultsContainer" class="space-y-3">
                     <!-- Populated dynamically by runComparison() -->
+                </div>
+            </div>
+
+            <!-- VIEW 3: Expenses Ledger & Category P&L -->
+            <div id="analyticsExpensesContainer" class="hidden space-y-4">
+                <!-- Header with Action -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            💸 8-Category Business Expenses Ledger
+                        </span>
+                        <span id="expenseLedgerCountBadge" class="bg-amber-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                            0 records
+                        </span>
+                    </div>
+                    <button type="button" onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 self-start sm:self-auto">
+                        ➕ Add New Expense
+                    </button>
+                </div>
+
+                <!-- 8 Categories Summary Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="expenseCategorySummaryGrid">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <!-- Expenses Table -->
+                <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow">
+                    <table class="w-full text-xs text-left border-collapse min-w-[550px]">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
+                                <th class="p-2.5 w-24">Date</th>
+                                <th class="p-2.5 w-32">Category</th>
+                                <th class="p-2.5">Notes / Description</th>
+                                <th class="p-2.5 text-right w-24">Amount</th>
+                                <th class="p-2.5 text-center w-16">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenseLedgerTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -377,7 +438,55 @@
             </div>
         </div>
     </div>
-<!-- Epos Bookmarklet & Import Modal -->
+<!-- Log Expense Modal -->
+    <div id="expenseModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
+        <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-slate-700">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                    💸 Log Business Expense
+                </h3>
+                <button type="button" onclick="closeExpenseModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+            </div>
+
+            <form id="expenseForm" onsubmit="submitExpenseForm(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Date</label>
+                    <input type="date" id="expenseDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Expense Category</label>
+                    <select id="expenseCategory" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
+                        <option value="Meat">🥩 Meat (Meat, Cheese, Oil, Bags)</option>
+                        <option value="Vegies">🥗 Vegies</option>
+                        <option value="Bread">🍞 Bread</option>
+                        <option value="Packaging">📦 Packaging</option>
+                        <option value="Campbels">🥫 Campbels (Chips, Sauces, Consumables)</option>
+                        <option value="Drinks">🥤 Drinks</option>
+                        <option value="Rent">🏢 Rent (Rent, Utilities, Outgoings)</option>
+                        <option value="Others">🔧 Others (Repairs, Pest, Misc)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Amount ($ AUD)</label>
+                    <input type="number" step="0.01" min="0.01" id="expenseAmount" required placeholder="0.00" class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Notes / Description (Optional)</label>
+                    <input type="text" id="expenseNotes" placeholder="e.g. Weekly meat delivery, repair invoice #..." class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeExpenseModal()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition">Cancel</button>
+                    <button type="submit" id="saveExpenseBtn" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold transition shadow">💾 Save Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Epos Bookmarklet & Import Modal -->
     <div id="eposModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-6 space-y-4">
             <div class="flex items-center justify-between border-b pb-3">
@@ -466,6 +575,10 @@
         window.setChartRangePreset = setChartRangePreset;
         window.switchCompareMode = switchCompareMode;
         window.runComparison = runComparison;
+        window.openExpenseModal = openExpenseModal;
+        window.closeExpenseModal = closeExpenseModal;
+        window.submitExpenseForm = submitExpenseForm;
+        window.deleteExpenseItem = deleteExpenseItem;
 
         // 2. Core State
         const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
@@ -475,6 +588,7 @@
         let dataStore = [];
         let staffRegistry = [];
         let hourlySalesStore = [];
+        let expensesStore = [];
         const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
         document.getElementById('filterWeek').value = todayStr;
 
@@ -535,10 +649,11 @@
                     if (!payload || !payload.action) return { status: "error", message: "No action specified" };
 
                     if (payload.action === "get") {
-                        const [staffRows, rosterRows, salesRows] = await Promise.all([
+                        const [staffRows, rosterRows, salesRows, expenseRows] = await Promise.all([
                             supabaseFetch("staff?select=*&order=name.asc"),
                             supabaseFetch("roster?select=*&order=date.asc"),
-                            supabaseFetch("hourly_sales?select=*&order=date.asc")
+                            supabaseFetch("hourly_sales?select=*&order=date.asc"),
+                            supabaseFetch("expenses?select=*&order=date.desc")
                         ]);
 
                         const logs = (rosterRows || []).map(r => ({
@@ -571,7 +686,15 @@
                             updatedAt: s.updated_at || ""
                         }));
 
-                        return { logs, staff, sales };
+                        const expenses = (expenseRows || []).map(x => ({
+                            id: x.id,
+                            date: cleanDateStr(x.date),
+                            category: x.category || 'Others',
+                            amount: Number(x.amount) || 0,
+                            notes: x.notes || ''
+                        }));
+
+                        return { logs, staff, sales, expenses };
                     }
 
                     if (payload.action === "save" && payload.entry) {
@@ -593,6 +716,29 @@
                             method: "POST",
                             headers: { "Prefer": "resolution=merge-duplicates" },
                             body: JSON.stringify(row)
+                        });
+                        return { status: "success" };
+                    }
+
+                    if (payload.action === "save_expense" && payload.expense) {
+                        const x = payload.expense;
+                        const row = {
+                            date: cleanDateStr(x.date),
+                            category: x.category || 'Others',
+                            amount: Number(x.amount) || 0,
+                            notes: x.notes || ''
+                        };
+                        const res = await supabaseFetch("expenses", {
+                            method: "POST",
+                            headers: { "Prefer": "return=representation" },
+                            body: JSON.stringify(row)
+                        });
+                        return { status: "success", item: res && res[0] ? res[0] : row };
+                    }
+
+                    if (payload.action === "delete_expense" && payload.id) {
+                        await supabaseFetch(`expenses?id=eq.${payload.id}`, {
+                            method: "DELETE"
                         });
                         return { status: "success" };
                     }
@@ -725,7 +871,10 @@
                             });
                         }
                         if (responseObj.sales && Array.isArray(responseObj.sales)) {
-                            hourlySalesStore = responseObj.sales.map(s => {
+                            if (responseObj.expenses && Array.isArray(responseObj.expenses)) {
+                            expensesStore = responseObj.expenses;
+                        }
+                        hourlySalesStore = responseObj.sales.map(s => {
                                 if (s.date) s.date = cleanDateStr(s.date);
                                 s.totalSales = Number(s.totalSales) || 0;
                                 if (typeof s.hourly === 'string') {
@@ -1388,11 +1537,13 @@
             currentAnalyticsTab = tabName;
             const tabRange = document.getElementById('tabRangeBtn');
             const tabCompare = document.getElementById('tabCompareBtn');
+            const tabExpenses = document.getElementById('tabExpensesBtn');
             const tabHeatmap = document.getElementById('tabHeatmapBtn');
             const tabDaily = document.getElementById('tabDailyBtn');
             
             const contRange = document.getElementById('analyticsDateRangeContainer');
             const contCompare = document.getElementById('analyticsCompareContainer');
+            const contExpenses = document.getElementById('analyticsExpensesContainer');
             const contHeatmap = document.getElementById('analyticsHeatmapContainer');
             const contDaily = document.getElementById('analyticsDailyContainer');
 
@@ -1401,11 +1552,13 @@
 
             if (tabRange) tabRange.className = (tabName === 'range' ? activeClass : inactiveClass);
             if (tabCompare) tabCompare.className = (tabName === 'compare' ? activeClass : inactiveClass);
+            if (tabExpenses) tabExpenses.className = (tabName === 'expenses' ? activeClass : inactiveClass);
             if (tabHeatmap) tabHeatmap.className = (tabName === 'heatmap' ? activeClass : inactiveClass);
             if (tabDaily) tabDaily.className = (tabName === 'daily' ? activeClass : inactiveClass);
 
             if (contRange) contRange.classList.toggle('hidden', tabName !== 'range');
             if (contCompare) contCompare.classList.toggle('hidden', tabName !== 'compare');
+            if (contExpenses) contExpenses.classList.toggle('hidden', tabName !== 'expenses');
             if (contHeatmap) contHeatmap.classList.toggle('hidden', tabName !== 'heatmap');
             if (contDaily) contDaily.classList.toggle('hidden', tabName !== 'daily');
 
@@ -1441,6 +1594,8 @@
                 renderDateRangeView();
             } else if (currentAnalyticsTab === 'compare') {
                 renderComparisonView();
+            } else if (currentAnalyticsTab === 'expenses') {
+                renderExpensesLedgerView();
             } else if (currentAnalyticsTab === 'heatmap') {
                 renderHourlyHeatmapView();
             } else {
@@ -1505,6 +1660,148 @@
             return list;
         }
 
+        
+        const EXPENSE_CATEGORIES = [
+            { key: 'Meat', label: 'Meat (Meat, Cheese, Oil, Bags)', icon: '🥩', color: 'text-rose-400 bg-rose-950/70 border-rose-800' },
+            { key: 'Vegies', label: 'Vegies', icon: '🥗', color: 'text-emerald-400 bg-emerald-950/70 border-emerald-800' },
+            { key: 'Bread', label: 'Bread', icon: '🍞', color: 'text-amber-400 bg-amber-950/70 border-amber-800' },
+            { key: 'Packaging', label: 'Packaging', icon: '📦', color: 'text-orange-400 bg-orange-950/70 border-orange-800' },
+            { key: 'Campbels', label: 'Campbels (Chips, Sauces, Consumables)', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
+            { key: 'Drinks', label: 'Drinks', icon: '🥤', color: 'text-sky-400 bg-sky-950/70 border-sky-800' },
+            { key: 'Rent', label: 'Rent (Rent, Utilities, Outgoings)', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
+            { key: 'Others', label: 'Others (Repairs, Pest, Misc)', icon: '🔧', color: 'text-purple-400 bg-purple-950/70 border-purple-800' }
+        ];
+
+        function getCategoryMeta(cat) {
+            const found = EXPENSE_CATEGORIES.find(c => c.key.toLowerCase() === (cat || '').toLowerCase());
+            return found || { key: cat || 'Others', label: cat || 'Others', icon: '💸', color: 'text-slate-300 bg-slate-800 border-slate-700' };
+        }
+
+        function openExpenseModal(prefillDate) {
+            const modal = document.getElementById('expenseModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const dInput = document.getElementById('expenseDate');
+                if (dInput) dInput.value = prefillDate || new Date().toISOString().split('T')[0];
+                const amtInput = document.getElementById('expenseAmount');
+                if (amtInput) amtInput.value = '';
+                const notesInput = document.getElementById('expenseNotes');
+                if (notesInput) notesInput.value = '';
+            }
+        }
+
+        function closeExpenseModal() {
+            const modal = document.getElementById('expenseModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function submitExpenseForm(e) {
+            e.preventDefault();
+            const date = document.getElementById('expenseDate').value;
+            const category = document.getElementById('expenseCategory').value;
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const notes = document.getElementById('expenseNotes').value.trim();
+
+            if (!date || isNaN(amount) || amount <= 0) {
+                alert("Please enter a valid date and amount.");
+                return;
+            }
+
+            const btn = document.getElementById('saveExpenseBtn');
+            if (btn) { btn.disabled = true; btn.innerText = "Saving..."; }
+
+            const newExp = { date: cleanDateStr(date), category, amount, notes };
+            try {
+                const res = await callSheetApi({ action: "save_expense", expense: newExp });
+                if (res && res.item) {
+                    expensesStore.unshift(res.item);
+                } else {
+                    expensesStore.unshift({ ...newExp, id: Date.now() });
+                }
+                closeExpenseModal();
+                renderCurrentAnalyticsView();
+            } catch (err) {
+                alert("Error saving expense: " + err.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = "💾 Save Expense"; }
+                loadCloudData({ silent: true });
+            }
+        }
+
+        async function deleteExpenseItem(id) {
+            if (!confirm("Are you sure you want to delete this expense record?")) return;
+            expensesStore = expensesStore.filter(x => String(x.id) !== String(id));
+            renderExpensesLedgerView();
+            try {
+                await callSheetApi({ action: "delete_expense", id });
+            } catch (err) {
+                console.error(err);
+            }
+            loadCloudData({ silent: true });
+        }
+
+        function renderExpensesLedgerView() {
+            const countBadge = document.getElementById('expenseLedgerCountBadge');
+            if (countBadge) countBadge.innerText = `${expensesStore.length} record(s)`;
+
+            // 1. Calculate totals per category
+            const catTotals = {};
+            EXPENSE_CATEGORIES.forEach(c => catTotals[c.key] = 0);
+            let grandTotal = 0;
+
+            expensesStore.forEach(x => {
+                const k = x.category || 'Others';
+                catTotals[k] = (catTotals[k] || 0) + Number(x.amount || 0);
+                grandTotal += Number(x.amount || 0);
+            });
+
+            const grid = document.getElementById('expenseCategorySummaryGrid');
+            if (grid) {
+                let cards = '';
+                EXPENSE_CATEGORIES.forEach(c => {
+                    const amt = catTotals[c.key] || 0;
+                    cards += `
+                        <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-1">
+                            <div class="text-[10px] font-bold text-slate-300 flex items-center gap-1 truncate">
+                                <span>${c.icon}</span> ${c.key}
+                            </div>
+                            <div class="text-sm font-black text-amber-300">$${amt.toFixed(2)}</div>
+                        </div>
+                    `;
+                });
+                grid.innerHTML = cards;
+            }
+
+            // 2. Render expenses table
+            const tbody = document.getElementById('expenseLedgerTableBody');
+            if (tbody) {
+                if (expensesStore.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">No expenses recorded yet. Tap "+ Add New Expense" to log your first supplier or rent invoice!</td></tr>`;
+                    return;
+                }
+                let rowsHtml = '';
+                expensesStore.forEach(x => {
+                    const meta = getCategoryMeta(x.category);
+                    rowsHtml += `
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="p-2.5 font-semibold text-slate-300">${formatDisplayDateStr(x.date)}</td>
+                            <td class="p-2.5">
+                                <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${meta.color}">
+                                    ${meta.icon} ${x.category}
+                                </span>
+                            </td>
+                            <td class="p-2.5 text-slate-300">${x.notes || '<span class="opacity-30">—</span>'}</td>
+                            <td class="p-2.5 text-right font-black text-amber-300">$${Number(x.amount || 0).toFixed(2)}</td>
+                            <td class="p-2.5 text-center">
+                                <button type="button" onclick="deleteExpenseItem(${x.id})" class="text-rose-400 hover:text-rose-300 font-bold text-xs" title="Delete record">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = rowsHtml;
+            }
+        }
+
         function renderDateRangeView() {
             initDateRangeDefaults();
             const fromInput = document.getElementById('chartRangeFrom');
@@ -1530,6 +1827,19 @@
             let rangeSales = 0;
             let rangeWages = 0;
             let rangeHours = 0;
+            let rangeExpenses = 0;
+
+            const categoryRangeTotals = {};
+            EXPENSE_CATEGORIES.forEach(c => categoryRangeTotals[c.key] = 0);
+
+            // Filter expenses in range
+            const rangeExpensesList = expensesStore.filter(x => x.date >= startIso && x.date <= endIso);
+            rangeExpensesList.forEach(x => {
+                const amt = Number(x.amount) || 0;
+                rangeExpenses += amt;
+                const k = x.category || 'Others';
+                categoryRangeTotals[k] = (categoryRangeTotals[k] || 0) + amt;
+            });
 
             const dayStatsList = [];
 
@@ -1554,12 +1864,16 @@
                     }
                 });
 
+                // Day expenses
+                const dayExpList = expensesStore.filter(x => x.date === dIso);
+                const dayExp = dayExpList.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
                 rangeSales += sAmt;
                 rangeWages += dWages;
                 rangeHours += dHours;
 
                 const splh = dHours > 0 ? (sAmt / dHours) : 0;
-                const net = sAmt - dWages;
+                const net = sAmt - dWages - dayExp;
 
                 const [y, m, d] = dIso.split('-').map(Number);
                 const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -1571,6 +1885,7 @@
                     dow,
                     sAmt,
                     dWages,
+                    dayExp,
                     dHours,
                     splh,
                     net,
@@ -1581,11 +1896,13 @@
             // Update KPI Cards
             const kpiSales = document.getElementById('kpiRangeSales');
             const kpiWages = document.getElementById('kpiRangeWages');
+            const kpiExpenses = document.getElementById('kpiRangeExpenses');
             const kpiHoursSplh = document.getElementById('kpiRangeHoursSplh');
             const kpiNet = document.getElementById('kpiRangeNet');
 
             if (kpiSales) kpiSales.innerText = `$${rangeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (kpiWages) kpiWages.innerText = `$${rangeWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiExpenses) kpiExpenses.innerText = `$${rangeExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
             if (kpiHoursSplh) {
                 const avgSplh = rangeHours > 0 ? (rangeSales / rangeHours) : 0;
@@ -1593,8 +1910,28 @@
             }
 
             if (kpiNet) {
-                const netVal = rangeSales - rangeWages;
-                kpiNet.innerText = `$${netVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const trueNet = rangeSales - rangeWages - rangeExpenses;
+                const color = trueNet >= 0 ? 'text-purple-300' : 'text-rose-400';
+                kpiNet.className = `text-base sm:text-lg font-black ${color}`;
+                kpiNet.innerText = `$${trueNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+
+            // Category Mini-Pills
+            const pillsCont = document.getElementById('rangeExpenseCategoryPills');
+            if (pillsCont) {
+                let pillsHtml = '<span class="text-slate-400 font-bold shrink-0">Expenses:</span>';
+                let hasExp = false;
+                EXPENSE_CATEGORIES.forEach(c => {
+                    const amt = categoryRangeTotals[c.key] || 0;
+                    if (amt > 0) {
+                        hasExp = true;
+                        pillsHtml += `<span class="px-2 py-0.5 rounded-md border ${c.color} font-bold whitespace-nowrap">${c.icon} ${c.key}: $${amt.toFixed(0)}</span>`;
+                    }
+                });
+                if (!hasExp) {
+                    pillsHtml += `<span class="text-slate-500 italic">No expenses logged in this date range. Tap "Log Expense" above to add receipts.</span>`;
+                }
+                pillsCont.innerHTML = pillsHtml;
             }
 
             // Render Day Cards
@@ -1689,6 +2026,10 @@
             let sales = 0;
             let wages = 0;
             let hours = 0;
+            let expenses = 0;
+
+            const catMap = {};
+            EXPENSE_CATEGORIES.forEach(c => catMap[c.key] = 0);
 
             dateList.forEach(dIso => {
                 const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
@@ -1707,12 +2048,20 @@
                         wages += (ch * cr) + (th * tr);
                     }
                 });
+
+                const dayExps = expensesStore.filter(x => x.date === dIso);
+                dayExps.forEach(x => {
+                    const a = Number(x.amount || 0);
+                    expenses += a;
+                    const k = x.category || 'Others';
+                    catMap[k] = (catMap[k] || 0) + a;
+                });
             });
 
             const splh = hours > 0 ? (sales / hours) : 0;
-            const net = sales - wages;
+            const net = sales - wages - expenses;
 
-            return { sales, wages, hours, splh, net, count: dateList.length };
+            return { sales, wages, hours, expenses, splh, net, catMap, count: dateList.length };
         }
 
         function runComparison() {
@@ -1742,7 +2091,6 @@
                 labelA = `Week of ${formatDisplayDateStr(monA)}`;
                 labelB = `Week of ${formatDisplayDateStr(monB)}`;
             } else if (currentCompareMode === 'month') {
-                // valA is 'YYYY-MM'
                 datesA = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valA));
                 datesB = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valB));
                 labelA = valA;
@@ -1755,11 +2103,13 @@
             const container = document.getElementById('comparisonResultsContainer');
             if (!container) return;
 
-            function formatDiff(vA, vB, isCurrency = true) {
+            function formatDiff(vA, vB, isCurrency = true, reverseGood = false) {
                 const diff = vB - vA;
                 const pct = vA > 0 ? (diff / vA) * 100 : (vB > 0 ? 100 : 0);
                 const sign = diff >= 0 ? '+' : '';
-                const color = diff >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                let isGood = diff >= 0;
+                if (reverseGood) isGood = diff <= 0;
+                const color = isGood ? 'text-emerald-400' : 'text-rose-400';
                 const formattedDiff = isCurrency ? `${sign}$${Math.abs(diff).toFixed(0)}` : `${sign}${diff.toFixed(1)}`;
                 return `<span class="${color} font-bold">${formattedDiff} (${sign}${pct.toFixed(1)}%)</span>`;
             }
@@ -1770,20 +2120,20 @@
                     <div class="bg-indigo-950/40 border border-indigo-800/60 p-3.5 rounded-xl space-y-1">
                         <div class="text-[11px] font-extrabold text-indigo-300 uppercase tracking-wide">Period A: ${labelA}</div>
                         <div class="text-xl font-black text-white">$${metA.sales.toFixed(2)}</div>
-                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1">
+                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap">
                             <span>Wages: <b>$${metA.wages.toFixed(0)}</b></span>
-                            <span>Hours: <b>${metA.hours.toFixed(1)}h</b></span>
-                            <span>SPLH: <b class="text-amber-300">$${metA.splh.toFixed(0)}/h</b></span>
+                            <span>Expenses: <b>$${metA.expenses.toFixed(0)}</b></span>
+                            <span>Net Profit: <b class="text-purple-300">$${metA.net.toFixed(0)}</b></span>
                         </div>
                     </div>
 
                     <div class="bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-xl space-y-1">
                         <div class="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wide">Period B: ${labelB}</div>
                         <div class="text-xl font-black text-white">$${metB.sales.toFixed(2)}</div>
-                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1">
+                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap">
                             <span>Wages: <b>$${metB.wages.toFixed(0)}</b></span>
-                            <span>Hours: <b>${metB.hours.toFixed(1)}h</b></span>
-                            <span>SPLH: <b class="text-amber-300">$${metB.splh.toFixed(0)}/h</b></span>
+                            <span>Expenses: <b>$${metB.expenses.toFixed(0)}</b></span>
+                            <span>Net Profit: <b class="text-purple-300">$${metB.net.toFixed(0)}</b></span>
                         </div>
                     </div>
                 </div>
@@ -1804,38 +2154,44 @@
                                 <td class="p-2.5 font-bold">Total Sales Revenue</td>
                                 <td class="p-2.5 text-right font-extrabold">$${metA.sales.toFixed(2)}</td>
                                 <td class="p-2.5 text-right font-extrabold text-emerald-300">$${metB.sales.toFixed(2)}</td>
-                                <td class="p-2.5 text-right">${formatDiff(metA.sales, metB.sales, true)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.sales, metB.sales, true, false)}</td>
                             </tr>
                             <tr>
                                 <td class="p-2.5 font-bold">Staff Labor Wages</td>
                                 <td class="p-2.5 text-right">$${metA.wages.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">$${metB.wages.toFixed(0)}</td>
-                                <td class="p-2.5 text-right">${formatDiff(metA.wages, metB.wages, true)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.wages, metB.wages, true, true)}</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold">Business Expenses (8 Categories)</td>
+                                <td class="p-2.5 text-right font-semibold text-amber-300">$${metA.expenses.toFixed(0)}</td>
+                                <td class="p-2.5 text-right font-semibold text-amber-300">$${metB.expenses.toFixed(0)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.expenses, metB.expenses, true, true)}</td>
                             </tr>
                             <tr>
                                 <td class="p-2.5 font-bold">Total Staff Hours Worked</td>
                                 <td class="p-2.5 text-right">${metA.hours.toFixed(1)} hrs</td>
                                 <td class="p-2.5 text-right">${metB.hours.toFixed(1)} hrs</td>
-                                <td class="p-2.5 text-right">${formatDiff(metA.hours, metB.hours, false)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.hours, metB.hours, false, false)}</td>
                             </tr>
                             <tr>
                                 <td class="p-2.5 font-bold">Sales Per Labor Hour (SPLH)</td>
                                 <td class="p-2.5 text-right font-extrabold text-amber-300">$${metA.splh.toFixed(0)} / hr</td>
                                 <td class="p-2.5 text-right font-extrabold text-amber-300">$${metB.splh.toFixed(0)} / hr</td>
-                                <td class="p-2.5 text-right">${formatDiff(metA.splh, metB.splh, true)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.splh, metB.splh, true, false)}</td>
                             </tr>
-                            <tr>
-                                <td class="p-2.5 font-bold">Net Gross Margin (Sales − Wages)</td>
+                            <tr class="bg-purple-950/30">
+                                <td class="p-2.5 font-black text-purple-200">🏆 True Net Profit (Revenue − Wages − Expenses)</td>
                                 <td class="p-2.5 text-right font-black text-purple-300">$${metA.net.toFixed(0)}</td>
                                 <td class="p-2.5 text-right font-black text-purple-300">$${metB.net.toFixed(0)}</td>
-                                <td class="p-2.5 text-right">${formatDiff(metA.net, metB.net, true)}</td>
+                                <td class="p-2.5 text-right">${formatDiff(metA.net, metB.net, true, false)}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             `;
         }
-
+        
         function renderComparisonView() {
             const pA = document.getElementById('compPickerAContainer');
             if (pA && !pA.innerHTML.trim()) {
