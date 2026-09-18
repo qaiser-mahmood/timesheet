@@ -1924,6 +1924,13 @@
             renderDateRangeView();
         }
 
+        function setChartRangePreset(preset) {
+            if (preset === 'today' || preset === 'day') selectPreset('day');
+            else if (preset === 'week' || preset === '7d' || preset === '14d') selectPreset('week');
+            else if (preset === 'month' || preset === 'this_month' || preset === 'last_month') selectPreset('month');
+            else selectPreset('week');
+        }
+
         function getDatesInRange(startIso, endIso) {
             const list = [];
             let cur = new Date(startIso + 'T00:00:00Z');
