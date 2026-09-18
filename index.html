@@ -33,10 +33,7 @@
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Previous Week
                 </button>
-                <button type="button" id="logExpenseHeaderBtn" onclick="openExpenseModal()" class="hide-on-share bg-amber-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    💸 Log Expense
-                </button>
-                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     👁️ View Roster
                 </button>
             </div>
@@ -197,24 +194,75 @@
 
             <!-- VIEW 1: Custom Date Range Chart -->
             <div id="analyticsDateRangeContainer" class="space-y-4">
-                <!-- Date Range Picker & Quick Presets -->
-                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs font-bold text-slate-300">From:</span>
-                        <input type="date" id="chartRangeFrom" onchange="applyCustomDateRange()" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-purple-500">
-                        <span class="text-xs font-bold text-slate-300">To:</span>
-                        <input type="date" id="chartRangeTo" onchange="applyCustomDateRange()" class="bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-purple-500">
-                        <button type="button" onclick="applyCustomDateRange()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow-sm">
-                            Apply
-                        </button>
+                <!-- Date Range Controls: Presets (Today/Week/Month with Nav) & Single Popover Calendar -->
+                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <!-- Presets Group with Arrow Navigators (Today, Week, Month) -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
+                        <!-- Today Preset Group -->
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
+                            <button type="button" onclick="navigatePreset('day', -1)" title="Previous Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
+                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition">Today</button>
+                            <button type="button" onclick="navigatePreset('day', 1)" title="Next Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        </div>
+
+                        <!-- Week Preset Group -->
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
+                            <button type="button" onclick="navigatePreset('week', -1)" title="Previous Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
+                            <button type="button" id="btnPresetWeek" onclick="selectPreset('week')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition">Week</button>
+                            <button type="button" onclick="navigatePreset('week', 1)" title="Next Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        </div>
+
+                        <!-- Month Preset Group -->
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
+                            <button type="button" onclick="navigatePreset('month', -1)" title="Previous Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
+                            <button type="button" id="btnPresetMonth" onclick="selectPreset('month')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition">Month</button>
+                            <button type="button" onclick="navigatePreset('month', 1)" title="Next Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        </div>
                     </div>
-                    <!-- Quick Presets -->
-                    <div class="flex items-center gap-1.5 flex-wrap text-[10px]">
-                        <span class="text-slate-400 font-bold">Presets:</span>
-                        <button type="button" onclick="setChartRangePreset('7d')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Last 7 Days</button>
-                        <button type="button" onclick="setChartRangePreset('14d')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Last 14 Days</button>
-                        <button type="button" onclick="setChartRangePreset('this_month')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">This Month</button>
-                        <button type="button" onclick="setChartRangePreset('last_month')" class="px-2.5 py-1 rounded-md bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold transition">Last Month</button>
+
+                    <!-- Single Interactive Calendar Trigger & Popover -->
+                    <div class="relative flex items-center gap-2" id="rangeCalendarWrapper">
+                        <input type="hidden" id="chartRangeFrom" value="">
+                        <input type="hidden" id="chartRangeTo" value="">
+
+                        <!-- The Single Trigger Button -->
+                        <button type="button" id="rangeCalendarTriggerBtn" onclick="toggleRangeCalendarPopover(event)" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-purple-500/80 text-white rounded-lg px-3 py-1.5 text-xs font-bold flex items-center justify-between sm:justify-start gap-2.5 transition shadow-sm">
+                            <span class="flex items-center gap-1.5">
+                                <span class="text-purple-400 text-sm">📅</span>
+                                <span id="rangeCalendarDisplay" class="tracking-wide">Select Date Range</span>
+                            </span>
+                            <span class="text-slate-400 text-[9px]">▼</span>
+                        </button>
+
+                        <!-- Popover Single Calendar Picker (1st click Start, 2nd click End, auto applies) -->
+                        <div id="rangeCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] text-white space-y-2.5">
+                            <!-- Popover Header with Month Nav -->
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                                <button type="button" onclick="changeRangeCalMonth(-1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">◀</button>
+                                <span id="rangeCalMonthYearHeader" class="text-xs font-black text-white tracking-wide">September 2026</span>
+                                <button type="button" onclick="changeRangeCalMonth(1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">▶</button>
+                            </div>
+
+                            <!-- Interactive Click Step Hint -->
+                            <div id="rangeCalHint" class="text-[10px] text-center text-purple-300 font-semibold bg-purple-950/40 border border-purple-900/50 py-1 px-2 rounded-lg">
+                                Click start date
+                            </div>
+
+                            <!-- Weekday Headers -->
+                            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                                <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                            </div>
+
+                            <!-- Calendar Days Grid -->
+                            <div id="rangeCalDaysGrid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                                <!-- Populated dynamically by renderRangeCalendarGrid() -->
+                            </div>
+
+                            <div class="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800">
+                                <span class="italic">2 clicks to select range</span>
+                                <button type="button" onclick="closeRangeCalendarPopover()" class="text-slate-400 hover:text-white font-bold">Close ✕</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -575,6 +623,12 @@
         window.setChartRangePreset = setChartRangePreset;
         window.switchCompareMode = switchCompareMode;
         window.runComparison = runComparison;
+        window.selectPreset = selectPreset;
+        window.navigatePreset = navigatePreset;
+        window.toggleRangeCalendarPopover = toggleRangeCalendarPopover;
+        window.closeRangeCalendarPopover = closeRangeCalendarPopover;
+        window.changeRangeCalMonth = changeRangeCalMonth;
+        window.handleRangeCalDayClick = handleRangeCalDayClick;
         window.openExpenseModal = openExpenseModal;
         window.closeExpenseModal = closeExpenseModal;
         window.submitExpenseForm = submitExpenseForm;
@@ -1617,33 +1671,266 @@
             }
         }
 
-        function setChartRangePreset(preset) {
+        // --- ENHANCED DATE RANGE CONTROLS (TODAY / WEEK / MONTH WITH ◀ ▶ AND 2-CLICK CALENDAR) ---
+        let currentPresetType = 'week'; // 'day' | 'week' | 'month' | 'custom'
+        let presetRefDate = new Date();
+        let rangeCalViewYear = new Date().getFullYear();
+        let rangeCalViewMonth = new Date().getMonth(); // 0-11
+        let rangeCalSelectionStep = 0; // 0 = ready for start, 1 = start chosen waiting for end
+        let tempRangeStart = null;
+        let tempRangeEnd = null;
+
+        function updatePresetButtonsUI() {
+            const btnDay = document.getElementById('btnPresetDay');
+            const btnWeek = document.getElementById('btnPresetWeek');
+            const btnMonth = document.getElementById('btnPresetMonth');
+            
+            const activeCls = "px-2.5 py-1 text-xs font-black bg-purple-600 text-white rounded shadow transition";
+            const inactiveCls = "px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition";
+
+            if (btnDay) btnDay.className = (currentPresetType === 'day' ? activeCls : inactiveCls);
+            if (btnWeek) btnWeek.className = (currentPresetType === 'week' ? activeCls : inactiveCls);
+            if (btnMonth) btnMonth.className = (currentPresetType === 'month' ? activeCls : inactiveCls);
+        }
+
+        function updateCalendarDisplayButton(fromIso, toIso) {
+            const displayEl = document.getElementById('rangeCalendarDisplay');
+            if (!displayEl) return;
+            if (!fromIso || !toIso) {
+                displayEl.innerText = "Select Date Range";
+                return;
+            }
+            if (fromIso === toIso) {
+                displayEl.innerText = formatDisplayDateStr(fromIso);
+            } else {
+                displayEl.innerText = `${formatDisplayDateStr(fromIso)} – ${formatDisplayDateStr(toIso)}`;
+            }
+        }
+
+        function setDateRange(fromIso, toIso, presetType = 'custom') {
             const fromInput = document.getElementById('chartRangeFrom');
             const toInput = document.getElementById('chartRangeTo');
             if (!fromInput || !toInput) return;
 
-            const now = new Date();
-            const curY = now.getFullYear();
-            const curM = now.getMonth();
-
-            if (preset === '7d') {
-                toInput.value = now.toISOString().split('T')[0];
-                fromInput.value = new Date(now.getTime() - 6 * 86400000).toISOString().split('T')[0];
-            } else if (preset === '14d') {
-                toInput.value = now.toISOString().split('T')[0];
-                fromInput.value = new Date(now.getTime() - 13 * 86400000).toISOString().split('T')[0];
-            } else if (preset === 'this_month') {
-                fromInput.value = `${curY}-${String(curM + 1).padStart(2, '0')}-01`;
-                toInput.value = now.toISOString().split('T')[0];
-            } else if (preset === 'last_month') {
-                const prevMonthDate = new Date(curY, curM, 0); // last day of prev month
-                const prevY = prevMonthDate.getFullYear();
-                const prevM = prevMonthDate.getMonth() + 1;
-                fromInput.value = `${prevY}-${String(prevM).padStart(2, '0')}-01`;
-                toInput.value = prevMonthDate.toISOString().split('T')[0];
-            }
-            applyCustomDateRange();
+            fromInput.value = fromIso;
+            toInput.value = toIso;
+            currentPresetType = presetType;
+            updatePresetButtonsUI();
+            updateCalendarDisplayButton(fromIso, toIso);
+            renderDateRangeView();
         }
+
+        function selectPreset(type) {
+            currentPresetType = type;
+            presetRefDate = new Date(); // reset to current date when clicking preset button
+            applyPresetRange();
+        }
+
+        function navigatePreset(type, delta) {
+            if (currentPresetType !== type) {
+                currentPresetType = type;
+                presetRefDate = new Date();
+            }
+
+            if (type === 'day') {
+                presetRefDate.setDate(presetRefDate.getDate() + delta);
+            } else if (type === 'week') {
+                presetRefDate.setDate(presetRefDate.getDate() + (delta * 7));
+            } else if (type === 'month') {
+                presetRefDate.setMonth(presetRefDate.getMonth() + delta);
+            }
+            applyPresetRange();
+        }
+
+        function applyPresetRange() {
+            const refIso = presetRefDate.toISOString().split('T')[0];
+
+            if (currentPresetType === 'day') {
+                setDateRange(refIso, refIso, 'day');
+            } else if (currentPresetType === 'week') {
+                const mon = getMondayString(refIso);
+                const sun = addDaysString(mon, 6);
+                setDateRange(mon, sun, 'week');
+            } else if (currentPresetType === 'month') {
+                const y = presetRefDate.getFullYear();
+                const m = presetRefDate.getMonth();
+                const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                setDateRange(firstIso, lastIso, 'month');
+            }
+        }
+
+        function initDateRangeDefaults() {
+            const fromInput = document.getElementById('chartRangeFrom');
+            const toInput = document.getElementById('chartRangeTo');
+            if (fromInput && !fromInput.value) {
+                // Default to current week
+                const nowIso = new Date().toISOString().split('T')[0];
+                const mon = getMondayString(nowIso);
+                const sun = addDaysString(mon, 6);
+                fromInput.value = mon;
+                toInput.value = sun;
+                currentPresetType = 'week';
+                updatePresetButtonsUI();
+                updateCalendarDisplayButton(mon, sun);
+            }
+        }
+
+        // --- SINGLE 2-CLICK RANGE CALENDAR POPOVER ---
+        function toggleRangeCalendarPopover(e) {
+            if (e) e.stopPropagation();
+            const popover = document.getElementById('rangeCalendarPopover');
+            if (!popover) return;
+            if (popover.classList.contains('hidden')) {
+                openRangeCalendarPopover();
+            } else {
+                closeRangeCalendarPopover();
+            }
+        }
+
+        function openRangeCalendarPopover() {
+            const popover = document.getElementById('rangeCalendarPopover');
+            if (!popover) return;
+
+            const fromInput = document.getElementById('chartRangeFrom');
+            const toInput = document.getElementById('chartRangeTo');
+            const curFrom = fromInput ? fromInput.value : '';
+            const curTo = toInput ? toInput.value : '';
+
+            if (curFrom) {
+                const parts = curFrom.split('-');
+                rangeCalViewYear = parseInt(parts[0], 10);
+                rangeCalViewMonth = parseInt(parts[1], 10) - 1;
+                tempRangeStart = curFrom;
+                tempRangeEnd = curTo || curFrom;
+            } else {
+                const now = new Date();
+                rangeCalViewYear = now.getFullYear();
+                rangeCalViewMonth = now.getMonth();
+                tempRangeStart = null;
+                tempRangeEnd = null;
+            }
+
+            rangeCalSelectionStep = 0;
+            renderRangeCalendarGrid();
+            popover.classList.remove('hidden');
+        }
+
+        function closeRangeCalendarPopover() {
+            const popover = document.getElementById('rangeCalendarPopover');
+            if (popover) popover.classList.add('hidden');
+        }
+
+        function changeRangeCalMonth(delta) {
+            rangeCalViewMonth += delta;
+            if (rangeCalViewMonth < 0) {
+                rangeCalViewMonth = 11;
+                rangeCalViewYear--;
+            } else if (rangeCalViewMonth > 11) {
+                rangeCalViewMonth = 0;
+                rangeCalViewYear++;
+            }
+            renderRangeCalendarGrid();
+        }
+
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        function renderRangeCalendarGrid() {
+            const headerEl = document.getElementById('rangeCalMonthYearHeader');
+            const gridEl = document.getElementById('rangeCalDaysGrid');
+            const hintEl = document.getElementById('rangeCalHint');
+            if (!gridEl) return;
+
+            if (headerEl) {
+                headerEl.innerText = `${MONTH_NAMES[rangeCalViewMonth]} ${rangeCalViewYear}`;
+            }
+
+            if (hintEl) {
+                if (rangeCalSelectionStep === 0) {
+                    hintEl.innerText = "Click start date";
+                    hintEl.className = "text-[10px] text-center text-purple-300 font-semibold bg-purple-950/40 border border-purple-900/50 py-1 px-2 rounded-lg";
+                } else {
+                    hintEl.innerText = "Click end date (or same day)";
+                    hintEl.className = "text-[10px] text-center text-amber-300 font-semibold bg-amber-950/40 border border-amber-900/50 py-1 px-2 rounded-lg animate-pulse";
+                }
+            }
+
+            const firstDay = new Date(rangeCalViewYear, rangeCalViewMonth, 1);
+            const lastDay = new Date(rangeCalViewYear, rangeCalViewMonth + 1, 0);
+            const numDays = lastDay.getDate();
+            const startDayOfWeek = (firstDay.getDay() + 6) % 7; // 0 (Mon) to 6 (Sun)
+
+            let html = '';
+            for (let i = 0; i < startDayOfWeek; i++) {
+                html += '<div class="p-1.5"></div>';
+            }
+
+            const todayIso = new Date().toISOString().split('T')[0];
+
+            for (let d = 1; d <= numDays; d++) {
+                const dStr = String(d).padStart(2, '0');
+                const mStr = String(rangeCalViewMonth + 1).padStart(2, '0');
+                const iso = `${rangeCalViewYear}-${mStr}-${dStr}`;
+
+                let btnCls = "w-full py-1.5 rounded-lg text-xs font-bold transition hover:bg-slate-700 ";
+                let isStart = (iso === tempRangeStart);
+                let isEnd = (iso === tempRangeEnd);
+                let isInRange = (tempRangeStart && tempRangeEnd && iso > tempRangeStart && iso < tempRangeEnd);
+
+                if (isStart && isEnd) {
+                    btnCls += "bg-purple-600 text-white font-black shadow ";
+                } else if (isStart) {
+                    btnCls += "bg-purple-600 text-white font-black rounded-r-none ";
+                } else if (isEnd) {
+                    btnCls += "bg-purple-600 text-white font-black rounded-l-none ";
+                } else if (isInRange) {
+                    btnCls += "bg-purple-900/50 text-purple-200 rounded-none ";
+                } else if (iso === todayIso) {
+                    btnCls += "border border-purple-500 text-white ";
+                } else {
+                    btnCls += "text-slate-300 ";
+                }
+
+                html += `<button type="button" onclick="handleRangeCalDayClick('${iso}')" class="${btnCls}">${d}</button>`;
+            }
+
+            gridEl.innerHTML = html;
+        }
+
+        function handleRangeCalDayClick(isoDate) {
+            if (rangeCalSelectionStep === 0) {
+                // First click: select start
+                tempRangeStart = isoDate;
+                tempRangeEnd = null;
+                rangeCalSelectionStep = 1;
+                renderRangeCalendarGrid();
+            } else {
+                // Second click: select end and automatically apply!
+                if (isoDate < tempRangeStart) {
+                    tempRangeEnd = tempRangeStart;
+                    tempRangeStart = isoDate;
+                } else {
+                    tempRangeEnd = isoDate;
+                }
+
+                setDateRange(tempRangeStart, tempRangeEnd, 'custom');
+                renderRangeCalendarGrid();
+
+                // Smoothly close after brief visual feedback
+                setTimeout(() => {
+                    closeRangeCalendarPopover();
+                }, 180);
+            }
+        }
+
+        // Close popover when clicking anywhere outside
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('rangeCalendarWrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                closeRangeCalendarPopover();
+            }
+        });
 
         function applyCustomDateRange() {
             renderDateRangeView();
@@ -1996,6 +2283,35 @@
             runComparison();
         }
 
+        function getIsoWeekString(dateOrStr) {
+            const d = new Date(dateOrStr + (typeof dateOrStr === 'string' && !dateOrStr.includes('T') ? 'T00:00:00' : ''));
+            const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            const dayNr = (target.getUTCDay() + 6) % 7;
+            target.setUTCDate(target.getUTCDate() - dayNr + 3);
+            const firstThursday = target.valueOf();
+            target.setUTCMonth(0, 1);
+            if (target.getUTCDay() !== 4) {
+                target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
+            }
+            const weekNr = 1 + Math.ceil((firstThursday - target) / 604800000);
+            return `${target.getUTCFullYear()}-W${String(weekNr).padStart(2, '0')}`;
+        }
+
+        function getMondayFromWeekInput(weekVal) {
+            if (!weekVal) return '';
+            if (weekVal.includes('-W')) {
+                const parts = weekVal.split('-W');
+                const year = parseInt(parts[0], 10);
+                const week = parseInt(parts[1], 10);
+                const jan4 = new Date(Date.UTC(year, 0, 4));
+                const dayOfWeek = jan4.getUTCDay() || 7;
+                const monWeek1 = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
+                const targetMon = new Date(monWeek1.getTime() + (week - 1) * 7 * 86400000);
+                return targetMon.toISOString().split('T')[0];
+            }
+            return getMondayString(weekVal);
+        }
+
         function renderComparisonPickers() {
             const pA = document.getElementById('compPickerAContainer');
             const pB = document.getElementById('compPickerBContainer');
@@ -2005,63 +2321,22 @@
             const prevIso = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
 
             if (currentCompareMode === 'day') {
-                pA.innerHTML = `<input type="date" id="compDateA" value="${prevIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500">`;
-                pB.innerHTML = `<input type="date" id="compDateB" value="${todayIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500">`;
+                pA.innerHTML = `<input type="date" id="compDateA" value="${prevIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
+                pB.innerHTML = `<input type="date" id="compDateB" value="${todayIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
             } else if (currentCompareMode === 'week') {
-                const curMon = getMondayString(todayIso);
-                const prevMon = addDaysString(curMon, -7);
-                pA.innerHTML = `<div class="flex items-center gap-1.5"><span class="text-[10px] text-slate-400">Week:</span><input type="date" id="compDateA" value="${prevMon}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500"></div>`;
-                pB.innerHTML = `<div class="flex items-center gap-1.5"><span class="text-[10px] text-slate-400">Week:</span><input type="date" id="compDateB" value="${curMon}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500"></div>`;
+                // Use native week picker (<input type="week">) just like monthly picker on mobile!
+                const curWeekIso = getIsoWeekString(todayIso);
+                const prevWeekIso = getIsoWeekString(addDaysString(todayIso, -7));
+                pA.innerHTML = `<div class="space-y-1"><input type="week" id="compDateA" value="${prevWeekIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm"><div id="compDateASpan" class="text-[10px] text-indigo-300 font-bold"></div></div>`;
+                pB.innerHTML = `<div class="space-y-1"><input type="week" id="compDateB" value="${curWeekIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm"><div id="compDateBSpan" class="text-[10px] text-emerald-300 font-bold"></div></div>`;
             } else if (currentCompareMode === 'month') {
                 const curMonthStr = todayIso.substring(0, 7); // YYYY-MM
                 const d = new Date();
                 d.setMonth(d.getMonth() - 1);
                 const prevMonthStr = d.toISOString().substring(0, 7);
-                pA.innerHTML = `<input type="month" id="compDateA" value="${prevMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500">`;
-                pB.innerHTML = `<input type="month" id="compDateB" value="${curMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500">`;
+                pA.innerHTML = `<input type="month" id="compDateA" value="${prevMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
+                pB.innerHTML = `<input type="month" id="compDateB" value="${curMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
             }
-        }
-
-        function calculateMetricsForDates(dateList) {
-            let sales = 0;
-            let wages = 0;
-            let hours = 0;
-            let expenses = 0;
-
-            const catMap = {};
-            EXPENSE_CATEGORIES.forEach(c => catMap[c.key] = 0);
-
-            dateList.forEach(dIso => {
-                const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
-                if (sRec) sales += Number(sRec.totalSales || 0);
-
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
-                dayShifts.forEach(shift => {
-                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
-                    const totH = Number(shift.totalHours) || 0;
-                    hours += totH;
-                    if (!isOwner) {
-                        const cr = Number(shift.cashRate) || 0;
-                        const tr = Number(shift.taxRate) || 0;
-                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
-                        const th = Math.max(0, totH - ch);
-                        wages += (ch * cr) + (th * tr);
-                    }
-                });
-
-                const dayExps = expensesStore.filter(x => x.date === dIso);
-                dayExps.forEach(x => {
-                    const a = Number(x.amount || 0);
-                    expenses += a;
-                    const k = x.category || 'Others';
-                    catMap[k] = (catMap[k] || 0) + a;
-                });
-            });
-
-            const splh = hours > 0 ? (sales / hours) : 0;
-            const net = sales - wages - expenses;
-
-            return { sales, wages, hours, expenses, splh, net, catMap, count: dateList.length };
         }
 
         function runComparison() {
@@ -2084,12 +2359,20 @@
                 labelA = formatDisplayDateStr(valA);
                 labelB = formatDisplayDateStr(valB);
             } else if (currentCompareMode === 'week') {
-                const monA = getMondayString(valA);
-                const monB = getMondayString(valB);
+                const monA = getMondayFromWeekInput(valA);
+                const monB = getMondayFromWeekInput(valB);
                 datesA = [0,1,2,3,4,5,6].map(i => addDaysString(monA, i));
                 datesB = [0,1,2,3,4,5,6].map(i => addDaysString(monB, i));
+                const sunA = addDaysString(monA, 6);
+                const sunB = addDaysString(monB, 6);
                 labelA = `Week of ${formatDisplayDateStr(monA)}`;
                 labelB = `Week of ${formatDisplayDateStr(monB)}`;
+
+                // Update span subtitle under week pickers
+                const spanA = document.getElementById('compDateASpan');
+                const spanB = document.getElementById('compDateBSpan');
+                if (spanA) spanA.innerText = `${formatDisplayDateStr(monA)} – ${formatDisplayDateStr(sunA)}`;
+                if (spanB) spanB.innerText = `${formatDisplayDateStr(monB)} – ${formatDisplayDateStr(sunB)}`;
             } else if (currentCompareMode === 'month') {
                 datesA = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valA));
                 datesB = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valB));
