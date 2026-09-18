@@ -1668,17 +1668,69 @@
         let tempRangeStart = null;
         let tempRangeEnd = null;
 
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
         function updatePresetButtonsUI() {
             const btnDay = document.getElementById('btnPresetDay');
             const btnWeek = document.getElementById('btnPresetWeek');
             const btnMonth = document.getElementById('btnPresetMonth');
             
-            const activeCls = "px-2.5 py-1 text-xs font-black bg-purple-600 text-white rounded shadow transition";
-            const inactiveCls = "px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition";
+            const activeCls = "px-2.5 py-1 text-xs font-black bg-purple-600 text-white rounded shadow transition whitespace-nowrap";
+            const inactiveCls = "px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap";
 
             if (btnDay) btnDay.className = (currentPresetType === 'day' ? activeCls : inactiveCls);
             if (btnWeek) btnWeek.className = (currentPresetType === 'week' ? activeCls : inactiveCls);
             if (btnMonth) btnMonth.className = (currentPresetType === 'month' ? activeCls : inactiveCls);
+
+            const now = new Date();
+            const nowIso = now.toISOString().split('T')[0];
+            const refIso = presetRefDate.toISOString().split('T')[0];
+
+            // 1. Day Button: "Today" when on today, otherwise show day e.g. "17 Sep"
+            if (btnDay) {
+                if (currentPresetType === 'day' && refIso !== nowIso) {
+                    const [y, m, d] = refIso.split('-').map(Number);
+                    const moShort = MONTH_NAMES[m - 1].slice(0, 3);
+                    btnDay.innerText = `${d} ${moShort}`;
+                } else {
+                    btnDay.innerText = "Today";
+                }
+            }
+
+            // 2. Week Button: "Week" when on current week, otherwise show week e.g. "7–13 Sep"
+            if (btnWeek) {
+                const curMon = getMondayString(nowIso);
+                const refMon = getMondayString(refIso);
+                if (currentPresetType === 'week' && refMon !== curMon) {
+                    const refSun = addDaysString(refMon, 6);
+                    const [y1, m1, d1] = refMon.split('-').map(Number);
+                    const [y2, m2, d2] = refSun.split('-').map(Number);
+                    const mo1 = MONTH_NAMES[m1 - 1].slice(0, 3);
+                    const mo2 = MONTH_NAMES[m2 - 1].slice(0, 3);
+                    if (m1 === m2) {
+                        btnWeek.innerText = `${d1}–${d2} ${mo1}`;
+                    } else {
+                        btnWeek.innerText = `${d1} ${mo1}–${d2} ${mo2}`;
+                    }
+                } else {
+                    btnWeek.innerText = "Week";
+                }
+            }
+
+            // 3. Month Button: "Month" when on current month, otherwise show month e.g. "August"
+            if (btnMonth) {
+                const isCurMonth = (presetRefDate.getFullYear() === now.getFullYear() && presetRefDate.getMonth() === now.getMonth());
+                if (currentPresetType === 'month' && !isCurMonth) {
+                    const mIdx = presetRefDate.getMonth();
+                    if (presetRefDate.getFullYear() === now.getFullYear()) {
+                        btnMonth.innerText = MONTH_NAMES[mIdx];
+                    } else {
+                        btnMonth.innerText = `${MONTH_NAMES[mIdx].slice(0, 3)} '${String(presetRefDate.getFullYear()).slice(-2)}`;
+                    }
+                } else {
+                    btnMonth.innerText = "Month";
+                }
+            }
         }
 
         function updateCalendarDisplayButton(fromIso, toIso) {
@@ -1821,8 +1873,6 @@
             }
             renderRangeCalendarGrid();
         }
-
-        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
         function renderRangeCalendarGrid() {
             const headerEl = document.getElementById('rangeCalMonthYearHeader');
