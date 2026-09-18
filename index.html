@@ -1658,18 +1658,6 @@
         }
 
         // ==================== DATE RANGE VIEW ====================
-        function initDateRangeDefaults() {
-            const fromInput = document.getElementById('chartRangeFrom');
-            const toInput = document.getElementById('chartRangeTo');
-            if (fromInput && !fromInput.value) {
-                const now = new Date();
-                const toIso = now.toISOString().split('T')[0];
-                const fromDate = new Date(now.getTime() - 6 * 86400000);
-                const fromIso = fromDate.toISOString().split('T')[0];
-                fromInput.value = fromIso;
-                toInput.value = toIso;
-            }
-        }
 
         // --- ENHANCED DATE RANGE CONTROLS (TODAY / WEEK / MONTH WITH ◀ ▶ AND 2-CLICK CALENDAR) ---
         let currentPresetType = 'week'; // 'day' | 'week' | 'month' | 'custom'
