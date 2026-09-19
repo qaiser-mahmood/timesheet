@@ -41,8 +41,8 @@ Under **Environment Variables** in Render, add:
 |---|---|---|
 | `EPOS_USERNAME` | `hqmahmood@gmail.com` | Your Epos Now email |
 | `EPOS_PASSWORD` | `your_epos_password` | Your Epos Now password |
-| `TELEGRAM_BOT_TOKEN` | `8950563751:AAH9lqUWbWDipbZI4xmLmyXL1fCuQcfQDps` | Bot token |
-| `TELEGRAM_CHAT_ID` | `8717773730` | Your Telegram chat ID |
+| `TELEGRAM_BOT_TOKEN` | `your_bot_token` | Token from @BotFather |
+| `TELEGRAM_CHAT_ID` | `your_chat_id` | Your Telegram chat ID |
 | `SUPABASE_URL` | `https://ckyutsdgpdamnhsqoail.supabase.co` | Supabase project URL |
 | `SUPABASE_KEY` | `sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf` | Supabase public key |
 | `PORT` | `3000` | Render HTTP port |

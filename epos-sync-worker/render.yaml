@@ -13,9 +13,9 @@ services:
       - key: EPOS_PASSWORD
         sync: false
       - key: TELEGRAM_BOT_TOKEN
-        value: 8950563751:AAH9lqUWbWDipbZI4xmLmyXL1fCuQcfQDps
+        sync: false
       - key: TELEGRAM_CHAT_ID
-        value: "8717773730"
+        sync: false
       - key: SUPABASE_URL
         value: https://ckyutsdgpdamnhsqoail.supabase.co
       - key: SUPABASE_KEY
