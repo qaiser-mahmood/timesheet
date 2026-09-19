@@ -328,18 +328,43 @@ async function ensureLoggedIn(force = false) {
     await page.waitForSelector(passwordSelector, { timeout: 15000 });
     await page.fill(passwordSelector, EPOS_PASSWORD);
 
-    // Submit form
+    // Submit form and cleanly wait for page navigation
     await sendTelegramMessage('🖱️ Submitting login credentials...');
     const submitSelector = 'button[type="submit"], .submission-form__btn, input[type="submit"]';
-    await page.click(submitSelector);
+    
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
+      page.click(submitSelector)
+    ]);
 
-    // Wait for redirect or 2FA challenge
-    console.log('Credentials submitted, waiting for redirect or 2FA challenge...');
-    await page.waitForTimeout(4000);
+    // Give page time to settle after redirect
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    await page.waitForTimeout(3000);
 
-    const afterUrl = page.url();
-    const pageText = await page.innerText('body').catch(() => '');
+    // Safely retrieve URL and text with retry if still navigating
+    let afterUrl = '';
+    let pageText = '';
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        await page.waitForLoadState('domcontentloaded').catch(() => {});
+        afterUrl = page.url();
+        pageText = await page.innerText('body');
+        break;
+      } catch (e) {
+        console.log(`Waiting for navigation to settle (attempt ${attempt + 1})...`);
+        await page.waitForTimeout(1500);
+      }
+    }
     console.log(`URL after submission: ${afterUrl}`);
+
+    // Check for login error (e.g. invalid password)
+    if (pageText.toLowerCase().includes('invalid username or password') ||
+        pageText.toLowerCase().includes('incorrect username or password') ||
+        pageText.toLowerCase().includes('check your details')) {
+      const authErr = '❌ Epos Now rejected credentials (Invalid username or password). Please double check EPOS_PASSWORD in Render.';
+      await sendTelegramMessage(authErr);
+      throw new Error(authErr);
+    }
 
     // Detect 2FA SMS challenge
     const is2FA = afterUrl.toLowerCase().includes('twofactor') ||
@@ -356,6 +381,7 @@ async function ensureLoggedIn(force = false) {
       console.log('2FA Challenge detected on screen!');
       // Take screenshot of 2FA screen and send to user
       try {
+        await page.waitForTimeout(1000);
         const buf = await page.screenshot();
         await sendTelegramPhoto(buf, '📱 2FA Verification Screen');
       } catch (_) {}
@@ -381,11 +407,14 @@ async function ensureLoggedIn(force = false) {
         if (trustDevice) await trustDevice.check();
       } catch (_) {}
 
-      // Click verify / submit button
+      // Click verify / submit button and wait for redirect
       const verifyBtnSelector = 'button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue")';
-      await page.click(verifyBtnSelector);
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+        page.click(verifyBtnSelector)
+      ]);
 
-      await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 35000 }).catch(() => {});
+      await page.waitForLoadState('domcontentloaded').catch(() => {});
       await page.waitForTimeout(3000);
     }
 
@@ -408,6 +437,7 @@ async function ensureLoggedIn(force = false) {
     console.error('Login flow failed:', err.message);
     try {
       if (appState.activePage) {
+        await appState.activePage.waitForTimeout(1000);
         const errBuf = await appState.activePage.screenshot();
         await sendTelegramPhoto(errBuf, `❌ Login Error Screen: ${err.message.slice(0, 200)}`);
       }
