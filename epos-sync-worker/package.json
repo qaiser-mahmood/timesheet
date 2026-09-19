@@ -1,0 +1,18 @@
+{
+  "name": "epos-sync-worker",
+  "version": "1.0.0",
+  "description": "Autonomous cloud sync worker for Epos Now to Supabase with Telegram 2FA handling",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-cron": "^3.0.3",
+    "playwright": "^1.45.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

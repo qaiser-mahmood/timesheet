@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: epos-sync-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    rootDir: epos-sync-worker
+    plan: free
+    region: singapore
+    envVars:
+      - key: EPOS_USERNAME
+        sync: false
+      - key: EPOS_PASSWORD
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        value: 8950563751:AAH9lqUWbWDipbZI4xmLmyXL1fCuQcfQDps
+      - key: TELEGRAM_CHAT_ID
+        value: "8717773730"
+      - key: SUPABASE_URL
+        value: https://ckyutsdgpdamnhsqoail.supabase.co
+      - key: SUPABASE_KEY
+        value: sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf
+      - key: PORT
+        value: 3000
+      - key: TZ
+        value: Australia/Perth
