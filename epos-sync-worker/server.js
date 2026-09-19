@@ -511,11 +511,12 @@ async function runSync(isManual = false) {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\n============================`);
     const page = await ensureLoggedIn();
 
-    // Ensure we are on transactions report page
-    if (!page.url().includes('transactions')) {
-      await page.goto(TARGET_URL, { waitUntil: 'networkidle', timeout: 45000 });
-      await page.waitForTimeout(2000);
-    }
+    // Always open a fresh view of the transactions report page
+    console.log('Loading fresh transactions report page...');
+    await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
+    await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(2500);
 
     // Run in-browser scraping engine
     const scrapeResult = await page.evaluate(async () => {
@@ -555,6 +556,25 @@ async function runSync(isManual = false) {
         }
       }
 
+      function countCurrentTxRows() {
+        var docs = getAllDocs();
+        var total = 0;
+        for (var di = 0; di < docs.length; di++) {
+          var rows = docs[di].querySelectorAll('tr, [role="row"], tbody tr');
+          total += rows.length;
+        }
+        return total;
+      }
+
+      function clickBtn(el) {
+        try { el.scrollIntoView({ behavior: 'instant', block: 'center' }); } catch (e) {}
+        try { el.focus(); } catch (e) {}
+        try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); } catch (e) {}
+        try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); } catch (e) {}
+        try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (e) {}
+        try { el.click(); } catch (e) {}
+      }
+
       function findMoreTxBtn() {
         var docs = getAllDocs();
         for (var di = 0; di < docs.length; di++) {
@@ -567,21 +587,60 @@ async function runSync(isManual = false) {
               return btn;
             }
           }
+          var allEls = doc.querySelectorAll('*');
+          for (var j = 0; j < allEls.length; j++) {
+            var el = allEls[j];
+            var t = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (t.includes('more transaction') || t.includes('load more')) {
+              var childHas = false;
+              for (var c = 0; c < el.children.length; c++) {
+                var ct = (el.children[c].innerText || el.children[c].textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                if (ct.includes('more transaction') || ct.includes('load more')) {
+                  childHas = true;
+                  break;
+                }
+              }
+              if (!childHas) {
+                var clickable = el.closest('button, a, [role="button"], input') || el;
+                if (clickable.tagName !== 'BODY' && clickable.tagName !== 'HTML') {
+                  return clickable;
+                }
+              }
+            }
+          }
         }
         return null;
       }
 
-      // Auto-load up to 8 batches
-      var maxBatches = 8;
-      for (var pageIdx = 0; pageIdx < maxBatches; pageIdx++) {
+      // Robust auto-loader up to 40 pages with row-increase verification
+      var page = 0;
+      var maxPages = 40;
+      var consecutiveMiss = 0;
+      while (page < maxPages) {
         scrollAllToBottom();
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 600));
         var btn = findMoreTxBtn();
         if (btn) {
-          btn.click();
-          await new Promise(r => setTimeout(r, 800));
+          consecutiveMiss = 0;
+          page++;
+          var startCount = countCurrentTxRows();
+          clickBtn(btn);
+          var waitStart = Date.now();
+          var rowsIncreased = false;
+          while (Date.now() - waitStart < 4500) {
+            await new Promise(r => setTimeout(r, 250));
+            if (countCurrentTxRows() > startCount) {
+              rowsIncreased = true;
+              break;
+            }
+          }
+          if (rowsIncreased) {
+            await new Promise(r => setTimeout(r, 400));
+          }
         } else {
-          break;
+          consecutiveMiss++;
+          if (consecutiveMiss >= 4) break;
+          await new Promise(r => setTimeout(r, 800));
         }
       }
 
@@ -731,10 +790,10 @@ async function runSync(isManual = false) {
         return { id: uid, date: t.date, time: t.time || '', amount: t.amount, raw_line: rawC };
       });
 
-      return { daysBatch, txRows, totalTx: txList.length, sample: fullText.slice(0, 200) };
+      return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page, sample: fullText.slice(0, 200) };
     });
 
-    console.log(`Scraped ${scrapeResult.totalTx} transactions across ${scrapeResult.daysBatch.length} day(s).`);
+    console.log(`Scraped ${scrapeResult.totalTx} transactions across ${scrapeResult.pagesLoaded} batches for ${scrapeResult.daysBatch.length} day(s).`);
 
     if (scrapeResult.totalTx === 0) {
       console.warn('No transactions parsed on page.');
@@ -793,6 +852,7 @@ async function runSync(isManual = false) {
     appState.lastSyncResult = {
       days: scrapeResult.daysBatch.length,
       txCount: scrapeResult.totalTx,
+      batches: scrapeResult.pagesLoaded,
       topDay: scrapeResult.daysBatch[0] ? `${scrapeResult.daysBatch[0].date}: $${scrapeResult.daysBatch[0].totalSales}` : 'N/A'
     };
     appState.consecutiveFailures = 0;
@@ -802,6 +862,7 @@ async function runSync(isManual = false) {
       const summaryLines = scrapeResult.daysBatch.map(d => `• *${d.date}*: $${d.totalSales.toFixed(2)} (${d.count} txs)`);
       await sendTelegramMessage(
         `✅ *Sync Complete!*\n\n` +
+        `Auto-loaded *${scrapeResult.pagesLoaded}* batches.\n` +
         `Synced *${scrapeResult.totalTx}* transactions across *${scrapeResult.daysBatch.length}* day(s) to Supabase:\n\n` +
         summaryLines.join('\n')
       );
