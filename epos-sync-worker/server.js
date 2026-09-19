@@ -198,6 +198,31 @@ async function pollTelegram() {
           } catch (err) {
             await sendTelegramMessage(`❌ Screenshot failed: ${err.message}`);
           }
+        } else if (cmd === '/screentext') {
+          try {
+            const page = await getActivePage();
+            const text = await page.innerText('body');
+            const clean = text.replace(/\n\s*\n/g, '\n').slice(0, 900);
+            await sendTelegramMessage(`📄 *Current Screen Text:*\n\n${clean}`);
+          } catch (err) {
+            await sendTelegramMessage(`❌ Error reading text: ${err.message}`);
+          }
+        } else if (cmd.startsWith('/click ')) {
+          const target = text.slice(7).trim();
+          try {
+            const page = await getActivePage();
+            const el = page.locator(`button:has-text("${target}"), a:has-text("${target}"), input[value*="${target}" i]`).first();
+            if (await el.count() > 0) {
+              await el.click();
+              await page.waitForTimeout(2500);
+              const buf = await page.screenshot();
+              await sendTelegramPhoto(buf, `✅ Clicked "${target}"`);
+            } else {
+              await sendTelegramMessage(`⚠️ Button matching "${target}" not found on screen.`);
+            }
+          } catch (err) {
+            await sendTelegramMessage(`❌ Click error: ${err.message}`);
+          }
         }
       }
     }
@@ -379,17 +404,40 @@ async function ensureLoggedIn(force = false) {
 
     if (is2FA) {
       console.log('2FA Challenge detected on screen!');
+
+      // Check if there is an explicit button to send the SMS
+      try {
+        const sendSmsTrigger = page.locator('button:has-text("Send SMS"), button:has-text("Send code"), a:has-text("Send SMS"), a:has-text("Send code"), button:has-text("Text me")');
+        if (await sendSmsTrigger.count() > 0) {
+          console.log('Triggering SMS delivery button...');
+          await sendSmsTrigger.first().click();
+          await page.waitForTimeout(2000);
+        }
+      } catch (_) {}
+
+      // Extract instructions text from the 2FA screen
+      let screenSummary = '';
+      try {
+        const raw = await page.innerText('main, form, body');
+        const lines = raw.split('\n')
+          .map(l => l.trim())
+          .filter(l => l.length > 5 && !l.toLowerCase().includes('copyright') && !l.toLowerCase().includes('terms') && !l.toLowerCase().includes('privacy'));
+        screenSummary = lines.slice(0, 4).join('\n');
+      } catch (_) {}
+
       // Take screenshot of 2FA screen and send to user
       try {
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(500);
         const buf = await page.screenshot();
         await sendTelegramPhoto(buf, '📱 2FA Verification Screen');
       } catch (_) {}
 
       await sendTelegramMessage(
-        `📱 *Epos Now SMS 2FA Code Required*\n\n` +
-        `Epos Now has sent a verification code via SMS to your mobile phone for *${EPOS_USERNAME}*.\n\n` +
-        `➡️ *Reply directly to this bot with your 6-digit code* within 5 minutes.`
+        `📱 *Epos Now 2FA Code Required*\n\n` +
+        (screenSummary ? `*Screen says:*\n_${screenSummary}_\n\n` : '') +
+        `➡️ *Reply directly with your 6-digit code*.\n\n` +
+        `💡 *Note*: If the screen asks for an *Authenticator App* code (e.g. Google Authenticator) or an *Email code*, please check those!\n` +
+        `💡 Type */screentext* to view full screen text, or */click Resend* if there is a resend button.`
       );
 
       // Wait for user code from Telegram
