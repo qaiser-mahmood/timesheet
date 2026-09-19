@@ -699,7 +699,7 @@ async function runSync(isManual = false) {
       var amtTimeRegex = /[\$£€]?\s*([0-9]+\.[0-9]{2})[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/g;
 
       // Scrape page by page to handle desktop table pagination AND infinite scroll
-      var collectedTxMap = {};
+      var collectedTxList = [];
       var maxPages = 40;
       var page = 0;
       var consecutiveMiss = 0;
@@ -764,11 +764,9 @@ async function runSync(isManual = false) {
           }
         }
 
-        // Add to collected transactions map (deduplicates across pages)
+        // Add all rows from this page (preserves separate transactions with identical amounts at the same minute)
         for (var ti = 0; ti < pageTxList.length; ti++) {
-          var txItem = pageTxList[ti];
-          var key = txItem.date + '_' + txItem.time + '_' + txItem.amount.toFixed(2);
-          collectedTxMap[key] = txItem;
+          collectedTxList.push(pageTxList[ti]);
         }
 
         // Check if there is a next page button (Right Arrow or More Transactions)
@@ -817,7 +815,7 @@ async function runSync(isManual = false) {
         await new Promise(function(r) { setTimeout(r, 500); });
       }
 
-      var txList = Object.values(collectedTxMap);
+      var txList = collectedTxList;
 
       // Group into daysGroup
       var daysGroup = {};
@@ -843,9 +841,9 @@ async function runSync(isManual = false) {
         daysBatch.push({ date: dayDate, totalSales: daysGroup[dayDate].totalSales, count: daysGroup[dayDate].count, hourly: daysGroup[dayDate].hourly });
       }
 
-      var txRows = txList.map(function(t) {
+      var txRows = txList.map(function(t, idx) {
         var rawC = (t.raw || '').replace(/\s+/g, ' ').trim();
-        var uid = (t.date + '_' + (t.time || '').replace(/[^a-zA-Z0-9]/g, '') + '_' + t.amount.toFixed(2) + '_' + rawC).slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
+        var uid = (t.date + '_' + (t.time || '').replace(/[^a-zA-Z0-9]/g, '') + '_' + t.amount.toFixed(2) + '_' + idx + '_' + rawC).slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
         return { id: uid, date: t.date, time: t.time || '', amount: t.amount, raw_line: rawC };
       });
 
