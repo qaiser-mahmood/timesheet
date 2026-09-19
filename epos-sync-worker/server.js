@@ -307,7 +307,7 @@ function waitFor2FACode(timeoutMs = 300000) {
 }
 
 // Ensure user is logged in
-async function ensureLoggedIn(force = false) {
+async function ensureLoggedIn(force = false, isManual = false) {
   if (appState.isLoggingIn) return;
   appState.isLoggingIn = true;
 
@@ -315,7 +315,7 @@ async function ensureLoggedIn(force = false) {
     const page = await getActivePage();
 
     console.log(`Checking session on ${TARGET_URL}...`);
-    await sendTelegramMessage(`🌐 Opening Epos Now...`);
+    if (isManual) await sendTelegramMessage(`🌐 Opening Epos Now...`);
 
     // Wait for full load including HTTP and JS redirects
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
@@ -331,7 +331,7 @@ async function ensureLoggedIn(force = false) {
     if (!isLoginPage && !force) {
       console.log('Already logged in to Epos Now.');
       appState.isAuthenticated = true;
-      await sendTelegramMessage('✅ Already logged in! Session is active.');
+      if (isManual) await sendTelegramMessage('✅ Already logged in! Session is active.');
       return page;
     }
 
@@ -509,11 +509,11 @@ async function runSync(isManual = false) {
 
   try {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\n============================`);
-    const page = await ensureLoggedIn();
+    const page = await ensureLoggedIn(false, isManual);
 
     // Always open a fresh view of the transactions report page
     console.log('Loading fresh transactions report page...');
-    await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
+    if (isManual) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(2500);

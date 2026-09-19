@@ -1930,13 +1930,18 @@
                     btnCls += "text-slate-300 ";
                 }
 
-                html += `<button type="button" onclick="handleRangeCalDayClick('${iso}')" class="${btnCls}">${d}</button>`;
+                html += `<button type="button" onclick="handleRangeCalDayClick(event, '${iso}')" class="${btnCls}">${d}</button>`;
             }
 
             gridEl.innerHTML = html;
         }
 
-        function handleRangeCalDayClick(isoDate) {
+        function handleRangeCalDayClick(e, isoDate) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
             if (rangeCalSelectionStep === 0) {
                 // First click: select start
                 tempRangeStart = isoDate;
@@ -1958,14 +1963,18 @@
                 // Smoothly close after brief visual feedback
                 setTimeout(() => {
                     closeRangeCalendarPopover();
-                }, 180);
+                }, 220);
             }
         }
 
         // Close popover when clicking anywhere outside
         document.addEventListener('click', function(e) {
             const wrapper = document.getElementById('rangeCalendarWrapper');
-            if (wrapper && !wrapper.contains(e.target)) {
+            const popover = document.getElementById('rangeCalendarPopover');
+            if (popover && !popover.classList.contains('hidden')) {
+                if (wrapper && (wrapper.contains(e.target) || (e.target && e.target.closest && e.target.closest('#rangeCalendarWrapper')))) {
+                    return;
+                }
                 closeRangeCalendarPopover();
             }
         });
@@ -2366,22 +2375,59 @@
             const prevIso = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
 
             if (currentCompareMode === 'day') {
-                pA.innerHTML = `<input type="date" id="compDateA" value="${prevIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
-                pB.innerHTML = `<input type="date" id="compDateB" value="${todayIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
+                pA.innerHTML = `<input type="date" id="compDateA" value="${prevIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
+                pB.innerHTML = `<input type="date" id="compDateB" value="${todayIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
             } else if (currentCompareMode === 'week') {
                 // Use native week picker (<input type="week">) just like monthly picker on mobile!
                 const curWeekIso = getIsoWeekString(todayIso);
                 const prevWeekIso = getIsoWeekString(addDaysString(todayIso, -7));
-                pA.innerHTML = `<div class="space-y-1"><input type="week" id="compDateA" value="${prevWeekIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm"><div id="compDateASpan" class="text-[10px] text-indigo-300 font-bold"></div></div>`;
-                pB.innerHTML = `<div class="space-y-1"><input type="week" id="compDateB" value="${curWeekIso}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm"><div id="compDateBSpan" class="text-[10px] text-emerald-300 font-bold"></div></div>`;
+                pA.innerHTML = `<div class="space-y-1"><input type="week" id="compDateA" value="${prevWeekIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm"><div id="compDateASpan" class="text-[10px] text-indigo-300 font-bold"></div></div>`;
+                pB.innerHTML = `<div class="space-y-1"><input type="week" id="compDateB" value="${curWeekIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm"><div id="compDateBSpan" class="text-[10px] text-emerald-300 font-bold"></div></div>`;
             } else if (currentCompareMode === 'month') {
                 const curMonthStr = todayIso.substring(0, 7); // YYYY-MM
                 const d = new Date();
                 d.setMonth(d.getMonth() - 1);
                 const prevMonthStr = d.toISOString().substring(0, 7);
-                pA.innerHTML = `<input type="month" id="compDateA" value="${prevMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
-                pB.innerHTML = `<input type="month" id="compDateB" value="${curMonthStr}" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
+                pA.innerHTML = `<input type="month" id="compDateA" value="${prevMonthStr}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
+                pB.innerHTML = `<input type="month" id="compDateB" value="${curMonthStr}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
             }
+        }
+
+        function calculateMetricsForDates(dates) {
+            let sales = 0;
+            let wages = 0;
+            let hours = 0;
+            let expenses = 0;
+
+            dates.forEach(dIso => {
+                const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
+                if (sRec) sales += Number(sRec.totalSales || 0);
+
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
+                dayShifts.forEach(shift => {
+                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                    const totH = Number(shift.totalHours) || 0;
+                    hours += totH;
+                    if (!isOwner) {
+                        const cr = Number(shift.cashRate) || 0;
+                        const tr = Number(shift.taxRate) || 0;
+                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const th = Math.max(0, totH - ch);
+                        wages += (ch * cr) + (th * tr);
+                    }
+                });
+
+                const dayExpList = expensesStore.filter(x => x.date === dIso);
+                dayExpList.forEach(x => {
+                    expenses += Number(x.amount || 0);
+                });
+            });
+
+            const net = sales - wages - expenses;
+            const splh = hours > 0 ? (sales / hours) : 0;
+            const laborPct = sales > 0 ? (wages / sales) * 100 : 0;
+
+            return { sales, wages, hours, expenses, net, splh, laborPct };
         }
 
         function runComparison() {
@@ -2419,10 +2465,23 @@
                 if (spanA) spanA.innerText = `${formatDisplayDateStr(monA)} – ${formatDisplayDateStr(sunA)}`;
                 if (spanB) spanB.innerText = `${formatDisplayDateStr(monB)} – ${formatDisplayDateStr(sunB)}`;
             } else if (currentCompareMode === 'month') {
-                datesA = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valA));
-                datesB = hourlySalesStore.map(s => cleanDateStr(s.date)).filter(d => d.startsWith(valB));
-                labelA = valA;
-                labelB = valB;
+                const partsA = valA.split('-').map(Number);
+                const daysInMonthA = new Date(partsA[0], partsA[1], 0).getDate();
+                datesA = [];
+                for (let d = 1; d <= daysInMonthA; d++) {
+                    datesA.push(`${valA}-${String(d).padStart(2, '0')}`);
+                }
+
+                const partsB = valB.split('-').map(Number);
+                const daysInMonthB = new Date(partsB[0], partsB[1], 0).getDate();
+                datesB = [];
+                for (let d = 1; d <= daysInMonthB; d++) {
+                    datesB.push(`${valB}-${String(d).padStart(2, '0')}`);
+                }
+
+                const mNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+                labelA = `${mNames[partsA[1]-1]} ${partsA[0]}`;
+                labelB = `${mNames[partsB[1]-1]} ${partsB[0]}`;
             }
 
             const metA = calculateMetricsForDates(datesA);
