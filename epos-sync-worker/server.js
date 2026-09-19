@@ -575,82 +575,72 @@ async function runSync(isManual = false) {
         try { el.click(); } catch (e) {}
       }
 
-      function findMoreTxBtn() {
+      // 1. Try to expand page size to 50 or 100 if dropdown exists on desktop
+      try {
+        var selects = document.querySelectorAll('select');
+        for (var si = 0; si < selects.length; si++) {
+          var s = selects[si];
+          var opts = Array.from(s.options).map(function(o) { return parseInt(o.value || o.text, 10); }).filter(function(n) { return !isNaN(n); });
+          if (opts.includes(10) && opts.some(function(n) { return n >= 25; })) {
+            var highest = Math.max.apply(Math, opts.filter(function(n) { return n <= 100; }));
+            s.value = String(highest);
+            s.dispatchEvent(new Event('change', { bubbles: true }));
+            await new Promise(function(r) { setTimeout(r, 2000); });
+            break;
+          }
+        }
+      } catch (_) {}
+
+      function findNextBtn() {
         var docs = getAllDocs();
         for (var di = 0; di < docs.length; di++) {
           var doc = docs[di];
-          var primaryBtns = doc.querySelectorAll('button, a, [role="button"], input[type="button"]');
-          for (var i = 0; i < primaryBtns.length; i++) {
-            var btn = primaryBtns[i];
-            var txt = (btn.innerText || btn.textContent || btn.value || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            if (txt.includes('more transaction') || txt.includes('more transactions') || txt.includes('load more') || txt.includes('show more') || txt.includes('more entries')) {
-              return btn;
+          var candidates = doc.querySelectorAll('button, a, [role="button"], input[type="button"], li, span');
+          for (var i = 0; i < candidates.length; i++) {
+            var el = candidates[i];
+            if (el.id === 'epos-sync-banner' || (el.closest && el.closest('#epos-sync-banner'))) continue;
+
+            // Ignore disabled buttons
+            var isDisabled = el.disabled ||
+              el.classList.contains('disabled') ||
+              el.getAttribute('aria-disabled') === 'true' ||
+              el.getAttribute('disabled') !== null;
+            if (isDisabled) continue;
+
+            var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+            var title = (el.getAttribute('title') || '').toLowerCase();
+            var txt = (el.innerText || el.textContent || el.value || '').trim();
+            var cls = (el.className || '').toString().toLowerCase();
+
+            // Next page indicators on desktop table
+            if (aria.includes('next') || title.includes('next') || aria.includes('forward') || title.includes('forward')) {
+              return el;
+            }
+            if (cls.includes('paginate_button next') || cls.includes('page-next') || cls.includes('next-page') || cls.includes('pagination-next') || cls.includes('btn-next')) {
+              return el;
+            }
+            if (txt === '>' || txt === '›' || txt === '»' || txt === 'Next' || txt === 'Next >' || txt === 'Next ›' || txt === 'Next Page') {
+              return el;
+            }
+            // Right chevron / arrow icon
+            var html = el.innerHTML || '';
+            var hasRightIcon = (html.includes('chevron-right') || html.includes('arrow-right') || html.includes('angle-right') || html.includes('fa-chevron-right') || html.includes('bi-chevron-right')) &&
+              !cls.includes('prev') && !aria.includes('prev') && !title.includes('prev');
+            if (hasRightIcon) {
+              return el;
             }
           }
-          var allEls = doc.querySelectorAll('*');
-          for (var j = 0; j < allEls.length; j++) {
-            var el = allEls[j];
-            var t = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            if (t.includes('more transaction') || t.includes('load more')) {
-              var childHas = false;
-              for (var c = 0; c < el.children.length; c++) {
-                var ct = (el.children[c].innerText || el.children[c].textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-                if (ct.includes('more transaction') || ct.includes('load more')) {
-                  childHas = true;
-                  break;
-                }
-              }
-              if (!childHas) {
-                var clickable = el.closest('button, a, [role="button"], input') || el;
-                if (clickable.tagName !== 'BODY' && clickable.tagName !== 'HTML') {
-                  return clickable;
-                }
-              }
+
+          // Fallback to "more transactions" infinite scroll button
+          for (var j = 0; j < candidates.length; j++) {
+            var c = candidates[j];
+            var cTxt = (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (cTxt.includes('more transaction') || cTxt.includes('more transactions') || cTxt.includes('load more') || cTxt.includes('show more')) {
+              return c;
             }
           }
         }
         return null;
-      }
-
-      // Robust auto-loader up to 40 pages with row-increase verification
-      var page = 0;
-      var maxPages = 40;
-      var consecutiveMiss = 0;
-      while (page < maxPages) {
-        scrollAllToBottom();
-        await new Promise(r => setTimeout(r, 600));
-        var btn = findMoreTxBtn();
-        if (btn) {
-          consecutiveMiss = 0;
-          page++;
-          var startCount = countCurrentTxRows();
-          clickBtn(btn);
-          var waitStart = Date.now();
-          var rowsIncreased = false;
-          while (Date.now() - waitStart < 4500) {
-            await new Promise(r => setTimeout(r, 250));
-            if (countCurrentTxRows() > startCount) {
-              rowsIncreased = true;
-              break;
-            }
-          }
-          if (rowsIncreased) {
-            await new Promise(r => setTimeout(r, 400));
-          }
-        } else {
-          consecutiveMiss++;
-          if (consecutiveMiss >= 4) break;
-          await new Promise(r => setTimeout(r, 800));
-        }
-      }
-
-      scrollAllToBottom();
-      await new Promise(r => setTimeout(r, 600));
-
-      var docs = getAllDocs();
-      var fullText = '';
-      for (var di = 0; di < docs.length; di++) {
-        if (docs[di].body) fullText += docs[di].body.innerText + '\n';
       }
 
       var monthNames = ["january","february","march","april","may","june","july","august","september","october","november","december"];
@@ -693,14 +683,6 @@ async function runSync(isManual = false) {
         return null;
       }
 
-      var datePatternRegex = /(?:\b(?:Today|Yesterday)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?[\s\-\/]+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:[\s\-\/,]+\d{2,4})?\b|\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)/gi;
-      var dateMarkers = [];
-      var dMatch;
-      while ((dMatch = datePatternRegex.exec(fullText)) !== null) {
-        var iso = parseAnyDate(dMatch[0]);
-        if (iso) dateMarkers.push({ index: dMatch.index, date: iso, raw: dMatch[0] });
-      }
-
       function parseTimeStr(timeStr) {
         var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([apAP][mM])?/i);
         if (!tm) return null;
@@ -711,77 +693,154 @@ async function runSync(isManual = false) {
         return String(h).padStart(2, '0') + ':00';
       }
 
+      var datePatternRegex = /(?:\b(?:Today|Yesterday)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?[\s\-\/]+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:[\s\-\/,]+\d{2,4})?\b|\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)/gi;
       var eposRowRegex = /(\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b)[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)[,\s]+[\$£€]?\s*([0-9]+\.[0-9]{2})/g;
       var timeAmtRegex = /(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)[,\s]+[\$£€]?\s*([0-9]+\.[0-9]{2})/g;
       var amtTimeRegex = /[\$£€]?\s*([0-9]+\.[0-9]{2})[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/g;
 
-      var txList = [];
-      var tMatch;
-      while ((tMatch = eposRowRegex.exec(fullText)) !== null) {
-        var rowDate = parseAnyDate(tMatch[1]);
-        var rowTime = tMatch[2];
-        var rowHour = parseTimeStr(rowTime);
-        var rowAmt = parseFloat(tMatch[3]);
-        if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
-          txList.push({ index: tMatch.index, date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
-        }
-      }
+      // Scrape page by page to handle desktop table pagination AND infinite scroll
+      var collectedTxMap = {};
+      var maxPages = 40;
+      var page = 0;
+      var consecutiveMiss = 0;
 
-      if (txList.length === 0) {
-        while ((tMatch = timeAmtRegex.exec(fullText)) !== null) {
-          var timeStr = tMatch[1];
-          var hourStr = parseTimeStr(timeStr);
-          var amt = parseFloat(tMatch[2]);
-          if (hourStr !== null && !isNaN(amt)) {
-            txList.push({ index: tMatch.index, time: timeStr, hour: hourStr, amount: amt, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
+      while (page < maxPages) {
+        page++;
+        scrollAllToBottom();
+        await new Promise(function(r) { setTimeout(r, 600); });
+
+        // Extract text from all documents/frames on current page
+        var docs = getAllDocs();
+        var pageText = '';
+        for (var di = 0; di < docs.length; di++) {
+          if (docs[di].body) pageText += docs[di].body.innerText + '\n';
+        }
+
+        // Find date markers on current page
+        var pageDateMarkers = [];
+        var dMatch;
+        datePatternRegex.lastIndex = 0;
+        while ((dMatch = datePatternRegex.exec(pageText)) !== null) {
+          var iso = parseAnyDate(dMatch[0]);
+          if (iso) pageDateMarkers.push({ index: dMatch.index, date: iso, raw: dMatch[0] });
+        }
+        var defaultDate = pageDateMarkers.length > 0 ? pageDateMarkers[0].date : (new Date().toISOString().split('T')[0]);
+
+        // Parse rows on current page
+        var pageTxList = [];
+        var tMatch;
+        eposRowRegex.lastIndex = 0;
+        while ((tMatch = eposRowRegex.exec(pageText)) !== null) {
+          var rowDate = parseAnyDate(tMatch[1]);
+          var rowTime = tMatch[2];
+          var rowHour = parseTimeStr(rowTime);
+          var rowAmt = parseFloat(tMatch[3]);
+          if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
+            pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
           }
         }
-      }
 
-      if (txList.length === 0) {
-        while ((tMatch = amtTimeRegex.exec(fullText)) !== null) {
-          var amt2 = parseFloat(tMatch[1]);
-          var timeStr2 = tMatch[2];
-          var hourStr2 = parseTimeStr(timeStr2);
-          if (hourStr2 !== null && !isNaN(amt2)) {
-            txList.push({ index: tMatch.index, time: timeStr2, hour: hourStr2, amount: amt2, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
-          }
-        }
-      }
-
-      var defaultDate = dateMarkers.length > 0 ? dateMarkers[0].date : (new Date().toISOString().split('T')[0]);
-      var daysGroup = {};
-
-      for (var i = 0; i < txList.length; i++) {
-        var tx = txList[i];
-        var matchedDate = tx.date;
-        if (!matchedDate) {
-          matchedDate = defaultDate;
-          for (var j = dateMarkers.length - 1; j >= 0; j--) {
-            if (dateMarkers[j].index <= tx.index) {
-              matchedDate = dateMarkers[j].date;
-              break;
+        if (pageTxList.length === 0) {
+          timeAmtRegex.lastIndex = 0;
+          while ((tMatch = timeAmtRegex.exec(pageText)) !== null) {
+            var timeStr = tMatch[1];
+            var hourStr = parseTimeStr(timeStr);
+            var amt = parseFloat(tMatch[2]);
+            if (hourStr !== null && !isNaN(amt)) {
+              pageTxList.push({ date: defaultDate, time: timeStr, hour: hourStr, amount: amt, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
             }
           }
-          tx.date = matchedDate;
         }
-        if (!daysGroup[matchedDate]) {
-          daysGroup[matchedDate] = { totalSales: 0, count: 0, hourly: {} };
+
+        if (pageTxList.length === 0) {
+          amtTimeRegex.lastIndex = 0;
+          while ((tMatch = amtTimeRegex.exec(pageText)) !== null) {
+            var amt2 = parseFloat(tMatch[1]);
+            var timeStr2 = tMatch[2];
+            var hourStr2 = parseTimeStr(timeStr2);
+            if (hourStr2 !== null && !isNaN(amt2)) {
+              pageTxList.push({ date: defaultDate, time: timeStr2, hour: hourStr2, amount: amt2, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
+            }
+          }
         }
-        daysGroup[matchedDate].count++;
-        daysGroup[matchedDate].totalSales += tx.amount;
-        daysGroup[matchedDate].hourly[tx.hour] = (daysGroup[matchedDate].hourly[tx.hour] || 0) + tx.amount;
+
+        // Add to collected transactions map (deduplicates across pages)
+        for (var ti = 0; ti < pageTxList.length; ti++) {
+          var txItem = pageTxList[ti];
+          var key = txItem.date + '_' + txItem.time + '_' + txItem.amount.toFixed(2);
+          collectedTxMap[key] = txItem;
+        }
+
+        // Check if there is a next page button (Right Arrow or More Transactions)
+        var nextBtn = findNextBtn();
+        if (!nextBtn) {
+          consecutiveMiss++;
+          if (consecutiveMiss >= 2) break;
+          await new Promise(function(r) { setTimeout(r, 800); });
+          nextBtn = findNextBtn();
+          if (!nextBtn) break;
+        }
+
+        consecutiveMiss = 0;
+
+        // Remember first row text and total count before click to detect page turn
+        var firstRowBefore = '';
+        try {
+          var r0 = document.querySelector('tbody tr');
+          if (r0) firstRowBefore = r0.innerText || '';
+        } catch (_) {}
+        var rowCountBefore = countCurrentTxRows();
+
+        // Click next page button
+        clickBtn(nextBtn);
+
+        // Wait for page turn or table rows to update
+        var waitStart = Date.now();
+        var changed = false;
+        while (Date.now() - waitStart < 4000) {
+          await new Promise(function(r) { setTimeout(r, 200); });
+          var firstRowAfter = '';
+          try {
+            var r1 = document.querySelector('tbody tr');
+            if (r1) firstRowAfter = r1.innerText || '';
+          } catch (_) {}
+          if (firstRowAfter && firstRowAfter !== firstRowBefore) {
+            changed = true;
+            break;
+          }
+          if (countCurrentTxRows() > rowCountBefore) {
+            changed = true;
+            break;
+          }
+        }
+
+        await new Promise(function(r) { setTimeout(r, 500); });
+      }
+
+      var txList = Object.values(collectedTxMap);
+
+      // Group into daysGroup
+      var daysGroup = {};
+      for (var i = 0; i < txList.length; i++) {
+        var tx = txList[i];
+        var dKey = tx.date;
+        if (!daysGroup[dKey]) {
+          daysGroup[dKey] = { totalSales: 0, count: 0, hourly: {} };
+        }
+        daysGroup[dKey].count++;
+        daysGroup[dKey].totalSales += tx.amount;
+        daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
       }
 
       var daysBatch = [];
       var sortedDays = Object.keys(daysGroup).sort().reverse();
       for (var d = 0; d < sortedDays.length; d++) {
-        var dKey = sortedDays[d];
-        daysGroup[dKey].totalSales = Math.round(daysGroup[dKey].totalSales * 100) / 100;
-        for (var hk in daysGroup[dKey].hourly) {
-          daysGroup[dKey].hourly[hk] = Math.round(daysGroup[dKey].hourly[hk] * 100) / 100;
+        var dayDate = sortedDays[d];
+        daysGroup[dayDate].totalSales = Math.round(daysGroup[dayDate].totalSales * 100) / 100;
+        for (var hk in daysGroup[dayDate].hourly) {
+          daysGroup[dayDate].hourly[hk] = Math.round(daysGroup[dayDate].hourly[hk] * 100) / 100;
         }
-        daysBatch.push({ date: dKey, totalSales: daysGroup[dKey].totalSales, count: daysGroup[dKey].count, hourly: daysGroup[dKey].hourly });
+        daysBatch.push({ date: dayDate, totalSales: daysGroup[dayDate].totalSales, count: daysGroup[dayDate].count, hourly: daysGroup[dayDate].hourly });
       }
 
       var txRows = txList.map(function(t) {
@@ -790,7 +849,7 @@ async function runSync(isManual = false) {
         return { id: uid, date: t.date, time: t.time || '', amount: t.amount, raw_line: rawC };
       });
 
-      return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page, sample: fullText.slice(0, 200) };
+      return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page };
     });
 
     console.log(`Scraped ${scrapeResult.totalTx} transactions across ${scrapeResult.pagesLoaded} batches for ${scrapeResult.daysBatch.length} day(s).`);
