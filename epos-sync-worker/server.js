@@ -13,7 +13,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8950563751:AAH9lqU
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '8717773730';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ckyutsdgpdamnhsqoail.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf';
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/15 * * * *'; // Every 15 mins default
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/15 * * * *';
 const STORAGE_STATE_PATH = path.join(__dirname, 'storageState.json');
 const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
 
@@ -21,6 +21,7 @@ const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
 const appState = {
   browser: null,
   context: null,
+  activePage: null,
   isSyncing: false,
   isLoggingIn: false,
   pending2FACode: null,
@@ -45,6 +46,7 @@ app.get(['/', '/health'], (req, res) => {
     lastSyncResult: appState.lastSyncResult,
     isAuthenticated: appState.isAuthenticated,
     isSyncing: appState.isSyncing,
+    isLoggingIn: appState.isLoggingIn,
     uptimeSeconds: Math.floor(process.uptime())
   });
 });
@@ -59,22 +61,36 @@ app.get('/sync', async (req, res) => {
 });
 
 // ----------------------------------------------------
-// Telegram Bot Helpers
+// Telegram Bot Helpers (Resilient with auto plain-text fallback)
 // ----------------------------------------------------
 async function sendTelegramMessage(text, parseMode = 'Markdown') {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
   try {
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
         text,
-        parse_mode: parseMode
+        ...(parseMode ? { parse_mode: parseMode } : {})
       })
     });
-    return await res.json();
+    const data = await res.json();
+    if (!data.ok && parseMode) {
+      console.warn('Telegram Markdown parse error, retrying plain text:', data.description);
+      const plainText = text.replace(/[*_`\[\]]/g, '');
+      const retryRes = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: plainText
+        })
+      });
+      return await retryRes.json();
+    }
+    return data;
   } catch (err) {
     console.error('Failed to send Telegram message:', err.message);
   }
@@ -87,12 +103,17 @@ async function sendTelegramPhoto(photoBuffer, caption = '') {
     const formData = new FormData();
     formData.append('chat_id', TELEGRAM_CHAT_ID);
     formData.append('photo', new Blob([photoBuffer], { type: 'image/png' }), 'screen.png');
-    if (caption) formData.append('caption', caption);
+    if (caption) formData.append('caption', caption.slice(0, 1024));
 
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       body: formData
     });
+    const data = await res.json();
+    if (!data.ok) {
+      console.error('Telegram photo upload error:', data.description);
+    }
+    return data;
   } catch (err) {
     console.error('Failed to send Telegram photo:', err.message);
   }
@@ -120,61 +141,61 @@ async function pollTelegram() {
 
         console.log(`Telegram command received: "${text}"`);
 
-        // Check if 2FA is pending and user entered 6 digits
-        if (appState.pending2FACode && /^\d{4,8}$/.test(text.replace(/\s+/g, ''))) {
-          const code = text.replace(/\s+/g, '');
-          console.log(`Received 2FA code from user: ${code}`);
-          appState.pending2FACode.resolve(code);
+        // Check if 2FA is pending and user entered 4-8 digits
+        const cleanDigits = text.replace(/\s+/g, '');
+        if (appState.pending2FACode && /^\d{4,8}$/.test(cleanDigits)) {
+          console.log(`Received 2FA code from user: ${cleanDigits}`);
+          appState.pending2FACode.resolve(cleanDigits);
           appState.pending2FACode = null;
-          await sendTelegramMessage(`👍 Code received (${code})! Submitting to Epos Now...`);
+          await sendTelegramMessage(`👍 Code received (${cleanDigits})! Submitting to Epos Now...`);
           continue;
         }
 
         const cmd = text.toLowerCase();
         if (cmd === '/start' || cmd === '/help') {
           await sendTelegramMessage(
-            `🤖 *Epos Now Autonomous Sync Worker*\n\n` +
-            `Available Commands:\n` +
+            `🤖 *Epos Now Cloud Sync Bot*\n\n` +
+            `Commands:\n` +
+            `• /login - Start fresh login and trigger SMS 2FA\n` +
             `• /sync - Run immediate sync to Supabase\n` +
             `• /status - Check status & last sync\n` +
-            `• /login - Re-authenticate / trigger 2FA\n` +
-            `• /screenshot - View current browser screen\n\n` +
-            `When 2FA SMS is requested, reply directly with your 6-digit code.`
+            `• /screenshot - View live browser screen\n\n` +
+            `When 2FA SMS is requested, reply directly here with your 6-digit code.`
           );
         } else if (cmd === '/status') {
           await sendTelegramMessage(
             `📊 *Worker Status*\n\n` +
             `• Authenticated: ${appState.isAuthenticated ? '✅ Yes' : '⚠️ No'}\n` +
+            `• Login in progress: ${appState.isLoggingIn ? '⏳ Yes' : 'No'}\n` +
             `• Sync in progress: ${appState.isSyncing ? '⏳ Yes' : 'No'}\n` +
             `• Last Sync: ${appState.lastSyncTime || 'None yet'}\n` +
-            `• Last Result: ${appState.lastSyncResult ? '`' + JSON.stringify(appState.lastSyncResult) + '`' : 'N/A'}\n` +
-            `• Target: ${TARGET_URL}`
+            `• Last Result: ${appState.lastSyncResult ? JSON.stringify(appState.lastSyncResult) : 'N/A'}\n` +
+            `• Account: ${EPOS_USERNAME}`
           );
         } else if (cmd === '/sync') {
-          await sendTelegramMessage('⏳ Starting manual sync...');
+          await sendTelegramMessage('⏳ Starting sync process...');
           runSync(true).catch(async (e) => {
             await sendTelegramMessage(`❌ Sync failed: ${e.message}`);
           });
         } else if (cmd === '/login') {
-          await sendTelegramMessage('🔐 Initiating fresh login...');
-          ensureLoggedIn(true).catch(async (e) => {
-            await sendTelegramMessage(`❌ Login error: ${e.message}`);
-          });
+          if (appState.isLoggingIn) {
+            await sendTelegramMessage('⏳ Login is already in progress. Please wait a moment...');
+          } else {
+            await sendTelegramMessage('🔐 Initiating fresh login flow...');
+            ensureLoggedIn(true).catch(async (e) => {
+              await sendTelegramMessage(`❌ Login error: ${e.message}`);
+            });
+          }
         } else if (cmd === '/screenshot') {
+          await sendTelegramMessage('📸 Capturing screenshot...');
           try {
-            if (appState.context) {
-              const pages = appState.context.pages();
-              if (pages.length > 0) {
-                const buf = await pages[0].screenshot();
-                await sendTelegramPhoto(buf, `📸 Current screen (${new Date().toLocaleTimeString('en-AU', { timeZone: 'Australia/Perth' })})`);
-              } else {
-                await sendTelegramMessage('No browser pages currently active.');
-              }
-            } else {
-              await sendTelegramMessage('Browser context not initialized yet.');
-            }
+            const page = await getActivePage();
+            const buf = await page.screenshot({ fullPage: false });
+            const title = await page.title().catch(() => 'Epos Now');
+            const url = page.url();
+            await sendTelegramPhoto(buf, `📸 ${title}\nURL: ${url}`);
           } catch (err) {
-            await sendTelegramMessage(`Error capturing screenshot: ${err.message}`);
+            await sendTelegramMessage(`❌ Screenshot failed: ${err.message}`);
           }
         }
       }
@@ -191,18 +212,19 @@ async function pollTelegram() {
 // ----------------------------------------------------
 async function getBrowserContext() {
   if (!appState.browser) {
+    console.log('Launching Playwright Chromium browser...');
     appState.browser = await chromium.launch({
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
         '--no-first-run',
-        '--no-zygote',
-        '--disable-gpu'
+        '--no-zygote'
       ]
     });
+    console.log('Browser launched successfully.');
   }
 
   if (!appState.context) {
@@ -224,6 +246,17 @@ async function getBrowserContext() {
   }
 
   return appState.context;
+}
+
+async function getActivePage() {
+  const context = await getBrowserContext();
+  const pages = context.pages();
+  if (pages.length > 0) {
+    appState.activePage = pages[0];
+  } else {
+    appState.activePage = await context.newPage();
+  }
+  return appState.activePage;
 }
 
 // Wait for user to send 6-digit SMS code via Telegram
@@ -252,11 +285,12 @@ async function ensureLoggedIn(force = false) {
   if (appState.isLoggingIn) return;
   appState.isLoggingIn = true;
 
-  const context = await getBrowserContext();
-  const page = (await context.pages())[0] || (await context.newPage());
-
   try {
+    const page = await getActivePage();
+
     console.log(`Checking session on ${TARGET_URL}...`);
+    await sendTelegramMessage(`🌐 Opening ${TARGET_URL}...`);
+
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await page.waitForTimeout(3000);
 
@@ -265,93 +299,119 @@ async function ensureLoggedIn(force = false) {
 
     // If redirected to login
     const isLoginPage = currentUrl.toLowerCase().includes('login') ||
+      (await page.$('#username')) !== null ||
+      (await page.$('input[name="username"]')) !== null ||
       (await page.$('input[type="password"]')) !== null;
 
     if (!isLoginPage && !force) {
       console.log('Already logged in to Epos Now.');
       appState.isAuthenticated = true;
+      await sendTelegramMessage('✅ Already logged in! Session is active.');
       return page;
     }
 
-    console.log('Login required. Filling credentials...');
+    console.log('Login required. Checking credentials...');
     if (!EPOS_PASSWORD) {
-      const err = new Error('EPOS_PASSWORD environment variable is not configured!');
-      await sendTelegramMessage(`⚠️ *Configuration Error*: EPOS_PASSWORD is missing in worker environment variables.`);
-      throw err;
+      const msg = '❌ EPOS_PASSWORD is not configured in Render environment variables! Please add EPOS_PASSWORD in Render Dashboard -> Environment.';
+      await sendTelegramMessage(msg);
+      throw new Error(msg);
     }
 
-    // Fill Username
-    const emailInput = await page.waitForSelector('input[type="email"], input[name*="user" i], input[name*="email" i], input[id*="user" i]', { timeout: 15000 });
-    await emailInput.fill(EPOS_USERNAME);
+    await sendTelegramMessage(`🔑 Entering credentials for ${EPOS_USERNAME}...`);
 
-    // Fill Password
-    const passInput = await page.waitForSelector('input[type="password"]', { timeout: 10000 });
-    await passInput.fill(EPOS_PASSWORD);
+    // Target inputs on https://login.eposnowhq.com
+    const usernameSelector = '#username, input[name="username"], input[type="email"], input[type="text"]';
+    await page.waitForSelector(usernameSelector, { timeout: 20000 });
+    await page.fill(usernameSelector, EPOS_USERNAME);
 
-    // Click Remember Me if present
-    try {
-      const rememberCheckbox = await page.$('input[type="checkbox"]');
-      if (rememberCheckbox) await rememberCheckbox.check();
-    } catch (_) {}
+    const passwordSelector = '#password, input[name="password"], input[type="password"]';
+    await page.waitForSelector(passwordSelector, { timeout: 15000 });
+    await page.fill(passwordSelector, EPOS_PASSWORD);
 
-    // Click Submit
-    const submitBtn = await page.waitForSelector('button[type="submit"], input[type="submit"], button:has-text("Log In"), button:has-text("Sign In"), button:has-text("Login")', { timeout: 10000 });
-    await submitBtn.click();
-    console.log('Submitted credentials, waiting for redirect or 2FA challenge...');
+    // Submit form
+    await sendTelegramMessage('🖱️ Submitting login credentials...');
+    const submitSelector = 'button[type="submit"], .submission-form__btn, input[type="submit"]';
+    await page.click(submitSelector);
 
+    // Wait for redirect or 2FA challenge
+    console.log('Credentials submitted, waiting for redirect or 2FA challenge...');
     await page.waitForTimeout(4000);
 
-    // Check for 2FA screen
     const afterUrl = page.url();
-    const pageText = await page.innerText('body');
+    const pageText = await page.innerText('body').catch(() => '');
+    console.log(`URL after submission: ${afterUrl}`);
+
+    // Detect 2FA SMS challenge
     const is2FA = afterUrl.toLowerCase().includes('twofactor') ||
       afterUrl.toLowerCase().includes('verification') ||
       afterUrl.toLowerCase().includes('challenge') ||
+      afterUrl.toLowerCase().includes('2fa') ||
       pageText.toLowerCase().includes('verification code') ||
       pageText.toLowerCase().includes('enter code') ||
       pageText.toLowerCase().includes('security code') ||
-      pageText.toLowerCase().includes('sent a code');
+      pageText.toLowerCase().includes('sent a code') ||
+      pageText.toLowerCase().includes('sms');
 
     if (is2FA) {
-      console.log('2FA Challenge detected!');
+      console.log('2FA Challenge detected on screen!');
+      // Take screenshot of 2FA screen and send to user
+      try {
+        const buf = await page.screenshot();
+        await sendTelegramPhoto(buf, '📱 2FA Verification Screen');
+      } catch (_) {}
+
       await sendTelegramMessage(
         `📱 *Epos Now SMS 2FA Code Required*\n\n` +
-        `Epos Now has sent a verification code via SMS to your phone for account *${EPOS_USERNAME}*.\n\n` +
-        `➡️ *Reply to this bot directly with the 6-digit code* within 5 minutes.`
+        `Epos Now has sent a verification code via SMS to your mobile phone for *${EPOS_USERNAME}*.\n\n` +
+        `➡️ *Reply directly to this bot with your 6-digit code* within 5 minutes.`
       );
 
-      // Wait for user to message code
+      // Wait for user code from Telegram
       const code = await waitFor2FACode(300000);
-      console.log(`Submitting 2FA code ${code} to Epos Now...`);
+      await sendTelegramMessage(`👍 Received code ${code}. Entering into Epos Now...`);
 
-      // Fill code input
-      const codeInput = await page.waitForSelector('input[type="text"], input[type="tel"], input[type="number"], input[name*="code" i], input[id*="code" i]', { timeout: 15000 });
-      await codeInput.fill(code);
+      // Fill code into 2FA input
+      const codeInputSelector = 'input[name*="code" i], input[id*="code" i], input[type="text"], input[type="tel"], input[type="number"]';
+      await page.waitForSelector(codeInputSelector, { timeout: 15000 });
+      await page.fill(codeInputSelector, code);
 
-      // Check remember device if present
+      // Check "Remember this device" if present
       try {
         const trustDevice = await page.$('input[type="checkbox"], input[id*="remember" i], input[id*="trust" i]');
         if (trustDevice) await trustDevice.check();
       } catch (_) {}
 
-      // Submit 2FA
-      const verifyBtn = await page.waitForSelector('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue")', { timeout: 10000 });
-      await verifyBtn.click();
+      // Click verify / submit button
+      const verifyBtnSelector = 'button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue")';
+      await page.click(verifyBtnSelector);
 
-      await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 30000 }).catch(() => {});
+      await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 35000 }).catch(() => {});
       await page.waitForTimeout(3000);
     }
 
-    // Save session storage
+    // Save authenticated session state
+    const context = await getBrowserContext();
     await context.storageState({ path: STORAGE_STATE_PATH });
-    console.log('Saved new authenticated session to storageState.json');
+    console.log('Saved authenticated session to storageState.json');
     appState.isAuthenticated = true;
 
-    await sendTelegramMessage(`✅ *Logged in successfully!* Epos Now session is active and saved.`);
+    // Send confirmation & screenshot
+    try {
+      const finalBuf = await page.screenshot();
+      await sendTelegramPhoto(finalBuf, '✅ Logged In Screen');
+    } catch (_) {}
+
+    await sendTelegramMessage(`🎉 *Logged in successfully!* Epos Now session is active and saved for future syncs.`);
     return page;
   } catch (err) {
     appState.isAuthenticated = false;
     console.error('Login flow failed:', err.message);
+    try {
+      if (appState.activePage) {
+        const errBuf = await appState.activePage.screenshot();
+        await sendTelegramPhoto(errBuf, `❌ Login Error Screen: ${err.message.slice(0, 200)}`);
+      }
+    } catch (_) {}
     throw err;
   } finally {
     appState.isLoggingIn = false;
@@ -372,7 +432,7 @@ async function runSync(isManual = false) {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\n============================`);
     const page = await ensureLoggedIn();
 
-    // Ensure we are on transactions page
+    // Ensure we are on transactions report page
     if (!page.url().includes('transactions')) {
       await page.goto(TARGET_URL, { waitUntil: 'networkidle', timeout: 45000 });
       await page.waitForTimeout(2000);
@@ -390,16 +450,6 @@ async function runSync(isManual = false) {
           } catch (e) {}
         }
         return docs;
-      }
-
-      function countCurrentTxRows() {
-        var docs = getAllDocs();
-        var total = 0;
-        for (var di = 0; di < docs.length; di++) {
-          var rows = docs[di].querySelectorAll('tr, [role="row"], tbody tr');
-          total += rows.length;
-        }
-        return total;
       }
 
       function scrollAllToBottom() {
@@ -442,7 +492,7 @@ async function runSync(isManual = false) {
         return null;
       }
 
-      // Auto-load 5 pages for routine updates
+      // Auto-load up to 8 batches
       var maxBatches = 8;
       for (var pageIdx = 0; pageIdx < maxBatches; pageIdx++) {
         scrollAllToBottom();
@@ -697,7 +747,6 @@ async function sessionHeartbeat() {
     if (appState.context) {
       const pages = appState.context.pages();
       if (pages.length > 0) {
-        // Quick lightweight check
         await pages[0].evaluate(() => document.title).catch(() => {});
       }
     }
@@ -732,7 +781,7 @@ app.listen(PORT, '0.0.0.0', () => {
   // Send boot notification
   sendTelegramMessage(
     `🚀 *Epos Now Sync Worker Online*\n\n` +
-    `Worker booted on Render / Cloud.\n` +
-    `Type /status to check status or /sync to start.`
+    `Worker restarted with enhanced Playwright & Telegram error recovery.\n\n` +
+    `Type /login to sign in or /screenshot to view screen.`
   ).catch(console.error);
 });
