@@ -183,7 +183,8 @@ async function pollTelegram() {
           } else {
             await sendTelegramMessage('🔐 Initiating fresh login flow...');
             ensureLoggedIn(true).catch(async (e) => {
-              await sendTelegramMessage(`❌ Login error: ${e.message}`);
+              const stackTop = e.stack ? e.stack.split('\n')[1].trim() : '';
+              await sendTelegramMessage(`❌ Login error: ${e.message}\n${stackTop}`);
             });
           }
         } else if (cmd === '/screenshot') {
@@ -289,19 +290,18 @@ async function ensureLoggedIn(force = false) {
     const page = await getActivePage();
 
     console.log(`Checking session on ${TARGET_URL}...`);
-    await sendTelegramMessage(`🌐 Opening ${TARGET_URL}...`);
+    await sendTelegramMessage(`🌐 Opening Epos Now...`);
 
-    await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    await page.waitForTimeout(3000);
+    // Wait for full load including HTTP and JS redirects
+    await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
 
     const currentUrl = page.url();
     console.log(`Current page URL: ${currentUrl}`);
 
-    // If redirected to login
-    const isLoginPage = currentUrl.toLowerCase().includes('login') ||
-      (await page.$('#username')) !== null ||
-      (await page.$('input[name="username"]')) !== null ||
-      (await page.$('input[type="password"]')) !== null;
+    // If redirected to login - use safe locator check
+    const hasLoginInputs = await page.locator('#username, input[name="username"], input[type="password"]').count() > 0;
+    const isLoginPage = currentUrl.toLowerCase().includes('login') || hasLoginInputs;
 
     if (!isLoginPage && !force) {
       console.log('Already logged in to Epos Now.');
@@ -319,26 +319,26 @@ async function ensureLoggedIn(force = false) {
 
     await sendTelegramMessage(`🔑 Entering credentials for ${EPOS_USERNAME}...`);
 
-    // Target inputs on https://login.eposnowhq.com
-    const usernameSelector = '#username, input[name="username"], input[type="email"], input[type="text"]';
-    await page.waitForSelector(usernameSelector, { timeout: 20000 });
-    await page.fill(usernameSelector, EPOS_USERNAME);
+    // Target inputs on https://login.eposnowhq.com using safe locators
+    const userField = page.locator('#username, input[name="username"], input[type="email"]');
+    await userField.first().waitFor({ state: 'visible', timeout: 20000 });
+    await userField.first().fill(EPOS_USERNAME);
 
-    const passwordSelector = '#password, input[name="password"], input[type="password"]';
-    await page.waitForSelector(passwordSelector, { timeout: 15000 });
-    await page.fill(passwordSelector, EPOS_PASSWORD);
+    const passField = page.locator('#password, input[name="password"], input[type="password"]');
+    await passField.first().waitFor({ state: 'visible', timeout: 15000 });
+    await passField.first().fill(EPOS_PASSWORD);
 
     // Submit form and cleanly wait for page navigation
     await sendTelegramMessage('🖱️ Submitting login credentials...');
-    const submitSelector = 'button[type="submit"], .submission-form__btn, input[type="submit"]';
+    const submitBtn = page.locator('button[type="submit"], .submission-form__btn, input[type="submit"]');
     
     await Promise.all([
-      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 30000 }).catch(() => {}),
-      page.click(submitSelector)
+      page.waitForNavigation({ waitUntil: 'load', timeout: 35000 }).catch(() => {}),
+      submitBtn.first().click()
     ]);
 
     // Give page time to settle after redirect
-    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(3000);
 
     // Safely retrieve URL and text with retry if still navigating
@@ -397,24 +397,24 @@ async function ensureLoggedIn(force = false) {
       await sendTelegramMessage(`👍 Received code ${code}. Entering into Epos Now...`);
 
       // Fill code into 2FA input
-      const codeInputSelector = 'input[name*="code" i], input[id*="code" i], input[type="text"], input[type="tel"], input[type="number"]';
-      await page.waitForSelector(codeInputSelector, { timeout: 15000 });
-      await page.fill(codeInputSelector, code);
+      const codeInput = page.locator('input[name*="code" i], input[id*="code" i], input[type="text"], input[type="tel"], input[type="number"]');
+      await codeInput.first().waitFor({ state: 'visible', timeout: 15000 });
+      await codeInput.first().fill(code);
 
       // Check "Remember this device" if present
       try {
-        const trustDevice = await page.$('input[type="checkbox"], input[id*="remember" i], input[id*="trust" i]');
-        if (trustDevice) await trustDevice.check();
+        const trustDevice = page.locator('input[type="checkbox"], input[id*="remember" i], input[id*="trust" i]');
+        if (await trustDevice.count() > 0) await trustDevice.first().check();
       } catch (_) {}
 
       // Click verify / submit button and wait for redirect
-      const verifyBtnSelector = 'button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue")';
+      const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue")');
       await Promise.all([
-        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
-        page.click(verifyBtnSelector)
+        page.waitForNavigation({ waitUntil: 'load', timeout: 35000 }).catch(() => {}),
+        verifyBtn.first().click()
       ]);
 
-      await page.waitForLoadState('domcontentloaded').catch(() => {});
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       await page.waitForTimeout(3000);
     }
 
@@ -434,12 +434,13 @@ async function ensureLoggedIn(force = false) {
     return page;
   } catch (err) {
     appState.isAuthenticated = false;
-    console.error('Login flow failed:', err.message);
+    const stackTop = err.stack ? err.stack.split('\n').slice(0, 3).join('\n') : '';
+    console.error('Login flow failed:', err.message, stackTop);
     try {
       if (appState.activePage) {
         await appState.activePage.waitForTimeout(1000);
         const errBuf = await appState.activePage.screenshot();
-        await sendTelegramPhoto(errBuf, `❌ Login Error Screen: ${err.message.slice(0, 200)}`);
+        await sendTelegramPhoto(errBuf, `❌ Login Error: ${err.message.slice(0, 100)}\n${stackTop.slice(0, 120)}`);
       }
     } catch (_) {}
     throw err;
