@@ -7,10 +7,13 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Anatolya Kebabs Weekly Roster</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         input[type="time"] { -webkit-appearance: none; -moz-appearance: none; appearance: none; min-height: 40px; }
-        .roster-share-active #mainTitle { text-align: center; width: 100%; font-size: 1.25rem; }
+        .roster-share-active #mainHeaderLogoContainer { justify-content: center !important; margin: 0 auto; }
+        .roster-share-active #mainTitle { text-align: center; font-size: 1.25rem; }
         .roster-share-active .hide-on-share { display: none !important; }
         .roster-share-active #weekRangeContainer { justify-content: center !important; text-align: center !important; margin-left: auto; margin-right: auto; background-color: transparent !important; border: none !important; font-size: 13px !important; }
         .roster-share-active th { background-color: #4b5563 !important; color: #ffffff !important; }
@@ -24,8 +27,8 @@
         <div class="w-full max-w-md bg-slate-900 text-white rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-800 space-y-5">
             <!-- Brand Icon / Avatar -->
             <div class="flex justify-center">
-                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-purple-600 flex items-center justify-center text-3xl shadow-xl shadow-orange-500/20 border border-white/10 ring-4 ring-orange-500/10">
-                    🥙
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-black flex items-center justify-center shadow-2xl shadow-amber-500/20 border border-amber-500/40 ring-4 ring-amber-500/10 overflow-hidden p-1.5 transition-transform hover:scale-105 duration-300">
+                    <img src="logo.png" alt="Anatolya Turkish Kebabs Logo" class="w-full h-full object-contain rounded-xl">
                 </div>
             </div>
 
@@ -80,12 +83,13 @@
             </div>
 
             <!-- Footer / Security Note -->
-            <div class="pt-3 border-t border-slate-800 text-center space-y-1">
+            <div class="pt-3 border-t border-slate-800 text-center space-y-1.5">
                 <div class="text-[10px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
                     <span>🔒</span> <span>Restricted Access • Authorized Staff & Management Only</span>
                 </div>
-                <div class="text-[9px] text-slate-600">
-                    © 2026 Anatolya Turkish Kebabs
+                <div class="text-[10px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+                    <img src="logo.png" alt="" class="w-3.5 h-3.5 rounded object-contain opacity-60">
+                    <span>© 2026 Anatolya Turkish Kebabs</span>
                 </div>
             </div>
         </div>
@@ -95,9 +99,12 @@
     <div id="appContainer" class="hidden max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
-            <div class="flex items-center gap-2 shrink-0">
-                <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-800 tracking-tight whitespace-nowrap">Anatolya Kebabs Roster</h1>
-                <span id="userEmailBadge" class="hidden text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[150px]"></span>
+            <div id="mainHeaderLogoContainer" class="flex items-center gap-2.5 shrink-0">
+                <img src="logo.png" alt="Anatolya Kebabs" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-amber-500/40 bg-black object-contain p-0.5 shrink-0 ring-2 ring-amber-500/10">
+                <div class="flex flex-col">
+                    <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-900 tracking-tight whitespace-nowrap leading-tight">Anatolya Kebabs Roster</h1>
+                    <span id="userEmailBadge" class="hidden text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 truncate max-w-[150px] font-mono mt-0.5"></span>
+                </div>
             </div>
 
             <div class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
@@ -645,9 +652,12 @@
     <div id="expenseModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-slate-700">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                    💸 Log Business Expense
-                </h3>
+                <div class="flex items-center gap-2">
+                    <img src="logo.png" alt="Anatolya Logo" class="w-6 h-6 rounded bg-black p-0.5 border border-amber-500/40 object-contain shadow-xs">
+                    <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
+                        Log Business Expense
+                    </h3>
+                </div>
                 <button type="button" onclick="closeExpenseModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
             </div>
 
@@ -693,9 +703,12 @@
     <div id="eposModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-6 space-y-4">
             <div class="flex items-center justify-between border-b pb-3">
-                <h3 class="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-1.5">
-                    ⚡ Epos Now Sales Sync
-                </h3>
+                <div class="flex items-center gap-2">
+                    <img src="logo.png" alt="Anatolya Logo" class="w-6 h-6 rounded bg-black p-0.5 border border-amber-500/30 object-contain shadow-xs">
+                    <h3 class="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-1.5">
+                        ⚡ Epos Now Sales Sync
+                    </h3>
+                </div>
                 <button type="button" onclick="closeEposModal()" class="text-gray-400 hover:text-gray-700 text-lg font-bold">✕</button>
             </div>
 
