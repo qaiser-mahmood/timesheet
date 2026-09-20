@@ -781,6 +781,19 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
+        // Whitelist of authorized management accounts
+        const AUTHORIZED_EMAILS = [
+            "hqmahmood@gmail.com",
+            "anatolyakebabs@gmail.com"
+        ];
+
+        function isAuthorizedEmail(email) {
+            if (!email) return false;
+            const normalized = String(email).trim().toLowerCase();
+            return AUTHORIZED_EMAILS.some(e => e.toLowerCase() === normalized);
+        }
+        window.isAuthorizedEmail = isAuthorizedEmail;
+
         // 1. Assign internal functions to window so the HTML can find them
         window.toggleRosterShareMode = toggleRosterShareMode;
         window.copyPreviousWeekRoster = copyPreviousWeekRoster;
@@ -835,8 +848,8 @@
 
                 function toggleRosterShareMode() {
                     const user = auth.currentUser;
-                    if (!user) {
-                        alert("Please login first to use this feature.");
+                    if (!user || !isAuthorizedEmail(user.email)) {
+                        alert("Please login with an authorized management account first.");
                         return; // Stop execution if not logged in
                     }
                     const app = document.getElementById('appContainer');
@@ -887,6 +900,10 @@
                 }
 
                 async function callSheetApi(payload) {
+                    const user = auth.currentUser;
+                    if (!user || !isAuthorizedEmail(user.email)) {
+                        return { status: "error", message: "Unauthorized: Account not on access list" };
+                    }
                     if (!payload || !payload.action) return { status: "error", message: "No action specified" };
 
                     if (payload.action === "get") {
@@ -1061,8 +1078,8 @@
 
                 async function syncDirectFromEpos() {
                     const user = auth.currentUser;
-                    if (!user) {
-                        alert("Please login first to use this feature.");
+                    if (!user || !isAuthorizedEmail(user.email)) {
+                        alert("Please login with an authorized management account first.");
                         return;
                     }
                     if (isCloudLoading) return;
@@ -1159,8 +1176,8 @@
 
                 async function loadCloudData(options = {}) {
                     const user = auth.currentUser;
-                    if (!user) {
-                        return; // Stop execution if not logged in
+                    if (!user || !isAuthorizedEmail(user.email)) {
+                        return; // Stop execution if not logged in or not authorized
                     }
                     const silent = (options && options.silent === true);
 
@@ -3578,21 +3595,76 @@ function convertHourStr(hStr) {
             };
         }
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             const loginContainer = document.getElementById("loginContainer");
             const appContainer = document.getElementById("appContainer");
             const userEmailBadge = document.getElementById("userEmailBadge");
+            const errEl = document.getElementById("loginErrorMessage");
+            const noticeEl = document.getElementById("logoutNoticeBanner");
 
             if (user) {
-                console.log("Authenticated as:", user.email);
+                const userEmail = (user.email || '').trim().toLowerCase();
+
+                // Check against authorized management whitelist
+                if (!isAuthorizedEmail(userEmail)) {
+                    console.warn("Unauthorized login attempt by:", user.email);
+
+                    // 1. Purge all in-memory business data
+                    dataStore = [];
+                    staffRegistry = [];
+                    hourlySalesStore = [];
+                    expensesStore = [];
+
+                    // 2. Keep Dashboard completely hidden, Show Login Screen
+                    if (appContainer) appContainer.classList.add("hidden");
+                    if (loginContainer) loginContainer.classList.remove("hidden");
+
+                    if (userEmailBadge) {
+                        userEmailBadge.innerText = "";
+                        userEmailBadge.classList.add("hidden");
+                    }
+
+                    // 3. Show prominent Access Denied message
+                    if (noticeEl) noticeEl.classList.add("hidden");
+                    if (errEl) {
+                        errEl.innerHTML = `
+                            <div class="space-y-1.5 py-1">
+                                <div class="font-black text-sm text-red-300 flex items-center justify-center gap-1.5">
+                                    <span>🚫</span> <span>Access Denied</span>
+                                </div>
+                                <div class="text-xs text-slate-200">
+                                    <strong class="text-white">${user.email}</strong> is not an authorized account.
+                                </div>
+                                <div class="text-[10px] text-red-300">
+                                    Access is strictly restricted to approved managers:
+                                    <div class="font-mono text-[9px] text-amber-300 mt-1">hqmahmood@gmail.com • anatolyakebabs@gmail.com</div>
+                                </div>
+                            </div>
+                        `;
+                        errEl.classList.remove("hidden");
+                    }
+
+                    // 4. Force immediate sign-out from Firebase
+                    try {
+                        await signOut(auth);
+                    } catch (e) {
+                        console.error("Sign-out error:", e);
+                    }
+                    return;
+                }
+
+                // Authorized login:
+                console.log("Authorized access granted to:", user.email);
+                if (errEl) errEl.classList.add("hidden");
 
                 // Show Dashboard, Hide Login Screen
                 if (loginContainer) loginContainer.classList.add("hidden");
                 if (appContainer) appContainer.classList.remove("hidden");
 
                 if (userEmailBadge) {
-                    userEmailBadge.innerText = user.email;
-                    userEmailBadge.title = `Signed in as ${user.email}`;
+                    userEmailBadge.innerText = `👤 ${user.email}`;
+                    userEmailBadge.title = `Signed in as ${user.email} (Authorized)`;
+                    userEmailBadge.className = "hidden sm:inline-block text-[10px] text-emerald-700 bg-emerald-50 font-bold px-2 py-0.5 rounded-md border border-emerald-200 truncate max-w-[190px]";
                     userEmailBadge.classList.remove("hidden");
                 }
 
@@ -3623,7 +3695,7 @@ function convertHourStr(hStr) {
 
         // Auto-refresh when user returns to this tab from Epos Now or another window
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && auth && auth.currentUser) {
+            if (document.visibilityState === 'visible' && auth && auth.currentUser && isAuthorizedEmail(auth.currentUser.email)) {
                 const now = Date.now();
                 if (now - lastCloudFetchTime > 8000) {
                     refreshCloudData(false);
@@ -3632,7 +3704,7 @@ function convertHourStr(hStr) {
         });
 
         window.addEventListener('focus', () => {
-            if (auth && auth.currentUser) {
+            if (auth && auth.currentUser && isAuthorizedEmail(auth.currentUser.email)) {
                 const now = Date.now();
                 if (now - lastCloudFetchTime > 8000) {
                     refreshCloudData(false);
