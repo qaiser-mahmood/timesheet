@@ -18,11 +18,14 @@ const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/15 * * * *';
 const STORAGE_STATE_PATH = path.join(__dirname, 'storageState.json');
 const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
 
-// Whitelisted management email accounts (Server-enforced)
-const AUTHORIZED_MANAGERS = [
+// Whitelisted management email accounts (Server-enforced, configurable via Render Env Var or code)
+const DEFAULT_MANAGERS = [
   'hqmahmood@gmail.com',
   'anatolyakebabs@gmail.com'
 ];
+const AUTHORIZED_MANAGERS = process.env.AUTHORIZED_MANAGERS
+  ? process.env.AUTHORIZED_MANAGERS.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
+  : DEFAULT_MANAGERS;
 
 // State tracker
 const appState = {
