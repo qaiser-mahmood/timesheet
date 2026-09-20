@@ -362,19 +362,73 @@
 
             <!-- VIEW 3: Expenses Ledger & Category P&L -->
             <div id="analyticsExpensesContainer" class="hidden space-y-4">
-                <!-- Header with Action -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-                            💸 8-Category Business Expenses Ledger
+                <!-- Header with Action & Single 2-Click Date Filter -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs sm:text-sm font-extrabold text-slate-100 flex items-center gap-1.5">
+                            💸 Expenses Ledger
                         </span>
                         <span id="expenseLedgerCountBadge" class="bg-amber-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
                             0 records
                         </span>
+                        <span id="expenseLedgerTotalBadge" class="bg-slate-900 border border-slate-700 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+                            $0.00
+                        </span>
                     </div>
-                    <button type="button" onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 self-start sm:self-auto">
-                        ➕ Add New Expense
-                    </button>
+
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <!-- Single 2-Click Date Range Selector -->
+                        <div class="relative" id="ledgerCalendarWrapper">
+                            <button type="button" id="ledgerCalendarTriggerBtn" onclick="toggleLedgerCalendarPopover(event)" class="bg-slate-900 hover:bg-slate-850 border border-slate-700 hover:border-amber-500/60 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 transition shadow-sm flex items-center gap-2 cursor-pointer" title="Filter ledger by date range">
+                                <span class="text-amber-400 text-sm">📅</span>
+                                <span id="ledgerCalendarDisplay" class="tracking-wide">All Time (1 Jun 2026 – Today)</span>
+                                <span class="text-slate-400 text-[9px]">▼</span>
+                            </button>
+
+                            <!-- Single 2-Click Popover Calendar for Ledger -->
+                            <div id="ledgerCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] text-white space-y-2.5">
+                                <!-- Popover Header with Month Nav -->
+                                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                                    <button type="button" onclick="changeLedgerCalMonth(-1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">◀</button>
+                                    <span id="ledgerCalMonthYearHeader" class="text-xs font-black text-white tracking-wide">September 2026</span>
+                                    <button type="button" onclick="changeLedgerCalMonth(1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">▶</button>
+                                </div>
+
+                                <!-- Quick Presets inside Popover -->
+                                <div class="flex items-center gap-1 overflow-x-auto pb-1 text-[10px] border-b border-slate-800 scrollbar-none">
+                                    <button type="button" onclick="setLedgerPreset('all')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">All (1/6)</button>
+                                    <button type="button" onclick="setLedgerPreset('month')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">This Month</button>
+                                    <button type="button" onclick="setLedgerPreset('last_month')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">Last Month</button>
+                                    <button type="button" onclick="setLedgerPreset('week')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">This Week</button>
+                                    <button type="button" onclick="setLedgerPreset('today')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">Today</button>
+                                </div>
+
+                                <!-- Interactive Click Step Hint -->
+                                <div id="ledgerCalHint" class="text-[10px] text-center text-amber-300 font-semibold bg-amber-950/40 border border-amber-900/50 py-1 px-2 rounded-lg">
+                                    Click start date
+                                </div>
+
+                                <!-- Day of Week Names (Mon - Sun) -->
+                                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                                </div>
+
+                                <!-- Days of Month Grid -->
+                                <div id="ledgerCalDaysGrid" class="grid grid-cols-7 gap-1 text-center">
+                                    <!-- Injected dynamically -->
+                                </div>
+
+                                <div class="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800">
+                                    <span class="italic">2 clicks to select range</span>
+                                    <button type="button" onclick="closeLedgerCalendarPopover()" class="text-slate-400 hover:text-white font-bold">Close ✕</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5">
+                            ➕ Add Expense
+                        </button>
+                    </div>
                 </div>
 
                 <!-- 8 Categories Summary Grid -->
@@ -660,6 +714,11 @@
         window.closeExpenseModal = closeExpenseModal;
         window.submitExpenseForm = submitExpenseForm;
         window.deleteExpenseItem = deleteExpenseItem;
+        window.toggleLedgerCalendarPopover = toggleLedgerCalendarPopover;
+        window.closeLedgerCalendarPopover = closeLedgerCalendarPopover;
+        window.changeLedgerCalMonth = changeLedgerCalMonth;
+        window.handleLedgerCalDayClick = handleLedgerCalDayClick;
+        window.setLedgerPreset = setLedgerPreset;
 
         // 2. Core State
         const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
@@ -2085,15 +2144,26 @@
             }
         }
 
-        // Close popover when clicking anywhere outside
+        // Close popovers when clicking anywhere outside
         document.addEventListener('click', function(e) {
             const wrapper = document.getElementById('rangeCalendarWrapper');
             const popover = document.getElementById('rangeCalendarPopover');
             if (popover && !popover.classList.contains('hidden')) {
                 if (wrapper && (wrapper.contains(e.target) || (e.target && e.target.closest && e.target.closest('#rangeCalendarWrapper')))) {
-                    return;
+                    // inside
+                } else {
+                    closeRangeCalendarPopover();
                 }
-                closeRangeCalendarPopover();
+            }
+
+            const lWrapper = document.getElementById('ledgerCalendarWrapper');
+            const lPopover = document.getElementById('ledgerCalendarPopover');
+            if (lPopover && !lPopover.classList.contains('hidden')) {
+                if (lWrapper && (lWrapper.contains(e.target) || (e.target && e.target.closest && e.target.closest('#ledgerCalendarWrapper')))) {
+                    // inside
+                } else {
+                    closeLedgerCalendarPopover();
+                }
             }
         });
 
@@ -2199,20 +2269,251 @@
             loadCloudData({ silent: true });
         }
 
+        // ==================== LEDGER DATE FILTER & 2-CLICK CALENDAR ====================
+        let ledgerDateFrom = '2026-06-01'; // Day 1
+        let ledgerDateTo = new Date().toISOString().split('T')[0]; // Today
+        let ledgerCalViewYear = new Date().getFullYear();
+        let ledgerCalViewMonth = new Date().getMonth();
+        let ledgerCalSelectionStep = 0; // 0 = start, 1 = end
+        let tempLedgerStart = null;
+        let tempLedgerEnd = null;
+
+        function toggleLedgerCalendarPopover(e) {
+            if (e) e.stopPropagation();
+            const popover = document.getElementById('ledgerCalendarPopover');
+            if (!popover) return;
+            if (popover.classList.contains('hidden')) {
+                openLedgerCalendarPopover();
+            } else {
+                closeLedgerCalendarPopover();
+            }
+        }
+
+        function openLedgerCalendarPopover() {
+            const popover = document.getElementById('ledgerCalendarPopover');
+            if (!popover) return;
+
+            if (ledgerDateFrom) {
+                const parts = ledgerDateFrom.split('-');
+                ledgerCalViewYear = parseInt(parts[0], 10);
+                ledgerCalViewMonth = parseInt(parts[1], 10) - 1;
+                tempLedgerStart = ledgerDateFrom;
+                tempLedgerEnd = ledgerDateTo || ledgerDateFrom;
+            } else {
+                const now = new Date();
+                ledgerCalViewYear = now.getFullYear();
+                ledgerCalViewMonth = now.getMonth();
+                tempLedgerStart = null;
+                tempLedgerEnd = null;
+            }
+
+            ledgerCalSelectionStep = 0;
+            renderLedgerCalendarGrid();
+            popover.classList.remove('hidden');
+        }
+
+        function closeLedgerCalendarPopover() {
+            const popover = document.getElementById('ledgerCalendarPopover');
+            if (popover) popover.classList.add('hidden');
+        }
+
+        function changeLedgerCalMonth(delta) {
+            ledgerCalViewMonth += delta;
+            if (ledgerCalViewMonth < 0) {
+                ledgerCalViewMonth = 11;
+                ledgerCalViewYear--;
+            } else if (ledgerCalViewMonth > 11) {
+                ledgerCalViewMonth = 0;
+                ledgerCalViewYear++;
+            }
+            renderLedgerCalendarGrid();
+        }
+
+        function renderLedgerCalendarGrid() {
+            const headerEl = document.getElementById('ledgerCalMonthYearHeader');
+            const gridEl = document.getElementById('ledgerCalDaysGrid');
+            const hintEl = document.getElementById('ledgerCalHint');
+            if (!gridEl) return;
+
+            if (headerEl) {
+                headerEl.innerText = `${MONTH_NAMES[ledgerCalViewMonth]} ${ledgerCalViewYear}`;
+            }
+
+            if (hintEl) {
+                if (ledgerCalSelectionStep === 0) {
+                    hintEl.innerText = "Click start date";
+                    hintEl.className = "text-[10px] text-center text-amber-300 font-semibold bg-amber-950/40 border border-amber-900/50 py-1 px-2 rounded-lg";
+                } else {
+                    hintEl.innerText = "Click end date (or same day)";
+                    hintEl.className = "text-[10px] text-center text-emerald-300 font-semibold bg-emerald-950/40 border border-emerald-900/50 py-1 px-2 rounded-lg animate-pulse";
+                }
+            }
+
+            const firstDay = new Date(ledgerCalViewYear, ledgerCalViewMonth, 1);
+            const lastDay = new Date(ledgerCalViewYear, ledgerCalViewMonth + 1, 0);
+            const numDays = lastDay.getDate();
+            const startDayOfWeek = (firstDay.getDay() + 6) % 7;
+
+            let html = '';
+            for (let i = 0; i < startDayOfWeek; i++) {
+                html += '<div class="p-1.5"></div>';
+            }
+
+            const todayIso = new Date().toISOString().split('T')[0];
+
+            for (let d = 1; d <= numDays; d++) {
+                const dStr = String(d).padStart(2, '0');
+                const mStr = String(ledgerCalViewMonth + 1).padStart(2, '0');
+                const iso = `${ledgerCalViewYear}-${mStr}-${dStr}`;
+
+                let btnCls = "w-full py-1.5 rounded-lg text-xs font-bold transition hover:bg-slate-700 ";
+                let isStart = (iso === tempLedgerStart);
+                let isEnd = (iso === tempLedgerEnd);
+                let isInRange = (tempLedgerStart && tempLedgerEnd && iso > tempLedgerStart && iso < tempLedgerEnd);
+
+                if (isStart && isEnd) {
+                    btnCls += "bg-amber-600 text-white font-black shadow ";
+                } else if (isStart) {
+                    btnCls += "bg-amber-600 text-white font-black rounded-r-none ";
+                } else if (isEnd) {
+                    btnCls += "bg-amber-600 text-white font-black rounded-l-none ";
+                } else if (isInRange) {
+                    btnCls += "bg-amber-900/50 text-amber-200 rounded-none ";
+                } else if (iso === todayIso) {
+                    btnCls += "border border-amber-500 text-white ";
+                } else {
+                    btnCls += "text-slate-300 ";
+                }
+
+                html += `<button type="button" onclick="handleLedgerCalDayClick(event, '${iso}')" class="${btnCls}">${d}</button>`;
+            }
+
+            gridEl.innerHTML = html;
+        }
+
+        function handleLedgerCalDayClick(e, isoDate) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
+            if (ledgerCalSelectionStep === 0) {
+                tempLedgerStart = isoDate;
+                tempLedgerEnd = null;
+                ledgerCalSelectionStep = 1;
+                renderLedgerCalendarGrid();
+            } else {
+                if (isoDate < tempLedgerStart) {
+                    tempLedgerEnd = tempLedgerStart;
+                    tempLedgerStart = isoDate;
+                } else {
+                    tempLedgerEnd = isoDate;
+                }
+
+                setLedgerDateRange(tempLedgerStart, tempLedgerEnd);
+                renderLedgerCalendarGrid();
+
+                setTimeout(() => {
+                    closeLedgerCalendarPopover();
+                }, 220);
+            }
+        }
+
+        function setLedgerDateRange(fromIso, toIso) {
+            ledgerDateFrom = fromIso;
+            ledgerDateTo = toIso;
+
+            updateLedgerCalendarDisplay();
+            renderExpensesLedgerView();
+        }
+
+        function updateLedgerCalendarDisplay() {
+            const displayEl = document.getElementById('ledgerCalendarDisplay');
+            if (!displayEl) return;
+
+            const todayIso = new Date().toISOString().split('T')[0];
+            if (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso) {
+                displayEl.innerText = "All Time (1 Jun 2026 – Today)";
+            } else if (ledgerDateFrom === ledgerDateTo) {
+                displayEl.innerText = formatDisplayDateStr(ledgerDateFrom);
+            } else {
+                displayEl.innerText = `${formatDisplayDateStr(ledgerDateFrom)} – ${formatDisplayDateStr(ledgerDateTo)}`;
+            }
+        }
+
+        function setLedgerPreset(preset) {
+            const now = new Date();
+            const todayIso = now.toISOString().split('T')[0];
+
+            if (preset === 'all') {
+                setLedgerDateRange('2026-06-01', todayIso);
+            } else if (preset === 'today') {
+                setLedgerDateRange(todayIso, todayIso);
+            } else if (preset === 'week') {
+                const mon = getMondayString(todayIso);
+                const sun = addDaysString(mon, 6);
+                setLedgerDateRange(mon, sun);
+            } else if (preset === 'month') {
+                const y = now.getFullYear();
+                const m = now.getMonth();
+                const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                setLedgerDateRange(firstIso, lastIso);
+            } else if (preset === 'last_month') {
+                const prevM = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const y = prevM.getFullYear();
+                const m = prevM.getMonth();
+                const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                setLedgerDateRange(firstIso, lastIso);
+            }
+
+            closeLedgerCalendarPopover();
+        }
+
         function renderExpensesLedgerView() {
+            updateLedgerCalendarDisplay();
+
+            // Filter expensesStore by ledger date range
+            const filteredExpenses = expensesStore.filter(x => {
+                if (!x.date) return false;
+                const d = cleanDateStr(x.date);
+                if (ledgerDateFrom && d < ledgerDateFrom) return false;
+                if (ledgerDateTo && d > ledgerDateTo) return false;
+                return true;
+            });
+
+            // Update top header sales badge when viewing Ledger!
+            const badgeEl = document.getElementById('salesSelectedDayBadge');
+            if (badgeEl) {
+                const todayIso = new Date().toISOString().split('T')[0];
+                if (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso) {
+                    badgeEl.innerText = "Ledger: All Time (1 Jun 2026 – Today)";
+                } else if (ledgerDateFrom === ledgerDateTo) {
+                    badgeEl.innerText = `Ledger: ${formatDisplayDateStr(ledgerDateFrom)}`;
+                } else {
+                    badgeEl.innerText = `Ledger: ${formatDisplayDateStr(ledgerDateFrom)} – ${formatDisplayDateStr(ledgerDateTo)}`;
+                }
+            }
+
             const countBadge = document.getElementById('expenseLedgerCountBadge');
-            if (countBadge) countBadge.innerText = `${expensesStore.length} record(s)`;
+            const totalBadge = document.getElementById('expenseLedgerTotalBadge');
 
             // 1. Calculate totals per category
             const catTotals = {};
             EXPENSE_CATEGORIES.forEach(c => catTotals[c.key] = 0);
             let grandTotal = 0;
 
-            expensesStore.forEach(x => {
+            filteredExpenses.forEach(x => {
                 const k = x.category || 'Others';
                 catTotals[k] = (catTotals[k] || 0) + Number(x.amount || 0);
                 grandTotal += Number(x.amount || 0);
             });
+
+            if (countBadge) countBadge.innerText = `${filteredExpenses.length} record(s)`;
+            if (totalBadge) totalBadge.innerText = `$${grandTotal.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             const grid = document.getElementById('expenseCategorySummaryGrid');
             if (grid) {
@@ -2234,12 +2535,12 @@
             // 2. Render expenses table
             const tbody = document.getElementById('expenseLedgerTableBody');
             if (tbody) {
-                if (expensesStore.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">No expenses recorded yet. Tap "+ Add New Expense" to log your first supplier or rent invoice!</td></tr>`;
+                if (filteredExpenses.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">No expenses recorded for the selected date range.</td></tr>`;
                     return;
                 }
                 let rowsHtml = '';
-                expensesStore.forEach(x => {
+                filteredExpenses.forEach(x => {
                     const meta = getCategoryMeta(x.category);
                     rowsHtml += `
                         <tr class="hover:bg-slate-800/40 transition">
@@ -2929,27 +3230,19 @@ function convertHourStr(hStr) {
             const container = document.getElementById('hourlyChartContainer');
             if (!container) return;
 
-            let startHour = 9;
-            let endHour = 22;
+            let startHour = 9;  // 9:00 AM
+            let endHour = 19;   // 7:00 PM (9am - 7pm trading hours)
 
-            for (const hKey of Object.keys(hourlyData)) {
-                const hNum = parseInt(hKey.split(':')[0], 10);
-                if (!isNaN(hNum)) {
-                    if (hNum < startHour) startHour = Math.max(0, hNum);
-                    if (hNum > endHour) endHour = Math.min(23, hNum);
+            for (const [hKey, amt] of Object.entries(hourlyData)) {
+                const saleAmt = Number(amt) || 0;
+                if (saleAmt > 0) {
+                    const hNum = parseInt(hKey.split(':')[0], 10);
+                    if (!isNaN(hNum)) {
+                        if (hNum < startHour) startHour = Math.max(0, hNum);
+                        if (hNum > endHour) endHour = Math.min(23, hNum);
+                    }
                 }
             }
-
-            dayShifts.forEach(shift => {
-                if (shift.from) {
-                    const [sH] = shift.from.split(':').map(Number);
-                    if (!isNaN(sH) && sH < startHour) startHour = Math.max(0, sH);
-                }
-                if (shift.to) {
-                    const [eH] = shift.to.split(':').map(Number);
-                    if (!isNaN(eH) && eH > endHour) endHour = Math.min(23, eH);
-                }
-            });
 
             const maxSaleForScale = Math.max(maxHourSale, 50);
 
