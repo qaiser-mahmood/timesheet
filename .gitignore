@@ -1,5 +1,23 @@
+# Secrets & environment
 secrets.txt
-.venv
+.env
+.env.*
+!.env.example
+storageState.json
+
+# Logs & temp files
+*.log
+*.tmp
+*.bak
+scratch/
+
+# Environments & dependencies
+node_modules/
+.venv/
+__pycache__/
+
+# Backups & drafts
 example.html
 index copy.html
-index last copy.html
+index last copy.html
+

@@ -17,10 +17,15 @@ services:
       - key: TELEGRAM_CHAT_ID
         sync: false
       - key: SUPABASE_URL
-        value: https://ckyutsdgpdamnhsqoail.supabase.co
+        sync: false
       - key: SUPABASE_KEY
-        value: sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: AUTHORIZED_MANAGERS
+        sync: false
       - key: PORT
         value: 3000
       - key: TZ
         value: Australia/Perth
+

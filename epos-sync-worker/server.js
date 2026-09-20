@@ -8,12 +8,12 @@ const crypto = require('crypto');
 
 // Configuration
 const PORT = process.env.PORT || 3000;
-const EPOS_USERNAME = process.env.EPOS_USERNAME || 'hqmahmood@gmail.com';
+const EPOS_USERNAME = process.env.EPOS_USERNAME || '';
 const EPOS_PASSWORD = process.env.EPOS_PASSWORD || '';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ckyutsdgpdamnhsqoail.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || 'sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/15 * * * *';
 const STORAGE_STATE_PATH = path.join(__dirname, 'storageState.json');
 const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';

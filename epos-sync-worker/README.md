@@ -39,12 +39,13 @@ Under **Environment Variables** in Render, add:
 
 | Key | Value | Notes |
 |---|---|---|
-| `EPOS_USERNAME` | `hqmahmood@gmail.com` | Your Epos Now email |
+| `EPOS_USERNAME` | `your_epos_email` | Your Epos Now login email |
 | `EPOS_PASSWORD` | `your_epos_password` | Your Epos Now password |
 | `TELEGRAM_BOT_TOKEN` | `your_bot_token` | Token from @BotFather |
 | `TELEGRAM_CHAT_ID` | `your_chat_id` | Your Telegram chat ID |
-| `SUPABASE_URL` | `https://ckyutsdgpdamnhsqoail.supabase.co` | Supabase project URL |
-| `SUPABASE_KEY` | `sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf` | Supabase public key |
+| `SUPABASE_URL` | `https://your-project.supabase.co` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | `your_service_role_key` | Supabase secret key |
+| `AUTHORIZED_MANAGERS` | `manager1@gmail.com,manager2@gmail.com` | Whitelisted manager Google accounts |
 | `PORT` | `3000` | Render HTTP port |
 | `TZ` | `Australia/Perth` | Timezone |
 
