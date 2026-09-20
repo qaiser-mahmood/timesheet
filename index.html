@@ -261,7 +261,7 @@
                     <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
                 <div class="flex items-center gap-2 text-xs">
-                    <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Scrape latest live sales directly from Epos Now">
+                    <button type="button" id="liveEposSyncBtn" onclick="openEposSyncModal()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Sync live sales or automated date ranges from Epos Now">
                         <span id="liveEposSyncSpinner" class="inline-block">⚡</span> <span id="liveEposSyncText">Sync</span>
                     </button>
                     <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Quick reload from Supabase database">
@@ -1119,6 +1119,10 @@
         window.closeRangeCalendarPopover = closeRangeCalendarPopover;
         window.changeRangeCalMonth = changeRangeCalMonth;
         window.handleRangeCalDayClick = handleRangeCalDayClick;
+        window.openEposSyncModal = openEposSyncModal;
+        window.closeEposSyncModal = closeEposSyncModal;
+        window.setEposSyncPreset = setEposSyncPreset;
+        window.startRangeEposSync = startRangeEposSync;
         window.openExpenseModal = openExpenseModal;
         window.closeExpenseModal = closeExpenseModal;
         window.submitExpenseForm = submitExpenseForm;
@@ -1424,7 +1428,129 @@
                     });
                 }
 
-                async function syncDirectFromEpos() {
+                function openEposSyncModal() {
+                    const modal = document.getElementById('eposSyncModal');
+                    if (!modal) return;
+                    modal.classList.remove('hidden');
+
+                    const sInput = document.getElementById('eposSyncStartDate');
+                    const eInput = document.getElementById('eposSyncEndDate');
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    if (window.analyticsDateRange && window.analyticsDateRange.start && window.analyticsDateRange.end) {
+                        if (sInput) sInput.value = window.analyticsDateRange.start;
+                        if (eInput) eInput.value = window.analyticsDateRange.end;
+                    } else {
+                        const d = new Date();
+                        const day = d.getDay();
+                        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                        const mon = new Date(d.setDate(diff)).toISOString().split('T')[0];
+                        if (sInput) sInput.value = mon;
+                        if (eInput) eInput.value = today;
+                    }
+                }
+
+                function closeEposSyncModal() {
+                    const modal = document.getElementById('eposSyncModal');
+                    if (modal) modal.classList.add('hidden');
+                }
+
+                function setEposSyncPreset(preset) {
+                    const sInput = document.getElementById('eposSyncStartDate');
+                    const eInput = document.getElementById('eposSyncEndDate');
+                    if (!sInput || !eInput) return;
+
+                    const now = new Date();
+                    const toIso = (dt) => dt.toISOString().split('T')[0];
+
+                    if (preset === 'week') {
+                        const d = new Date(now);
+                        const day = d.getDay();
+                        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+                        const mon = new Date(d.setDate(diff));
+                        const sun = new Date(mon);
+                        sun.setDate(mon.getDate() + 6);
+                        sInput.value = toIso(mon);
+                        eInput.value = toIso(sun);
+                    } else if (preset === 'lastWeek') {
+                        const d = new Date(now);
+                        const day = d.getDay();
+                        const diff = d.getDate() - day + (day === 0 ? -6 : 1) - 7;
+                        const mon = new Date(d.setDate(diff));
+                        const sun = new Date(mon);
+                        sun.setDate(mon.getDate() + 6);
+                        sInput.value = toIso(mon);
+                        eInput.value = toIso(sun);
+                    } else if (preset === 'month') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                        sInput.value = toIso(firstDay);
+                        eInput.value = toIso(lastDay);
+                    } else if (preset === 'lastMonth') {
+                        const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                        const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+                        sInput.value = toIso(firstDay);
+                        eInput.value = toIso(lastDay);
+                    } else if (preset === 'curQuarter') {
+                        const mo = now.getMonth() + 1;
+                        const yr = now.getFullYear();
+                        let qStart, qEnd;
+                        if (mo >= 7 && mo <= 9) {
+                            qStart = new Date(yr, 6, 1);
+                            qEnd = new Date(yr, 8, 30);
+                        } else if (mo >= 10 && mo <= 12) {
+                            qStart = new Date(yr, 9, 1);
+                            qEnd = new Date(yr, 11, 31);
+                        } else if (mo >= 1 && mo <= 3) {
+                            qStart = new Date(yr, 0, 1);
+                            qEnd = new Date(yr, 2, 31);
+                        } else {
+                            qStart = new Date(yr, 3, 1);
+                            qEnd = new Date(yr, 5, 30);
+                        }
+                        sInput.value = toIso(qStart);
+                        eInput.value = toIso(qEnd);
+                    } else if (preset === 'prevQuarter') {
+                        const mo = now.getMonth() + 1;
+                        const yr = now.getFullYear();
+                        let qStart, qEnd;
+                        if (mo >= 7 && mo <= 9) {
+                            qStart = new Date(yr, 3, 1);
+                            qEnd = new Date(yr, 5, 30);
+                        } else if (mo >= 10 && mo <= 12) {
+                            qStart = new Date(yr, 6, 1);
+                            qEnd = new Date(yr, 8, 30);
+                        } else if (mo >= 1 && mo <= 3) {
+                            qStart = new Date(yr - 1, 9, 1);
+                            qEnd = new Date(yr - 1, 11, 31);
+                        } else {
+                            qStart = new Date(yr, 0, 1);
+                            qEnd = new Date(yr, 2, 31);
+                        }
+                        sInput.value = toIso(qStart);
+                        eInput.value = toIso(qEnd);
+                    }
+                }
+
+                function startRangeEposSync(e) {
+                    if (e && e.preventDefault) e.preventDefault();
+                    const sInput = document.getElementById('eposSyncStartDate');
+                    const eInput = document.getElementById('eposSyncEndDate');
+                    if (!sInput || !eInput || !sInput.value || !eInput.value) {
+                        alert("Please select both start date and end date.");
+                        return;
+                    }
+                    if (sInput.value > eInput.value) {
+                        alert("Start date must be before or equal to end date.");
+                        return;
+                    }
+                    const sDate = sInput.value;
+                    const eDate = eInput.value;
+                    closeEposSyncModal();
+                    syncDirectFromEpos(sDate, eDate);
+                }
+
+                async function syncDirectFromEpos(customStartDate = null, customEndDate = null) {
                     const user = auth.currentUser;
                     if (!user || !isAuthorizedEmail(user.email)) {
                         alert("Please login with an authorized management account first.");
@@ -1445,7 +1571,7 @@
                         }
                     }
 
-                    function clearSyncStatus(delay = 5000) {
+                    function clearSyncStatus(delay = 6000) {
                         setTimeout(() => {
                             if (pill) pill.classList.add('hidden');
                         }, delay);
@@ -1456,6 +1582,73 @@
                         setRefreshSpinners(true);
                         if (btn) btn.disabled = true;
                         if (btnIcon) btnIcon.classList.add('animate-spin');
+
+                        let idToken = '';
+                        try {
+                            idToken = await user.getIdToken();
+                        } catch (tokErr) {
+                            console.warn("Could not fetch ID token for sync:", tokErr);
+                        }
+                        const authHeaders = idToken ? { 'Authorization': `Bearer ${idToken}` } : {};
+
+                        // Case A: Custom Date Range (Multi-chunk background sync with live polling)
+                        if (customStartDate && customEndDate) {
+                            if (btnText) btnText.innerText = 'Syncing...';
+                            setSyncStatus(`⚡ Initiating sync ${customStartDate} to ${customEndDate}...`, 'bg-purple-600 text-white');
+
+                            const triggerUrl = `${EPOS_WORKER_URL}/sync?wait=false&notify=false&startDate=${encodeURIComponent(customStartDate)}&endDate=${encodeURIComponent(customEndDate)}`;
+                            const triggerResp = await fetch(triggerUrl, { headers: authHeaders, cache: 'no-cache' });
+                            
+                            if (!triggerResp.ok) {
+                                const errTxt = await triggerResp.text();
+                                throw new Error(`Worker sync request failed: ${errTxt}`);
+                            }
+
+                            // Poll /sync-status every 3 seconds until finished or max 4 minutes
+                            let isComplete = false;
+                            let pollAttempts = 0;
+                            const maxPolls = 80;
+                            let lastResult = null;
+
+                            while (!isComplete && pollAttempts < maxPolls) {
+                                pollAttempts++;
+                                await new Promise(r => setTimeout(r, 3000));
+                                try {
+                                    const statusRes = await fetch(`${EPOS_WORKER_URL}/sync-status`, { cache: 'no-cache' });
+                                    if (statusRes.ok) {
+                                        const statusData = await statusRes.json();
+                                        if (statusData.isSyncing) {
+                                            const p = statusData.progress || {};
+                                            if (p.totalChunks > 1) {
+                                                setSyncStatus(`🔄 Batch ${p.currentChunk}/${p.totalChunks} (${p.currentRange}) [${p.totalTx || 0} txs]`, 'bg-indigo-600 text-white');
+                                            } else {
+                                                setSyncStatus(`🔄 Scraping Epos Now (${p.currentRange || customStartDate})... [${p.totalTx || 0} txs]`, 'bg-indigo-600 text-white');
+                                            }
+                                        } else {
+                                            isComplete = true;
+                                            lastResult = statusData.lastSyncResult;
+                                            break;
+                                        }
+                                    }
+                                } catch (pollErr) {
+                                    console.warn("Poll status check issue:", pollErr);
+                                }
+                            }
+
+                            if (btnText) btnText.innerText = 'Updating DB...';
+                            await loadCloudData({ silent: true });
+
+                            if (lastResult && lastResult.txCount !== undefined) {
+                                setSyncStatus(`✅ Synced ${lastResult.txCount} txs across ${lastResult.days || 1} day(s)!`, 'bg-emerald-600 text-white');
+                            } else {
+                                setSyncStatus('✅ Database Updated', 'bg-emerald-600 text-white');
+                            }
+                            if (btnText) btnText.innerText = 'Synced!';
+                            clearSyncStatus(7000);
+                            return;
+                        }
+
+                        // Case B: Today's Live Sales (Fast Synchronous Scrape)
                         if (btnText) btnText.innerText = 'Connecting...';
                         setSyncStatus('⚡ Connecting to Epos Worker...', 'bg-purple-600 text-white');
 
@@ -1467,19 +1660,12 @@
                         const controller = new AbortController();
                         const abortTimeout = setTimeout(() => controller.abort(), 55000);
 
-                        let idToken = '';
-                        try {
-                            idToken = await user.getIdToken();
-                        } catch (tokErr) {
-                            console.warn("Could not fetch ID token for sync:", tokErr);
-                        }
-
                         let workerResult = null;
                         try {
                             const resp = await fetch(`${EPOS_WORKER_URL}/sync?wait=true&notify=false`, {
                                 signal: controller.signal,
                                 cache: 'no-cache',
-                                headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
+                                headers: authHeaders
                             });
                             clearTimeout(progressTimer);
                             clearTimeout(abortTimeout);

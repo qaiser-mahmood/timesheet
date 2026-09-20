@@ -39,7 +39,15 @@ const appState = {
   lastSyncResult: null,
   isAuthenticated: false,
   consecutiveFailures: 0,
-  telegramOffset: 0
+  telegramOffset: 0,
+  activeSyncProgress: {
+    isSyncing: false,
+    currentChunk: 0,
+    totalChunks: 0,
+    currentRange: '',
+    totalTx: 0,
+    status: 'idle'
+  }
 };
 
 // Express App
@@ -202,6 +210,16 @@ app.get(['/', '/health'], (req, res) => {
     isSyncing: appState.isSyncing,
     isLoggingIn: appState.isLoggingIn,
     uptimeSeconds: Math.floor(process.uptime())
+  });
+});
+
+// Real-time sync progress status for Timesheet Dashboard
+app.get('/sync-status', (req, res) => {
+  res.json({
+    isSyncing: appState.isSyncing,
+    progress: appState.activeSyncProgress,
+    lastSyncTime: appState.lastSyncTime,
+    lastSyncResult: appState.lastSyncResult
   });
 });
 
@@ -433,10 +451,16 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
 app.all('/sync', requireAuthorizedManager, async (req, res) => {
   const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
   const notifyTelegram = req.query.notify === 'true' || req.query.notify === '1';
+  const startDate = req.query.startDate || req.body.startDate || null;
+  const endDate = req.query.endDate || req.body.endDate || null;
 
   if (appState.isSyncing) {
     if (!shouldWait) {
-      return res.json({ status: 'in_progress', message: 'Sync already underway' });
+      return res.json({ 
+        status: 'in_progress', 
+        message: 'Sync already underway', 
+        progress: appState.activeSyncProgress 
+      });
     }
     // Wait for the active sync to complete (up to 45 seconds)
     const start = Date.now();
@@ -453,7 +477,7 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
 
   if (shouldWait) {
     try {
-      await runSync(true, notifyTelegram);
+      await runSync(true, notifyTelegram, startDate, endDate);
       return res.json({
         status: 'ok',
         message: 'Sync completed',
@@ -464,8 +488,14 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
       return res.status(500).json({ status: 'error', message: err.message });
     }
   } else {
-    runSync(true, notifyTelegram).catch(console.error);
-    return res.json({ status: 'triggered', message: 'Sync process initiated' });
+    runSync(true, notifyTelegram, startDate, endDate).catch(console.error);
+    return res.json({ 
+      status: 'triggered', 
+      message: 'Sync process initiated',
+      startDate,
+      endDate,
+      progress: appState.activeSyncProgress
+    });
   }
 });
 
@@ -581,9 +611,18 @@ async function pollTelegram() {
             `• Last Result: ${appState.lastSyncResult ? JSON.stringify(appState.lastSyncResult) : 'N/A'}\n` +
             `• Account: ${EPOS_USERNAME}`
           );
-        } else if (cmd === '/sync') {
-          await sendTelegramMessage('⏳ Starting sync process...');
-          runSync(true).catch(async (e) => {
+        } else if (cmd.startsWith('/sync')) {
+          const parts = text.split(/\s+/);
+          let sDate = null;
+          let eDate = null;
+          if (parts.length >= 3 && /^\d{4}-\d{2}-\d{2}$/.test(parts[1]) && /^\d{4}-\d{2}-\d{2}$/.test(parts[2])) {
+            sDate = parts[1];
+            eDate = parts[2];
+            await sendTelegramMessage(`⏳ Starting sync for date range ${sDate} to ${eDate} (chunked in <=31 days)...`);
+          } else {
+            await sendTelegramMessage('⏳ Starting sync process for today\'s live transactions...');
+          }
+          runSync(true, true, sDate, eDate).catch(async (e) => {
             await sendTelegramMessage(`❌ Sync failed: ${e.message}`);
           });
         } else if (cmd === '/login') {
@@ -907,28 +946,60 @@ async function ensureLoggedIn(force = false, isManual = false) {
 }
 
 // ----------------------------------------------------
-// Sync Engine (Runs Scraper & Upserts to Supabase)
+// Sync Engine (Runs Scraper, Filter & Upserts to Supabase)
 // ----------------------------------------------------
-async function runSync(isManual = false, notifyTelegram = true) {
-  if (appState.isSyncing) {
-    console.log('Sync is already running. Skipping.');
-    return;
+
+// Splits any date range into sequential chunks of max 31 days (Epos Now limit)
+function splitDateRangeIntoChunks(startDateStr, endDateStr, maxDays = 31) {
+  const chunks = [];
+  const start = new Date(startDateStr + 'T00:00:00Z');
+  const end = new Date(endDateStr + 'T00:00:00Z');
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    return [{ from: startDateStr, to: endDateStr }];
   }
-  appState.isSyncing = true;
+
+  let currStart = new Date(start);
+  while (currStart <= end) {
+    let currEnd = new Date(currStart);
+    currEnd.setUTCDate(currEnd.getUTCDate() + (maxDays - 1));
+    if (currEnd > end) {
+      currEnd = new Date(end);
+    }
+
+    chunks.push({
+      from: currStart.toISOString().split('T')[0],
+      to: currEnd.toISOString().split('T')[0]
+    });
+
+    currStart = new Date(currEnd);
+    currStart.setUTCDate(currStart.getUTCDate() + 1);
+  }
+  return chunks;
+}
+
+// Interacts with Epos Now Filters to set From and To date range
+async function applyEposDateFilter(page, fromIso, toIso) {
+  console.log(`[EposFilter] Applying date filter: ${fromIso} to ${toIso}...`);
+  const [fYear, fMonth, fDay] = fromIso.split('-');
+  const [tYear, tMonth, tDay] = toIso.split('-');
+  const fromFormatted = `${fDay}/${fMonth}/${fYear}`;
+  const toFormatted = `${tDay}/${tMonth}/${tYear}`;
 
   try {
-    console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\n============================`);
-    const page = await ensureLoggedIn(false, isManual && notifyTelegram);
+    // Look for a "Filter" / "Filters" toggle button if filter section is collapsed
+    const filterToggle = page.locator('button:has-text("Filter"), a:has-text("Filter"), button:has-text("Filters"), a:has-text("Filters"), [aria-label*="Filter" i], #filter-toggle, .filter-toggle, [data-testid*="filter" i]').first();
+    if (await filterToggle.count() > 0 && await filterToggle.isVisible()) {
+      const inputsVisible = await page.locator('input[placeholder*="from" i], input[name*="from" i], input#StartDate, input#DateFrom').first().isVisible().catch(() => false);
+      if (!inputsVisible) {
+        console.log('[EposFilter] Opening filters drawer...');
+        await filterToggle.click().catch(() => {});
+        await page.waitForTimeout(1000);
+      }
+    }
 
-    // Always open a fresh view of the transactions report page
-    console.log('Loading fresh transactions report page...');
-    if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
-    await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(2500);
-
-    // Run in-browser scraping engine
-    const scrapeResult = await page.evaluate(async () => {
+    // Locate and fill From & To inputs inside DOM
+    const filterRes = await page.evaluate(({ fromIso, toIso, fromFormatted, toFormatted }) => {
       function getAllDocs() {
         var docs = [document];
         var ifrs = document.querySelectorAll('iframe');
@@ -941,365 +1012,438 @@ async function runSync(isManual = false, notifyTelegram = true) {
         return docs;
       }
 
-      function scrollAllToBottom() {
-        try { window.scrollTo({ top: 9999999, behavior: 'instant' }); } catch (e) { window.scrollTo(0, 9999999); }
-        var docs = getAllDocs();
-        for (var di = 0; di < docs.length; di++) {
-          var doc = docs[di];
-          try { doc.documentElement.scrollTop = 9999999; } catch (e) {}
-          try { doc.body.scrollTop = 9999999; } catch (e) {}
-          var rows = doc.querySelectorAll('tr, [role="row"], tbody tr');
-          if (rows && rows.length > 0) {
-            try { rows[rows.length - 1].scrollIntoView({ behavior: 'instant', block: 'end' }); } catch (e) {}
+      var docs = getAllDocs();
+      var fromInput = null;
+      var toInput = null;
+
+      var fromSelectors = [
+        'input#StartDate', 'input#DateFrom', 'input#from', 'input[name="StartDate" i]',
+        'input[name="DateFrom" i]', 'input[name="from" i]', 'input[name*="start" i]',
+        'input[placeholder*="from" i]', 'input[placeholder*="start" i]', 'input[aria-label*="from" i]',
+        'input[aria-label*="start" i]'
+      ];
+      var toSelectors = [
+        'input#EndDate', 'input#DateTo', 'input#to', 'input[name="EndDate" i]',
+        'input[name="DateTo" i]', 'input[name="to" i]', 'input[name*="end" i]',
+        'input[placeholder*="to" i]', 'input[placeholder*="end" i]', 'input[aria-label*="to" i]',
+        'input[aria-label*="end" i]'
+      ];
+
+      for (var di = 0; di < docs.length; di++) {
+        var doc = docs[di];
+        if (!fromInput) {
+          for (var fi = 0; fi < fromSelectors.length; fi++) {
+            var el = doc.querySelector(fromSelectors[fi]);
+            if (el) { fromInput = el; break; }
           }
-          var scrollables = doc.querySelectorAll('main, section, article, table, tbody, div');
-          for (var s = 0; s < scrollables.length; s++) {
-            var el = scrollables[s];
-            if (el.scrollHeight > el.clientHeight + 25 && el.clientHeight > 70) {
-              try {
-                el.scrollTop = el.scrollHeight;
-                el.dispatchEvent(new Event('scroll', { bubbles: true }));
-              } catch (e) {}
-            }
+        }
+        if (!toInput) {
+          for (var ti = 0; ti < toSelectors.length; ti++) {
+            var el = doc.querySelector(toSelectors[ti]);
+            if (el) { toInput = el; break; }
           }
         }
       }
 
-      function countCurrentTxRows() {
-        var docs = getAllDocs();
-        var total = 0;
+      // If inputs not found by ID/name, check generic date inputs in order
+      if (!fromInput || !toInput) {
         for (var di = 0; di < docs.length; di++) {
-          var rows = docs[di].querySelectorAll('tr, [role="row"], tbody tr');
-          total += rows.length;
-        }
-        return total;
-      }
-
-      function clickBtn(el) {
-        try { el.scrollIntoView({ behavior: 'instant', block: 'center' }); } catch (e) {}
-        try { el.focus(); } catch (e) {}
-        try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); } catch (e) {}
-        try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); } catch (e) {}
-        try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (e) {}
-        try { el.click(); } catch (e) {}
-      }
-
-      // 1. Try to expand page size to 50 or 100 if dropdown exists on desktop
-      try {
-        var selects = document.querySelectorAll('select');
-        for (var si = 0; si < selects.length; si++) {
-          var s = selects[si];
-          var opts = Array.from(s.options).map(function(o) { return parseInt(o.value || o.text, 10); }).filter(function(n) { return !isNaN(n); });
-          if (opts.includes(10) && opts.some(function(n) { return n >= 25; })) {
-            var highest = Math.max.apply(Math, opts.filter(function(n) { return n <= 100; }));
-            s.value = String(highest);
-            s.dispatchEvent(new Event('change', { bubbles: true }));
-            await new Promise(function(r) { setTimeout(r, 2000); });
+          var dateInputs = docs[di].querySelectorAll('input[type="date"], input.datepicker, input[placeholder*="dd" i], input[placeholder*="yyyy" i]');
+          if (dateInputs.length >= 2) {
+            if (!fromInput) fromInput = dateInputs[0];
+            if (!toInput) toInput = dateInputs[1];
             break;
           }
         }
-      } catch (_) {}
-
-      function findNextBtn() {
-        var docs = getAllDocs();
-        for (var di = 0; di < docs.length; di++) {
-          var doc = docs[di];
-          var candidates = doc.querySelectorAll('button, a, [role="button"], input[type="button"], li, span');
-          for (var i = 0; i < candidates.length; i++) {
-            var el = candidates[i];
-            if (el.id === 'epos-sync-banner' || (el.closest && el.closest('#epos-sync-banner'))) continue;
-
-            // Ignore disabled buttons
-            var isDisabled = el.disabled ||
-              el.classList.contains('disabled') ||
-              el.getAttribute('aria-disabled') === 'true' ||
-              el.getAttribute('disabled') !== null;
-            if (isDisabled) continue;
-
-            var aria = (el.getAttribute('aria-label') || '').toLowerCase();
-            var title = (el.getAttribute('title') || '').toLowerCase();
-            var txt = (el.innerText || el.textContent || el.value || '').trim();
-            var cls = (el.className || '').toString().toLowerCase();
-
-            // Next page indicators on desktop table
-            if (aria.includes('next') || title.includes('next') || aria.includes('forward') || title.includes('forward')) {
-              return el;
-            }
-            if (cls.includes('paginate_button next') || cls.includes('page-next') || cls.includes('next-page') || cls.includes('pagination-next') || cls.includes('btn-next')) {
-              return el;
-            }
-            if (txt === '>' || txt === '›' || txt === '»' || txt === 'Next' || txt === 'Next >' || txt === 'Next ›' || txt === 'Next Page') {
-              return el;
-            }
-            // Right chevron / arrow icon
-            var html = el.innerHTML || '';
-            var hasRightIcon = (html.includes('chevron-right') || html.includes('arrow-right') || html.includes('angle-right') || html.includes('fa-chevron-right') || html.includes('bi-chevron-right')) &&
-              !cls.includes('prev') && !aria.includes('prev') && !title.includes('prev');
-            if (hasRightIcon) {
-              return el;
-            }
-          }
-
-          // Fallback to "more transactions" infinite scroll button
-          for (var j = 0; j < candidates.length; j++) {
-            var c = candidates[j];
-            var cTxt = (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            if (cTxt.includes('more transaction') || cTxt.includes('more transactions') || cTxt.includes('load more') || cTxt.includes('show more')) {
-              return c;
-            }
-          }
-        }
-        return null;
       }
 
-      var monthNames = ["january","february","march","april","may","june","july","august","september","october","november","december"];
-      var shortMonths = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-
-      function toIso(y, m, d) {
-        return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      function fillDate(el, isoVal, formattedVal) {
+        if (!el) return false;
+        var val = (el.type === 'date') ? isoVal : formattedVal;
+        el.value = val;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+        return true;
       }
 
-      function parseAnyDate(str) {
-        if (!str) return null;
-        var now = new Date();
-        var curYear = now.getFullYear();
-        if (/\btoday\b/i.test(str)) return toIso(curYear, now.getMonth() + 1, now.getDate());
-        if (/\byesterday\b/i.test(str)) {
-          var yDate = new Date(now.getTime() - 86400000);
-          return toIso(yDate.getFullYear(), yDate.getMonth() + 1, yDate.getDate());
-        }
-        var mIso = str.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
-        if (mIso) return mIso[0];
-        var mWord1 = str.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]+([A-Za-z]{3,9})(?:[\s\-\/,]+(\d{2,4}))?\b/i);
-        if (mWord1) {
-          var mStr = mWord1[2].toLowerCase();
-          var mIdx = monthNames.indexOf(mStr);
-          if (mIdx === -1) mIdx = shortMonths.indexOf(mStr.slice(0, 3));
-          if (mIdx !== -1) {
-            var yr = mWord1[3] ? (mWord1[3].length === 2 ? '20' + mWord1[3] : mWord1[3]) : String(curYear);
-            return toIso(yr, mIdx + 1, mWord1[1]);
+      var setFrom = fillDate(fromInput, fromIso, fromFormatted);
+      var setTo = fillDate(toInput, toIso, toFormatted);
+
+      // Find apply button
+      var applyBtn = null;
+      for (var di = 0; di < docs.length; di++) {
+        var btns = docs[di].querySelectorAll('button, input[type="submit"], a');
+        for (var bi = 0; bi < btns.length; bi++) {
+          var b = btns[bi];
+          var t = (b.innerText || b.value || b.textContent || '').trim().toLowerCase();
+          if (t === 'apply' || t === 'filter' || t === 'run report' || t === 'update' || t === 'apply filter' || t === 'search') {
+            applyBtn = b;
+            break;
           }
         }
-        var mSlash = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
-        if (mSlash) {
-          var d = parseInt(mSlash[1], 10);
-          var mo = parseInt(mSlash[2], 10);
-          if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12) {
-            var yr3 = mSlash[3].length === 2 ? '20' + mSlash[3] : mSlash[3];
-            return toIso(yr3, mo, d);
-          }
-        }
-        return null;
+        if (applyBtn) break;
       }
 
-      function parseTimeStr(timeStr) {
-        var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([apAP][mM])?/i);
-        if (!tm) return null;
-        var h = parseInt(tm[1], 10);
-        var ampm = tm[4] ? tm[4].toUpperCase() : '';
-        if (ampm === 'PM' && h < 12) h += 12;
-        if (ampm === 'AM' && h === 12) h = 0;
-        return String(h).padStart(2, '0') + ':00';
+      if (applyBtn) {
+        applyBtn.click();
+        return { success: true, setFrom, setTo, clickedApply: true };
       }
 
-      var datePatternRegex = /(?:\b(?:Today|Yesterday)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?[\s\-\/]+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:[\s\-\/,]+\d{2,4})?\b|\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)/gi;
-      var eposRowRegex = /(\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b)[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)[,\s]+[\$£€]?\s*([0-9]+\.[0-9]{2})/g;
-      var timeAmtRegex = /(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)[,\s]+[\$£€]?\s*([0-9]+\.[0-9]{2})/g;
-      var amtTimeRegex = /[\$£€]?\s*([0-9]+\.[0-9]{2})[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/g;
+      return { success: (setFrom && setTo), setFrom, setTo, clickedApply: false };
+    }, { fromIso, toIso, fromFormatted, toFormatted });
 
-      // Scrape page by page to handle desktop table pagination AND infinite scroll
-      var collectedTxList = [];
-      var maxPages = 40;
-      var page = 0;
-      var consecutiveMiss = 0;
+    console.log('[EposFilter] DOM filter result:', filterRes);
 
-      while (page < maxPages) {
-        page++;
-        scrollAllToBottom();
-        await new Promise(function(r) { setTimeout(r, 600); });
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(3000);
+  } catch (err) {
+    console.warn(`[EposFilter] Warning applying date filter (${fromIso} to ${toIso}):`, err.message);
+  }
+}
 
-        // Extract text from all documents/frames on current page
-        var docs = getAllDocs();
-        var pageText = '';
-        for (var di = 0; di < docs.length; di++) {
-          if (docs[di].body) pageText += docs[di].body.innerText + '\n';
-        }
-
-        // Find date markers on current page
-        var pageDateMarkers = [];
-        var dMatch;
-        datePatternRegex.lastIndex = 0;
-        while ((dMatch = datePatternRegex.exec(pageText)) !== null) {
-          var iso = parseAnyDate(dMatch[0]);
-          if (iso) pageDateMarkers.push({ index: dMatch.index, date: iso, raw: dMatch[0] });
-        }
-        var defaultDate = pageDateMarkers.length > 0 ? pageDateMarkers[0].date : (new Date().toISOString().split('T')[0]);
-
-        // Parse rows on current page
-        var pageTxList = [];
-        var tMatch;
-        eposRowRegex.lastIndex = 0;
-        while ((tMatch = eposRowRegex.exec(pageText)) !== null) {
-          var rowDate = parseAnyDate(tMatch[1]);
-          var rowTime = tMatch[2];
-          var rowHour = parseTimeStr(rowTime);
-          var rowAmt = parseFloat(tMatch[3]);
-          if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
-            var afterMatch = pageText.slice(tMatch.index, tMatch.index + 120);
-            var isCash = /\bcash\b/i.test(afterMatch);
-            pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, isCash: isCash, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
-          }
-        }
-
-        if (pageTxList.length === 0) {
-          timeAmtRegex.lastIndex = 0;
-          while ((tMatch = timeAmtRegex.exec(pageText)) !== null) {
-            var timeStr = tMatch[1];
-            var hourStr = parseTimeStr(timeStr);
-            var amt = parseFloat(tMatch[2]);
-            if (hourStr !== null && !isNaN(amt)) {
-              var afterMatch2 = pageText.slice(tMatch.index, tMatch.index + 120);
-              var isCash2 = /\bcash\b/i.test(afterMatch2);
-              pageTxList.push({ date: defaultDate, time: timeStr, hour: hourStr, amount: amt, isCash: isCash2, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
-            }
-          }
-        }
-
-        if (pageTxList.length === 0) {
-          amtTimeRegex.lastIndex = 0;
-          while ((tMatch = amtTimeRegex.exec(pageText)) !== null) {
-            var amt2 = parseFloat(tMatch[1]);
-            var timeStr2 = tMatch[2];
-            var hourStr2 = parseTimeStr(timeStr2);
-            if (hourStr2 !== null && !isNaN(amt2)) {
-              var afterMatch3 = pageText.slice(tMatch.index, tMatch.index + 120);
-              var isCash3 = /\bcash\b/i.test(afterMatch3);
-              pageTxList.push({ date: defaultDate, time: timeStr2, hour: hourStr2, amount: amt2, isCash: isCash3, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
-            }
-          }
-        }
-
-        // Add all rows from this page (preserves separate transactions with identical amounts at the same minute)
-        for (var ti = 0; ti < pageTxList.length; ti++) {
-          collectedTxList.push(pageTxList[ti]);
-        }
-
-        // Check if there is a next page button (Right Arrow or More Transactions)
-        var nextBtn = findNextBtn();
-        if (!nextBtn) {
-          consecutiveMiss++;
-          if (consecutiveMiss >= 2) break;
-          await new Promise(function(r) { setTimeout(r, 800); });
-          nextBtn = findNextBtn();
-          if (!nextBtn) break;
-        }
-
-        consecutiveMiss = 0;
-
-        // Remember first row text and total count before click to detect page turn
-        var firstRowBefore = '';
+// Scrapes currently displayed transactions from table (and up to 40 pages of pagination)
+async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
+  console.log(`Scraping transactions view (${chunkLabel})...`);
+  const scrapeResult = await page.evaluate(async () => {
+    function getAllDocs() {
+      var docs = [document];
+      var ifrs = document.querySelectorAll('iframe');
+      for (var i = 0; i < ifrs.length; i++) {
         try {
-          var r0 = document.querySelector('tbody tr');
-          if (r0) firstRowBefore = r0.innerText || '';
-        } catch (_) {}
-        var rowCountBefore = countCurrentTxRows();
-
-        // Click next page button
-        clickBtn(nextBtn);
-
-        // Wait for page turn or table rows to update
-        var waitStart = Date.now();
-        var changed = false;
-        while (Date.now() - waitStart < 4000) {
-          await new Promise(function(r) { setTimeout(r, 200); });
-          var firstRowAfter = '';
-          try {
-            var r1 = document.querySelector('tbody tr');
-            if (r1) firstRowAfter = r1.innerText || '';
-          } catch (_) {}
-          if (firstRowAfter && firstRowAfter !== firstRowBefore) {
-            changed = true;
-            break;
-          }
-          if (countCurrentTxRows() > rowCountBefore) {
-            changed = true;
-            break;
-          }
-        }
-
-        await new Promise(function(r) { setTimeout(r, 500); });
+          var d = ifrs[i].contentDocument || ifrs[i].contentWindow.document;
+          if (d && d.body) docs.push(d);
+        } catch (e) {}
       }
-
-      var txList = collectedTxList;
-
-      // Group into daysGroup
-      var daysGroup = {};
-      for (var i = 0; i < txList.length; i++) {
-        var tx = txList[i];
-        var dKey = tx.date;
-        if (!daysGroup[dKey]) {
-          daysGroup[dKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
-        }
-        daysGroup[dKey].count++;
-        daysGroup[dKey].totalSales += tx.amount;
-        if (tx.isCash) {
-          daysGroup[dKey].cashSales += tx.amount;
-        } else {
-          daysGroup[dKey].cardSales += tx.amount;
-        }
-        daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
-      }
-
-      var daysBatch = [];
-      var sortedDays = Object.keys(daysGroup).sort().reverse();
-      for (var d = 0; d < sortedDays.length; d++) {
-        var dayDate = sortedDays[d];
-        daysGroup[dayDate].totalSales = Math.round(daysGroup[dayDate].totalSales * 100) / 100;
-        daysGroup[dayDate].cardSales = Math.round(daysGroup[dayDate].cardSales * 100) / 100;
-        daysGroup[dayDate].cashSales = Math.round(daysGroup[dayDate].cashSales * 100) / 100;
-        for (var hk in daysGroup[dayDate].hourly) {
-          daysGroup[dayDate].hourly[hk] = Math.round(daysGroup[dayDate].hourly[hk] * 100) / 100;
-        }
-        daysGroup[dayDate].hourly._cardSales = daysGroup[dayDate].cardSales;
-        daysGroup[dayDate].hourly._cashSales = daysGroup[dayDate].cashSales;
-        daysBatch.push({
-          date: dayDate,
-          totalSales: daysGroup[dayDate].totalSales,
-          cardSales: daysGroup[dayDate].cardSales,
-          cashSales: daysGroup[dayDate].cashSales,
-          count: daysGroup[dayDate].count,
-          hourly: daysGroup[dayDate].hourly
-        });
-      }
-
-      var txRows = txList.map(function(t, idx) {
-        var rawC = (t.raw || '').replace(/\s+/g, ' ').trim();
-        var uid = (t.date + '_' + (t.time || '').replace(/[^a-zA-Z0-9]/g, '') + '_' + t.amount.toFixed(2) + '_' + idx + '_' + rawC).slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
-        return { id: uid, date: t.date, time: t.time || '', amount: t.amount, raw_line: rawC };
-      });
-
-      return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page };
-    });
-
-    console.log(`Scraped ${scrapeResult.totalTx} transactions across ${scrapeResult.pagesLoaded} batches for ${scrapeResult.daysBatch.length} day(s).`);
-
-    if (scrapeResult.totalTx === 0) {
-      console.warn('No transactions parsed on page.');
-      if (isManual) {
-        await sendTelegramMessage('⚠️ Scrape completed, but 0 transactions were found on the current Epos Now report page.');
-      }
-      return;
+      return docs;
     }
 
-    // Upsert hourly_sales to Supabase
-    const hsPayload = scrapeResult.daysBatch.map(d => ({
-      date: d.date,
-      total_sales: d.totalSales,
-      hourly: d.hourly,
-      updated_at: new Date().toISOString()
-    }));
+    function scrollAllToBottom() {
+      try { window.scrollTo({ top: 9999999, behavior: 'instant' }); } catch (e) { window.scrollTo(0, 9999999); }
+      var docs = getAllDocs();
+      for (var di = 0; di < docs.length; di++) {
+        var doc = docs[di];
+        try { doc.documentElement.scrollTop = 9999999; } catch (e) {}
+        try { doc.body.scrollTop = 9999999; } catch (e) {}
+        var rows = doc.querySelectorAll('tr, [role="row"], tbody tr');
+        if (rows && rows.length > 0) {
+          try { rows[rows.length - 1].scrollIntoView({ behavior: 'instant', block: 'end' }); } catch (e) {}
+        }
+        var scrollables = doc.querySelectorAll('main, section, article, table, tbody, div');
+        for (var s = 0; s < scrollables.length; s++) {
+          var el = scrollables[s];
+          if (el.scrollHeight > el.clientHeight + 25 && el.clientHeight > 70) {
+            try {
+              el.scrollTop = el.scrollHeight;
+              el.dispatchEvent(new Event('scroll', { bubbles: true }));
+            } catch (e) {}
+          }
+        }
+      }
+    }
 
-    const hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
+    function countCurrentTxRows() {
+      var docs = getAllDocs();
+      var total = 0;
+      for (var di = 0; di < docs.length; di++) {
+        var rows = docs[di].querySelectorAll('tr, [role="row"], tbody tr');
+        total += rows.length;
+      }
+      return total;
+    }
+
+    function clickBtn(el) {
+      try { el.scrollIntoView({ behavior: 'instant', block: 'center' }); } catch (e) {}
+      try { el.focus(); } catch (e) {}
+      try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); } catch (e) {}
+      try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); } catch (e) {}
+      try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (e) {}
+      try { el.click(); } catch (e) {}
+    }
+
+    // Expand page size to 50 or 100 if dropdown exists
+    try {
+      var selects = document.querySelectorAll('select');
+      for (var si = 0; si < selects.length; si++) {
+        var s = selects[si];
+        var opts = Array.from(s.options).map(function(o) { return parseInt(o.value || o.text, 10); }).filter(function(n) { return !isNaN(n); });
+        if (opts.includes(10) && opts.some(function(n) { return n >= 25; })) {
+          var highest = Math.max.apply(Math, opts.filter(function(n) { return n <= 100; }));
+          s.value = String(highest);
+          s.dispatchEvent(new Event('change', { bubbles: true }));
+          await new Promise(function(r) { setTimeout(r, 2000); });
+          break;
+        }
+      }
+    } catch (_) {}
+
+    function findNextBtn() {
+      var docs = getAllDocs();
+      for (var di = 0; di < docs.length; di++) {
+        var doc = docs[di];
+        var candidates = doc.querySelectorAll('button, a, [role="button"], input[type="button"], li, span');
+        for (var i = 0; i < candidates.length; i++) {
+          var el = candidates[i];
+          if (el.id === 'epos-sync-banner' || (el.closest && el.closest('#epos-sync-banner'))) continue;
+
+          var isDisabled = el.disabled ||
+            el.classList.contains('disabled') ||
+            el.getAttribute('aria-disabled') === 'true' ||
+            el.getAttribute('disabled') !== null;
+          if (isDisabled) continue;
+
+          var aria = (el.getAttribute('aria-label') || '').toLowerCase();
+          var title = (el.getAttribute('title') || '').toLowerCase();
+          var txt = (el.innerText || el.textContent || el.value || '').trim();
+          var cls = (el.className || '').toString().toLowerCase();
+
+          if (aria.includes('next') || title.includes('next') || aria.includes('forward') || title.includes('forward')) {
+            return el;
+          }
+          if (cls.includes('paginate_button next') || cls.includes('page-next') || cls.includes('next-page') || cls.includes('pagination-next') || cls.includes('btn-next')) {
+            return el;
+          }
+          if (txt === '>' || txt === '›' || txt === '»' || txt === 'Next' || txt === 'Next >' || txt === 'Next ›' || txt === 'Next Page') {
+            return el;
+          }
+          var html = el.innerHTML || '';
+          var hasRightIcon = (html.includes('chevron-right') || html.includes('arrow-right') || html.includes('angle-right') || html.includes('fa-chevron-right') || html.includes('bi-chevron-right')) &&
+            !cls.includes('prev') && !aria.includes('prev') && !title.includes('prev');
+          if (hasRightIcon) {
+            return el;
+          }
+        }
+
+        for (var j = 0; j < candidates.length; j++) {
+          var c = candidates[j];
+          var cTxt = (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          if (cTxt.includes('more transaction') || cTxt.includes('more transactions') || cTxt.includes('load more') || cTxt.includes('show more')) {
+            return c;
+          }
+        }
+      }
+      return null;
+    }
+
+    var monthNames = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+    var shortMonths = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+    function toIso(y, m, d) {
+      return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    }
+
+    function parseAnyDate(str) {
+      if (!str) return null;
+      var now = new Date();
+      var curYear = now.getFullYear();
+      if (/\btoday\b/i.test(str)) return toIso(curYear, now.getMonth() + 1, now.getDate());
+      if (/\byesterday\b/i.test(str)) {
+        var yDate = new Date(now.getTime() - 86400000);
+        return toIso(yDate.getFullYear(), yDate.getMonth() + 1, yDate.getDate());
+      }
+      var mIso = str.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+      if (mIso) return mIso[0];
+      var mWord1 = str.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]+([A-Za-z]{3,9})(?:[\s\-\/,]+(\d{2,4}))?\b/i);
+      if (mWord1) {
+        var mStr = mWord1[2].toLowerCase();
+        var mIdx = monthNames.indexOf(mStr);
+        if (mIdx === -1) mIdx = shortMonths.indexOf(mStr.slice(0, 3));
+        if (mIdx !== -1) {
+          var yr = mWord1[3] ? (mWord1[3].length === 2 ? '20' + mWord1[3] : mWord1[3]) : String(curYear);
+          return toIso(yr, mIdx + 1, mWord1[1]);
+        }
+      }
+      var mSlash = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+      if (mSlash) {
+        var d = parseInt(mSlash[1], 10);
+        var mo = parseInt(mSlash[2], 10);
+        if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12) {
+          var yr3 = mSlash[3].length === 2 ? '20' + mSlash[3] : mSlash[3];
+          return toIso(yr3, mo, d);
+        }
+      }
+      return null;
+    }
+
+    function parseTimeStr(timeStr) {
+      var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([apAP][mM])?/i);
+      if (!tm) return null;
+      var h = parseInt(tm[1], 10);
+      var ampm = tm[4] ? tm[4].toUpperCase() : '';
+      if (ampm === 'PM' && h < 12) h += 12;
+      if (ampm === 'AM' && h === 12) h = 0;
+      return String(h).padStart(2, '0') + ':00';
+    }
+
+    var datePatternRegex = /(?:\b(?:Today|Yesterday)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?[\s\-\/]+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:[\s\-\/,]+\d{2,4})?\b|\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)/gi;
+    var eposRowRegex = /(\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b)[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)[,\s]+[\$£€]?\s*([0-9]+\.[0-9]{2})/g;
+
+    var collectedTxList = [];
+    var maxPages = 40;
+    var page = 0;
+    var consecutiveMiss = 0;
+
+    while (page < maxPages) {
+      page++;
+      scrollAllToBottom();
+      await new Promise(function(r) { setTimeout(r, 600); });
+
+      var docs = getAllDocs();
+      var pageText = '';
+      for (var di = 0; di < docs.length; di++) {
+        if (docs[di].body) pageText += docs[di].body.innerText + '\n';
+      }
+
+      var pageDateMarkers = [];
+      var dMatch;
+      datePatternRegex.lastIndex = 0;
+      while ((dMatch = datePatternRegex.exec(pageText)) !== null) {
+        var iso = parseAnyDate(dMatch[0]);
+        if (iso) pageDateMarkers.push({ index: dMatch.index, date: iso, raw: dMatch[0] });
+      }
+
+      var pageTxList = [];
+      var tMatch;
+      eposRowRegex.lastIndex = 0;
+      while ((tMatch = eposRowRegex.exec(pageText)) !== null) {
+        var rowDate = parseAnyDate(tMatch[1]);
+        var rowTime = tMatch[2];
+        var rowHour = parseTimeStr(rowTime);
+        var rowAmt = parseFloat(tMatch[3]);
+        if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
+          var afterMatch = pageText.slice(tMatch.index, tMatch.index + 120);
+          var isCash = /\bcash\b/i.test(afterMatch);
+          pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, isCash: isCash, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
+        }
+      }
+
+      var addedThisRound = 0;
+      for (var ti = 0; ti < pageTxList.length; ti++) {
+        var tx = pageTxList[ti];
+        var key = tx.date + '|' + tx.time + '|' + tx.amount.toFixed(2);
+        var exists = false;
+        for (var cti = 0; cti < collectedTxList.length; cti++) {
+          var ctx = collectedTxList[cti];
+          if (ctx.date === tx.date && ctx.time === tx.time && Math.abs(ctx.amount - tx.amount) < 0.001) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          collectedTxList.push(tx);
+          addedThisRound++;
+        }
+      }
+
+      if (addedThisRound === 0) {
+        consecutiveMiss++;
+        if (consecutiveMiss >= 2) break;
+      } else {
+        consecutiveMiss = 0;
+      }
+
+      var nextBtn = findNextBtn();
+      if (!nextBtn) break;
+
+      var rowCountBefore = countCurrentTxRows();
+      var firstRowBefore = (document.querySelector('tbody tr') || {}).innerText;
+      clickBtn(nextBtn);
+
+      for (var w = 0; w < 10; w++) {
+        await new Promise(function(r) { setTimeout(r, 400); });
+        var firstRowAfter = (document.querySelector('tbody tr') || {}).innerText;
+        if (firstRowAfter && firstRowAfter !== firstRowBefore) break;
+        if (countCurrentTxRows() > rowCountBefore) break;
+      }
+      await new Promise(function(r) { setTimeout(r, 500); });
+    }
+
+    var txList = collectedTxList;
+    var daysGroup = {};
+    for (var i = 0; i < txList.length; i++) {
+      var tx = txList[i];
+      var dKey = tx.date;
+      if (!daysGroup[dKey]) {
+        daysGroup[dKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
+      }
+      daysGroup[dKey].count++;
+      daysGroup[dKey].totalSales += tx.amount;
+      if (tx.isCash) {
+        daysGroup[dKey].cashSales += tx.amount;
+      } else {
+        daysGroup[dKey].cardSales += tx.amount;
+      }
+      daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
+    }
+
+    var daysBatch = [];
+    var sortedDays = Object.keys(daysGroup).sort().reverse();
+    for (var d = 0; d < sortedDays.length; d++) {
+      var dayDate = sortedDays[d];
+      daysGroup[dayDate].totalSales = Math.round(daysGroup[dayDate].totalSales * 100) / 100;
+      daysGroup[dayDate].cardSales = Math.round(daysGroup[dayDate].cardSales * 100) / 100;
+      daysGroup[dayDate].cashSales = Math.round(daysGroup[dayDate].cashSales * 100) / 100;
+      for (var hk in daysGroup[dayDate].hourly) {
+        daysGroup[dayDate].hourly[hk] = Math.round(daysGroup[dayDate].hourly[hk] * 100) / 100;
+      }
+      daysGroup[dayDate].hourly._cardSales = daysGroup[dayDate].cardSales;
+      daysGroup[dayDate].hourly._cashSales = daysGroup[dayDate].cashSales;
+      daysBatch.push({
+        date: dayDate,
+        totalSales: daysGroup[dayDate].totalSales,
+        cardSales: daysGroup[dayDate].cardSales,
+        cashSales: daysGroup[dayDate].cashSales,
+        count: daysGroup[dayDate].count,
+        hourly: daysGroup[dayDate].hourly
+      });
+    }
+
+    var txRows = txList.map(function(t, idx) {
+      var rawC = (t.raw || '').replace(/\s+/g, ' ').trim();
+      var uid = (t.date + '_' + (t.time || '').replace(/[^a-zA-Z0-9]/g, '') + '_' + t.amount.toFixed(2) + '_' + idx + '_' + rawC).slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
+      return { id: uid, date: t.date, time: t.time || '', amount: t.amount, raw_line: rawC };
+    });
+
+    return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page };
+  });
+
+  console.log(`Scraped ${scrapeResult.totalTx} transactions across ${scrapeResult.pagesLoaded} batches for ${scrapeResult.daysBatch.length} day(s) (${chunkLabel}).`);
+
+  if (scrapeResult.totalTx === 0) {
+    return scrapeResult;
+  }
+
+  // Upsert hourly_sales to Supabase
+  const hsPayload = scrapeResult.daysBatch.map(d => ({
+    date: d.date,
+    total_sales: d.totalSales,
+    hourly: d.hourly,
+    updated_at: new Date().toISOString()
+  }));
+
+  const hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify(hsPayload)
+  });
+
+  if (!hsRes.ok) {
+    const txt = await hsRes.text();
+    console.error('Supabase hourly_sales upsert failed:', txt);
+  } else {
+    console.log(`Successfully upserted ${hsPayload.length} day(s) to hourly_sales.`);
+  }
+
+  // Upsert raw_transactions in chunks of 100
+  let insertedTx = 0;
+  for (let i = 0; i < scrapeResult.txRows.length; i += 100) {
+    const chunk = scrapeResult.txRows.slice(i, i + 100);
+    const txRes = await fetch(`${SUPABASE_URL}/rest/v1/raw_transactions?on_conflict=id`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -1307,35 +1451,118 @@ async function runSync(isManual = false, notifyTelegram = true) {
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
-      body: JSON.stringify(hsPayload)
+      body: JSON.stringify(chunk)
     });
+    if (txRes.ok) insertedTx += chunk.length;
+  }
+  console.log(`Successfully upserted ${insertedTx} raw transactions (${chunkLabel}).`);
 
-    if (!hsRes.ok) {
-      const txt = await hsRes.text();
-      console.error('Supabase hourly_sales upsert failed:', txt);
-    } else {
-      console.log(`Successfully upserted ${hsPayload.length} day(s) to hourly_sales.`);
+  return scrapeResult;
+}
+
+// Main Sync Engine: Supports both fast 'Today' sync and chunked multi-month date ranges
+async function runSync(isManual = false, notifyTelegram = true, startDate = null, endDate = null) {
+  if (appState.isSyncing) {
+    console.log('Sync is already running. Skipping.');
+    return;
+  }
+  appState.isSyncing = true;
+
+  try {
+    console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\nRange: ${startDate || 'Today'} to ${endDate || 'Today'}\n============================`);
+    const page = await ensureLoggedIn(false, isManual && notifyTelegram);
+
+    // If date range is specified (and not just today's live trade)
+    if (startDate && endDate) {
+      const chunks = splitDateRangeIntoChunks(startDate, endDate, 31);
+      console.log(`Split date range ${startDate} -> ${endDate} into ${chunks.length} chunk(s) (max 31 days each).`);
+
+      appState.activeSyncProgress = {
+        isSyncing: true,
+        currentChunk: 0,
+        totalChunks: chunks.length,
+        currentRange: `${startDate} to ${endDate}`,
+        totalTx: 0,
+        status: 'running'
+      };
+
+      if (isManual && notifyTelegram) {
+        await sendTelegramMessage(`⚡ Starting sync for *${startDate}* to *${endDate}* (${chunks.length} batch(es) of ≤31 days)...\n\nEpos Now limits queries to 31 days maximum.`);
+      }
+
+      let totalTxCount = 0;
+      let totalDaysCount = 0;
+      let lastDaysBatch = [];
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        appState.activeSyncProgress.currentChunk = i + 1;
+        appState.activeSyncProgress.currentRange = `${chunk.from} to ${chunk.to}`;
+
+        console.log(`\n--- Processing Chunk ${i + 1}/${chunks.length} (${chunk.from} to ${chunk.to}) ---`);
+        if (isManual && notifyTelegram) {
+          await sendTelegramMessage(`🔄 *Chunk ${i + 1}/${chunks.length}*: Scraping ${chunk.from} to ${chunk.to}...`);
+        }
+
+        await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
+        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+        await page.waitForTimeout(2000);
+
+        // Apply Epos Now filter for this chunk
+        await applyEposDateFilter(page, chunk.from, chunk.to);
+
+        // Scrape and save transactions for this chunk
+        const chunkResult = await scrapeAndSaveCurrentPage(page, `${chunk.from} to ${chunk.to}`);
+        if (chunkResult) {
+          totalTxCount += chunkResult.totalTx;
+          totalDaysCount += chunkResult.daysBatch.length;
+          lastDaysBatch = chunkResult.daysBatch;
+          appState.activeSyncProgress.totalTx = totalTxCount;
+        }
+
+        if (i < chunks.length - 1) {
+          await page.waitForTimeout(1500);
+        }
+      }
+
+      appState.activeSyncProgress.status = 'completed';
+      appState.lastSyncTime = new Date().toISOString();
+      appState.lastSyncResult = {
+        days: totalDaysCount,
+        txCount: totalTxCount,
+        batches: chunks.length,
+        topDay: `${startDate} to ${endDate}`
+      };
+      appState.consecutiveFailures = 0;
+
+      if (isManual && notifyTelegram) {
+        await sendTelegramMessage(
+          `✅ *Multi-Month Sync Complete!*\n\n` +
+          `Date Range: *${startDate}* to *${endDate}*\n` +
+          `Processed *${chunks.length}* chunks (≤31 days each).\n` +
+          `Synced *${totalTxCount}* transactions across *${totalDaysCount}* day(s) to Supabase.`
+        );
+      }
+
+      return appState.lastSyncResult;
     }
 
-    // Upsert raw_transactions in chunks of 100
-    let insertedTx = 0;
-    for (let i = 0; i < scrapeResult.txRows.length; i += 100) {
-      const chunk = scrapeResult.txRows.slice(i, i + 100);
-      const txRes = await fetch(`${SUPABASE_URL}/rest/v1/raw_transactions?on_conflict=id`, {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify(chunk)
-      });
-      if (txRes.ok) insertedTx += chunk.length;
-    }
-    console.log(`Successfully upserted ${insertedTx} raw transactions.`);
+    // Default: Single Fast Scrape (Today's live transactions)
+    console.log('Loading fresh transactions report page for Today...');
+    if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
+    await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(2500);
 
-    // Update state
+    const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today');
+    if (!scrapeResult || scrapeResult.totalTx === 0) {
+      console.warn('No transactions parsed on page.');
+      if (isManual && notifyTelegram) {
+        await sendTelegramMessage('⚠️ Scrape completed, but 0 transactions were found on the current Epos Now report page.');
+      }
+      return;
+    }
+
     appState.lastSyncTime = new Date().toISOString();
     appState.lastSyncResult = {
       days: scrapeResult.daysBatch.length,
@@ -1345,7 +1572,6 @@ async function runSync(isManual = false, notifyTelegram = true) {
     };
     appState.consecutiveFailures = 0;
 
-    // Send summary to Telegram if manually triggered with notifications
     if (isManual && notifyTelegram) {
       const summaryLines = scrapeResult.daysBatch.map(d => `• *${d.date}*: $${d.totalSales.toFixed(2)} (${d.count} txs)`);
       await sendTelegramMessage(
