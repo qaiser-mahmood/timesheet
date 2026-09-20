@@ -363,21 +363,23 @@
             <!-- VIEW 3: Expenses Ledger & Category P&L -->
             <div id="analyticsExpensesContainer" class="hidden space-y-4">
                 <!-- Expenses Ledger Header Card -->
-                <div class="flex items-center justify-between gap-2 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
-                    <div class="flex flex-wrap items-center gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-2 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <!-- Row 1 on mobile / Left on desktop: Label, Count Badge, Total Badge -->
+                    <div class="flex items-center gap-2 overflow-x-auto scrollbar-none whitespace-nowrap">
                         <span class="text-xs sm:text-sm font-extrabold text-slate-100 flex items-center gap-1.5">
                             💸 Expenses Ledger
                         </span>
-                        <span id="expenseLedgerCountBadge" class="bg-amber-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">
+                        <span id="expenseLedgerCountBadge" class="bg-amber-600 text-white text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-bold">
                             0 records
                         </span>
-                        <span id="expenseLedgerTotalBadge" class="bg-slate-900 border border-slate-700 text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-extrabold">
+                        <span id="expenseLedgerTotalBadge" class="bg-slate-900 border border-amber-500/40 text-amber-300 text-xs sm:text-sm px-2.5 py-0.5 rounded-full font-black tracking-wide shadow-inner">
                             $0.00
                         </span>
                     </div>
 
-                    <button type="button" onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 whitespace-nowrap">
-                        ➕ Add Expense
+                    <!-- Row 2 on mobile / Right on desktop: Log Exp Button -->
+                    <button type="button" onclick="openExpenseModal()" class="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
+                        ➕ Log Exp
                     </button>
                 </div>
 
