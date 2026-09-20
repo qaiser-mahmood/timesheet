@@ -362,8 +362,8 @@
 
             <!-- VIEW 3: Expenses Ledger & Category P&L -->
             <div id="analyticsExpensesContainer" class="hidden space-y-4">
-                <!-- Header with Action & Single 2-Click Date Filter -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                <!-- Expenses Ledger Header Card -->
+                <div class="flex items-center justify-between gap-2 bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
                     <div class="flex flex-wrap items-center gap-2">
                         <span class="text-xs sm:text-sm font-extrabold text-slate-100 flex items-center gap-1.5">
                             💸 Expenses Ledger
@@ -376,58 +376,81 @@
                         </span>
                     </div>
 
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <!-- Single 2-Click Date Range Selector -->
-                        <div class="relative" id="ledgerCalendarWrapper">
-                            <button type="button" id="ledgerCalendarTriggerBtn" onclick="toggleLedgerCalendarPopover(event)" class="bg-slate-900 hover:bg-slate-850 border border-slate-700 hover:border-amber-500/60 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-200 transition shadow-sm flex items-center gap-2 cursor-pointer" title="Filter ledger by date range">
-                                <span class="text-amber-400 text-sm">📅</span>
-                                <span id="ledgerCalendarDisplay" class="tracking-wide">All Time (1 Jun 2026 – Today)</span>
-                                <span class="text-slate-400 text-[9px]">▼</span>
-                            </button>
+                    <button type="button" onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 whitespace-nowrap">
+                        ➕ Add Expense
+                    </button>
+                </div>
 
-                            <!-- Single 2-Click Popover Calendar for Ledger -->
-                            <div id="ledgerCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] text-white space-y-2.5">
-                                <!-- Popover Header with Month Nav -->
-                                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                                    <button type="button" onclick="changeLedgerCalMonth(-1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">◀</button>
-                                    <span id="ledgerCalMonthYearHeader" class="text-xs font-black text-white tracking-wide">September 2026</span>
-                                    <button type="button" onclick="changeLedgerCalMonth(1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">▶</button>
-                                </div>
-
-                                <!-- Quick Presets inside Popover -->
-                                <div class="flex items-center gap-1 overflow-x-auto pb-1 text-[10px] border-b border-slate-800 scrollbar-none">
-                                    <button type="button" onclick="setLedgerPreset('all')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">All (1/6)</button>
-                                    <button type="button" onclick="setLedgerPreset('month')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">This Month</button>
-                                    <button type="button" onclick="setLedgerPreset('last_month')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">Last Month</button>
-                                    <button type="button" onclick="setLedgerPreset('week')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">This Week</button>
-                                    <button type="button" onclick="setLedgerPreset('today')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold whitespace-nowrap">Today</button>
-                                </div>
-
-                                <!-- Interactive Click Step Hint -->
-                                <div id="ledgerCalHint" class="text-[10px] text-center text-amber-300 font-semibold bg-amber-950/40 border border-amber-900/50 py-1 px-2 rounded-lg">
-                                    Click start date
-                                </div>
-
-                                <!-- Day of Week Names (Mon - Sun) -->
-                                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
-                                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
-                                </div>
-
-                                <!-- Days of Month Grid -->
-                                <div id="ledgerCalDaysGrid" class="grid grid-cols-7 gap-1 text-center">
-                                    <!-- Injected dynamically -->
-                                </div>
-
-                                <div class="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800">
-                                    <span class="italic">2 clicks to select range</span>
-                                    <button type="button" onclick="closeLedgerCalendarPopover()" class="text-slate-400 hover:text-white font-bold">Close ✕</button>
-                                </div>
-                            </div>
+                <!-- Ledger Date Range Controls: Presets (Today/Week/Month with Nav) & All Preset + Popover Calendar -->
+                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <!-- Presets Group with Arrow Navigators (Today, Week, Month) -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
+                        <!-- Today Preset Group -->
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
+                            <button type="button" onclick="navigateLedgerPreset('day', -1)" title="Previous Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
+                            <button type="button" id="btnLedgerPresetDay" onclick="selectLedgerPreset('day')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap">Today</button>
+                            <button type="button" onclick="navigateLedgerPreset('day', 1)" title="Next Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
                         </div>
 
-                        <button type="button" onclick="openExpenseModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5">
-                            ➕ Add Expense
+                        <!-- Week Preset Group -->
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
+                            <button type="button" onclick="navigateLedgerPreset('week', -1)" title="Previous Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
+                            <button type="button" id="btnLedgerPresetWeek" onclick="selectLedgerPreset('week')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap">Week</button>
+                            <button type="button" onclick="navigateLedgerPreset('week', 1)" title="Next Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        </div>
+
+                        <!-- Month Preset Group -->
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
+                            <button type="button" onclick="navigateLedgerPreset('month', -1)" title="Previous Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
+                            <button type="button" id="btnLedgerPresetMonth" onclick="selectLedgerPreset('month')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap">Month</button>
+                            <button type="button" onclick="navigateLedgerPreset('month', 1)" title="Next Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Group: All Preset Button + Single Interactive Calendar Trigger & Popover -->
+                    <div class="relative flex items-center gap-2" id="ledgerCalendarWrapper">
+                        <button type="button" id="btnLedgerPresetAll" onclick="selectLedgerPreset('all')" title="Show all expenses from 1 June 2026 until today" class="px-3 py-1.5 text-xs font-black bg-amber-600 text-white rounded-lg shadow border border-amber-500 transition whitespace-nowrap">
+                            All (1/6)
                         </button>
+
+                        <!-- Single Trigger Button -->
+                        <button type="button" id="ledgerCalendarTriggerBtn" onclick="toggleLedgerCalendarPopover(event)" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-amber-500/80 text-white rounded-lg px-3 py-1.5 text-xs font-bold flex items-center justify-between sm:justify-start gap-2.5 transition shadow-sm cursor-pointer" title="Filter ledger by date range">
+                            <span class="flex items-center gap-1.5">
+                                <span class="text-amber-400 text-sm">📅</span>
+                                <span id="ledgerCalendarDisplay" class="tracking-wide">All Time (1 Jun 2026 – Today)</span>
+                            </span>
+                            <span class="text-slate-400 text-[9px]">▼</span>
+                        </button>
+
+                        <!-- Popover Single Calendar Picker (1st click Start, 2nd click End, auto applies) -->
+                        <div id="ledgerCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] max-w-[calc(100vw-1.5rem)] text-white space-y-2.5">
+                            <!-- Popover Header with Month Nav -->
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                                <button type="button" onclick="changeLedgerCalMonth(-1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">◀</button>
+                                <span id="ledgerCalMonthYearHeader" class="text-xs font-black text-white tracking-wide">September 2026</span>
+                                <button type="button" onclick="changeLedgerCalMonth(1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">▶</button>
+                            </div>
+
+                            <!-- Interactive Click Step Hint -->
+                            <div id="ledgerCalHint" class="text-[10px] text-center text-amber-300 font-semibold bg-amber-950/40 border border-amber-900/50 py-1 px-2 rounded-lg">
+                                Click start date
+                            </div>
+
+                            <!-- Weekday Headers -->
+                            <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                                <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                            </div>
+
+                            <!-- Calendar Days Grid -->
+                            <div id="ledgerCalDaysGrid" class="grid grid-cols-7 gap-1 text-center text-xs">
+                                <!-- Populated dynamically by renderLedgerCalendarGrid() -->
+                            </div>
+
+                            <div class="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800">
+                                <span class="italic">2 clicks to select range</span>
+                                <button type="button" onclick="closeLedgerCalendarPopover()" class="text-slate-400 hover:text-white font-bold">Close ✕</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -718,7 +741,9 @@
         window.closeLedgerCalendarPopover = closeLedgerCalendarPopover;
         window.changeLedgerCalMonth = changeLedgerCalMonth;
         window.handleLedgerCalDayClick = handleLedgerCalDayClick;
-        window.setLedgerPreset = setLedgerPreset;
+        window.selectLedgerPreset = selectLedgerPreset;
+        window.navigateLedgerPreset = navigateLedgerPreset;
+        window.setLedgerPreset = selectLedgerPreset;
 
         // 2. Core State
         const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
@@ -2270,6 +2295,8 @@
         }
 
         // ==================== LEDGER DATE FILTER & 2-CLICK CALENDAR ====================
+        let currentLedgerPresetType = 'all'; // 'all' | 'day' | 'week' | 'month' | 'custom'
+        let ledgerPresetRefDate = new Date();
         let ledgerDateFrom = '2026-06-01'; // Day 1
         let ledgerDateTo = new Date().toISOString().split('T')[0]; // Today
         let ledgerCalViewYear = new Date().getFullYear();
@@ -2277,6 +2304,119 @@
         let ledgerCalSelectionStep = 0; // 0 = start, 1 = end
         let tempLedgerStart = null;
         let tempLedgerEnd = null;
+
+        function updateLedgerPresetButtonsUI() {
+            const btnDay = document.getElementById('btnLedgerPresetDay');
+            const btnWeek = document.getElementById('btnLedgerPresetWeek');
+            const btnMonth = document.getElementById('btnLedgerPresetMonth');
+            const btnAll = document.getElementById('btnLedgerPresetAll');
+
+            const activeCls = "px-2.5 py-1 text-xs font-black bg-amber-600 text-white rounded shadow transition whitespace-nowrap";
+            const inactiveCls = "px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap";
+
+            if (btnDay) btnDay.className = (currentLedgerPresetType === 'day' ? activeCls : inactiveCls);
+            if (btnWeek) btnWeek.className = (currentLedgerPresetType === 'week' ? activeCls : inactiveCls);
+            if (btnMonth) btnMonth.className = (currentLedgerPresetType === 'month' ? activeCls : inactiveCls);
+
+            const activeAllCls = "px-3 py-1.5 text-xs font-black bg-amber-600 text-white rounded-lg shadow border border-amber-500 transition whitespace-nowrap";
+            const inactiveAllCls = "px-3 py-1.5 text-xs font-bold bg-slate-900 hover:bg-slate-850 text-slate-200 hover:text-white rounded-lg border border-slate-700 transition whitespace-nowrap";
+            if (btnAll) btnAll.className = (currentLedgerPresetType === 'all' ? activeAllCls : inactiveAllCls);
+
+            const now = new Date();
+            const nowIso = now.toISOString().split('T')[0];
+            const refIso = ledgerPresetRefDate.toISOString().split('T')[0];
+
+            // 1. Day Button: "Today" when on today, otherwise show day e.g. "17 Sep"
+            if (btnDay) {
+                if (currentLedgerPresetType === 'day' && refIso !== nowIso) {
+                    const [y, m, d] = refIso.split('-').map(Number);
+                    const moShort = MONTH_NAMES[m - 1].slice(0, 3);
+                    btnDay.innerText = `${d} ${moShort}`;
+                } else {
+                    btnDay.innerText = "Today";
+                }
+            }
+
+            // 2. Week Button: "Week" when on current week, otherwise show week e.g. "7–13 Sep"
+            if (btnWeek) {
+                const curMon = getMondayString(nowIso);
+                const refMon = getMondayString(refIso);
+                if (currentLedgerPresetType === 'week' && refMon !== curMon) {
+                    const refSun = addDaysString(refMon, 6);
+                    const [y1, m1, d1] = refMon.split('-').map(Number);
+                    const [y2, m2, d2] = refSun.split('-').map(Number);
+                    const mo1 = MONTH_NAMES[m1 - 1].slice(0, 3);
+                    const mo2 = MONTH_NAMES[m2 - 1].slice(0, 3);
+                    if (m1 === m2) {
+                        btnWeek.innerText = `${d1}–${d2} ${mo1}`;
+                    } else {
+                        btnWeek.innerText = `${d1} ${mo1}–${d2} ${mo2}`;
+                    }
+                } else {
+                    btnWeek.innerText = "Week";
+                }
+            }
+
+            // 3. Month Button: "Month" when on current month, otherwise show month e.g. "August"
+            if (btnMonth) {
+                const isCurMonth = (ledgerPresetRefDate.getFullYear() === now.getFullYear() && ledgerPresetRefDate.getMonth() === now.getMonth());
+                if (currentLedgerPresetType === 'month' && !isCurMonth) {
+                    const mIdx = ledgerPresetRefDate.getMonth();
+                    if (ledgerPresetRefDate.getFullYear() === now.getFullYear()) {
+                        btnMonth.innerText = MONTH_NAMES[mIdx];
+                    } else {
+                        btnMonth.innerText = `${MONTH_NAMES[mIdx].slice(0, 3)} '${String(ledgerPresetRefDate.getFullYear()).slice(-2)}`;
+                    }
+                } else {
+                    btnMonth.innerText = "Month";
+                }
+            }
+        }
+
+        function selectLedgerPreset(type) {
+            currentLedgerPresetType = type;
+            ledgerPresetRefDate = new Date();
+            applyLedgerPresetRange();
+        }
+
+        function navigateLedgerPreset(type, delta) {
+            if (currentLedgerPresetType !== type) {
+                currentLedgerPresetType = type;
+                ledgerPresetRefDate = new Date();
+            }
+
+            if (type === 'day') {
+                ledgerPresetRefDate.setDate(ledgerPresetRefDate.getDate() + delta);
+            } else if (type === 'week') {
+                ledgerPresetRefDate.setDate(ledgerPresetRefDate.getDate() + (delta * 7));
+            } else if (type === 'month') {
+                ledgerPresetRefDate.setMonth(ledgerPresetRefDate.getMonth() + delta);
+            }
+            applyLedgerPresetRange();
+        }
+
+        function applyLedgerPresetRange() {
+            const now = new Date();
+            const todayIso = now.toISOString().split('T')[0];
+            const refIso = ledgerPresetRefDate.toISOString().split('T')[0];
+
+            if (currentLedgerPresetType === 'all') {
+                setLedgerDateRange('2026-06-01', todayIso, 'all');
+            } else if (currentLedgerPresetType === 'day') {
+                setLedgerDateRange(refIso, refIso, 'day');
+            } else if (currentLedgerPresetType === 'week') {
+                const mon = getMondayString(refIso);
+                const sun = addDaysString(mon, 6);
+                setLedgerDateRange(mon, sun, 'week');
+            } else if (currentLedgerPresetType === 'month') {
+                const y = ledgerPresetRefDate.getFullYear();
+                const m = ledgerPresetRefDate.getMonth();
+                const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+                const lastDay = new Date(y, m + 1, 0).getDate();
+                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                setLedgerDateRange(firstIso, lastIso, 'month');
+            }
+        }
 
         function toggleLedgerCalendarPopover(e) {
             if (e) e.stopPropagation();
@@ -2293,14 +2433,16 @@
             const popover = document.getElementById('ledgerCalendarPopover');
             if (!popover) return;
 
-            if (ledgerDateFrom) {
-                const parts = ledgerDateFrom.split('-');
+            const now = new Date();
+
+            if (currentLedgerPresetType !== 'all' && ledgerDateFrom) {
+                const target = ledgerDateTo || ledgerDateFrom;
+                const parts = target.split('-');
                 ledgerCalViewYear = parseInt(parts[0], 10);
                 ledgerCalViewMonth = parseInt(parts[1], 10) - 1;
                 tempLedgerStart = ledgerDateFrom;
                 tempLedgerEnd = ledgerDateTo || ledgerDateFrom;
             } else {
-                const now = new Date();
                 ledgerCalViewYear = now.getFullYear();
                 ledgerCalViewMonth = now.getMonth();
                 tempLedgerStart = null;
@@ -2310,11 +2452,27 @@
             ledgerCalSelectionStep = 0;
             renderLedgerCalendarGrid();
             popover.classList.remove('hidden');
+
+            // Responsive positioning: ensure popover NEVER goes off screen on left or right
+            requestAnimationFrame(() => {
+                const rect = popover.getBoundingClientRect();
+                if (rect.left < 8) {
+                    popover.style.left = '0px';
+                    popover.style.right = 'auto';
+                } else if (rect.right > window.innerWidth - 8) {
+                    popover.style.right = '0px';
+                    popover.style.left = 'auto';
+                }
+            });
         }
 
         function closeLedgerCalendarPopover() {
             const popover = document.getElementById('ledgerCalendarPopover');
-            if (popover) popover.classList.add('hidden');
+            if (popover) {
+                popover.classList.add('hidden');
+                popover.style.left = '';
+                popover.style.right = '';
+            }
         }
 
         function changeLedgerCalMonth(delta) {
@@ -2410,7 +2568,7 @@
                     tempLedgerEnd = isoDate;
                 }
 
-                setLedgerDateRange(tempLedgerStart, tempLedgerEnd);
+                setLedgerDateRange(tempLedgerStart, tempLedgerEnd, 'custom');
                 renderLedgerCalendarGrid();
 
                 setTimeout(() => {
@@ -2419,10 +2577,12 @@
             }
         }
 
-        function setLedgerDateRange(fromIso, toIso) {
+        function setLedgerDateRange(fromIso, toIso, presetType = 'custom') {
             ledgerDateFrom = fromIso;
             ledgerDateTo = toIso;
+            currentLedgerPresetType = presetType;
 
+            updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
             renderExpensesLedgerView();
         }
@@ -2432,7 +2592,7 @@
             if (!displayEl) return;
 
             const todayIso = new Date().toISOString().split('T')[0];
-            if (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso) {
+            if (currentLedgerPresetType === 'all' || (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso)) {
                 displayEl.innerText = "All Time (1 Jun 2026 – Today)";
             } else if (ledgerDateFrom === ledgerDateTo) {
                 displayEl.innerText = formatDisplayDateStr(ledgerDateFrom);
@@ -2441,39 +2601,8 @@
             }
         }
 
-        function setLedgerPreset(preset) {
-            const now = new Date();
-            const todayIso = now.toISOString().split('T')[0];
-
-            if (preset === 'all') {
-                setLedgerDateRange('2026-06-01', todayIso);
-            } else if (preset === 'today') {
-                setLedgerDateRange(todayIso, todayIso);
-            } else if (preset === 'week') {
-                const mon = getMondayString(todayIso);
-                const sun = addDaysString(mon, 6);
-                setLedgerDateRange(mon, sun);
-            } else if (preset === 'month') {
-                const y = now.getFullYear();
-                const m = now.getMonth();
-                const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
-                const lastDay = new Date(y, m + 1, 0).getDate();
-                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-                setLedgerDateRange(firstIso, lastIso);
-            } else if (preset === 'last_month') {
-                const prevM = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                const y = prevM.getFullYear();
-                const m = prevM.getMonth();
-                const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
-                const lastDay = new Date(y, m + 1, 0).getDate();
-                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-                setLedgerDateRange(firstIso, lastIso);
-            }
-
-            closeLedgerCalendarPopover();
-        }
-
         function renderExpensesLedgerView() {
+            updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
 
             // Filter expensesStore by ledger date range
@@ -2489,7 +2618,7 @@
             const badgeEl = document.getElementById('salesSelectedDayBadge');
             if (badgeEl) {
                 const todayIso = new Date().toISOString().split('T')[0];
-                if (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso) {
+                if (currentLedgerPresetType === 'all' || (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso)) {
                     badgeEl.innerText = "Ledger: All Time (1 Jun 2026 – Today)";
                 } else if (ledgerDateFrom === ledgerDateTo) {
                     badgeEl.innerText = `Ledger: ${formatDisplayDateStr(ledgerDateFrom)}`;
