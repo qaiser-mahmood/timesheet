@@ -720,7 +720,7 @@
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-baseline justify-between">
-                                <span class="text-[11px] text-slate-400">Box [W1] Gross Wages:</span>
+                                <span class="text-[11px] text-slate-400">Box [W1] Tax Wages (ex. Cash):</span>
                                 <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxW1">$0.00</span>
                             </div>
                             <div class="flex items-baseline justify-between pt-1">
@@ -728,7 +728,7 @@
                                 <span class="text-lg font-black text-amber-400 font-mono" id="basBoxW2">$0.00</span>
                             </div>
                         </div>
-                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Total roster wages & estimated PAYG withholding</p>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Taxable roster wages (excluding cash wages) & estimated PAYG withholding</p>
                     </div>
 
                     <!-- Total Settlement to ATO (Box 3 + Box W2) -->
@@ -824,7 +824,7 @@
                                         <th class="p-2 text-right">Total Shifts</th>
                                         <th class="p-2 text-right">Total Hours</th>
                                         <th class="p-2 text-right">Tax Hours</th>
-                                        <th class="p-2 text-right">Gross Pay (W1)</th>
+                                        <th class="p-2 text-right" title="Formal taxable wages excluding cash wages">Tax Wages (W1)</th>
                                         <th class="p-2 text-right">Tax Withheld (W2)</th>
                                     </tr>
                                 </thead>
@@ -3412,16 +3412,14 @@
                 const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
                 const th = Math.max(0, totH - ch);
 
-                let shiftGross = 0;
                 let shiftTaxPay = 0;
                 let shiftWithheld = 0;
 
                 if (!isOwner) {
-                    shiftGross = (ch * cr) + (th * tr);
+                    // For BAS (Box W1), ATO only reports formal taxable wages subject to PAYG withholding (excluding cash wages)
                     shiftTaxPay = (th * tr);
-                    // 15% standard PAYG withholding on tax portion
                     shiftWithheld = shiftTaxPay * (shift.taxRate ? ESTIMATED_TAX_RATE : 0);
-                    totalWagesW1 += shiftGross;
+                    totalWagesW1 += shiftTaxPay;
                     totalTaxWithheldW2 += shiftWithheld;
                 }
 
@@ -3431,7 +3429,7 @@
                         shifts: 0,
                         hours: 0,
                         taxHours: 0,
-                        grossPay: 0,
+                        taxPay: 0,
                         taxWithheld: 0,
                         isOwner
                     };
@@ -3440,7 +3438,7 @@
                 staffMap[name].shifts += 1;
                 staffMap[name].hours += totH;
                 staffMap[name].taxHours += th;
-                staffMap[name].grossPay += shiftGross;
+                staffMap[name].taxPay += shiftTaxPay;
                 staffMap[name].taxWithheld += shiftWithheld;
             });
 
@@ -3589,7 +3587,7 @@
                                 <td class="p-2 text-right font-mono text-slate-300">${s.shifts}</td>
                                 <td class="p-2 text-right font-mono text-slate-200 font-bold">${s.hours.toFixed(1)} hrs</td>
                                 <td class="p-2 text-right font-mono text-slate-400">${s.taxHours.toFixed(1)} hrs</td>
-                                <td class="p-2 text-right font-mono font-bold text-amber-300">$${s.grossPay.toFixed(2)}</td>
+                                <td class="p-2 text-right font-mono font-bold text-amber-300">$${s.taxPay.toFixed(2)}</td>
                                 <td class="p-2 text-right font-mono font-bold text-amber-400">$${s.taxWithheld.toFixed(2)}</td>
                             </tr>
                         `;
