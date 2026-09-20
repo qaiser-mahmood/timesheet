@@ -837,6 +837,7 @@
         // 2. Core State
         const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
         const SUPABASE_KEY = "sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf";
+        const EPOS_WORKER_URL = "https://epos-sync-worker.onrender.com";
         const ESTIMATED_TAX_RATE = 0.15;
         let isShareModeActive = false;
         let dataStore = [];
@@ -906,6 +907,56 @@
                     }
                     if (!payload || !payload.action) return { status: "error", message: "No action specified" };
 
+                    // 1. Obtain Google ID token for server-side verification
+                    let idToken = null;
+                    try {
+                        idToken = await user.getIdToken();
+                    } catch (tokErr) {
+                        console.warn("Could not retrieve ID token:", tokErr);
+                    }
+
+                    // 2. Primary Route: High-security Render Worker API
+                    if (idToken) {
+                        try {
+                            if (payload.action === "get") {
+                                const beResp = await fetch(`${EPOS_WORKER_URL}/api/data`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Authorization": `Bearer ${idToken}`,
+                                        "Content-Type": "application/json"
+                                    }
+                                });
+                                if (beResp.ok) {
+                                    return await beResp.json();
+                                } else if (beResp.status === 401 || beResp.status === 403) {
+                                    const errData = await beResp.json().catch(() => ({}));
+                                    throw new Error(errData.message || "Forbidden: Access denied by secure server");
+                                }
+                            } else {
+                                const beResp = await fetch(`${EPOS_WORKER_URL}/api/mutate`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Authorization": `Bearer ${idToken}`,
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify(payload)
+                                });
+                                if (beResp.ok) {
+                                    return await beResp.json();
+                                } else if (beResp.status === 401 || beResp.status === 403) {
+                                    const errData = await beResp.json().catch(() => ({}));
+                                    throw new Error(errData.message || "Forbidden: Access denied by secure server");
+                                }
+                            }
+                        } catch (beErr) {
+                            if (beErr.message && (beErr.message.includes("Forbidden") || beErr.message.includes("Access denied"))) {
+                                throw beErr;
+                            }
+                            console.warn("Backend worker API unreachable, using direct Supabase fallback:", beErr.message);
+                        }
+                    }
+
+                    // 3. Fallback direct Supabase queries (for transition or local fallback)
                     if (payload.action === "get") {
                         const [staffRows, rosterRows, salesRows, expenseRows] = await Promise.all([
                             supabaseFetch("staff?select=*&order=name.asc"),
@@ -1074,8 +1125,6 @@
                     });
                 }
 
-                const EPOS_WORKER_URL = 'https://epos-sync-worker.onrender.com';
-
                 async function syncDirectFromEpos() {
                     const user = auth.currentUser;
                     if (!user || !isAuthorizedEmail(user.email)) {
@@ -1119,11 +1168,19 @@
                         const controller = new AbortController();
                         const abortTimeout = setTimeout(() => controller.abort(), 55000);
 
+                        let idToken = '';
+                        try {
+                            idToken = await user.getIdToken();
+                        } catch (tokErr) {
+                            console.warn("Could not fetch ID token for sync:", tokErr);
+                        }
+
                         let workerResult = null;
                         try {
                             const resp = await fetch(`${EPOS_WORKER_URL}/sync?wait=true&notify=false`, {
                                 signal: controller.signal,
-                                cache: 'no-cache'
+                                cache: 'no-cache',
+                                headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
                             });
                             clearTimeout(progressTimer);
                             clearTimeout(abortTimeout);

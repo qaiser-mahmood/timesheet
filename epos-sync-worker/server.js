@@ -4,6 +4,7 @@ const cron = require('node-cron');
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // Configuration
 const PORT = process.env.PORT || 3000;
@@ -12,10 +13,16 @@ const EPOS_PASSWORD = process.env.EPOS_PASSWORD || '';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ckyutsdgpdamnhsqoail.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || 'sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf';
 const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/15 * * * *';
 const STORAGE_STATE_PATH = path.join(__dirname, 'storageState.json');
 const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
+
+// Whitelisted management email accounts (Server-enforced)
+const AUTHORIZED_MANAGERS = [
+  'hqmahmood@gmail.com',
+  'anatolyakebabs@gmail.com'
+];
 
 // State tracker
 const appState = {
@@ -45,7 +52,142 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health endpoint for keep-alive cron & monitoring
+// Google / Firebase ID Token Verification Cache
+let cachedGoogleCerts = null;
+let googleCertsExpiry = 0;
+
+async function getGooglePublicCerts() {
+  const now = Date.now();
+  if (cachedGoogleCerts && now < googleCertsExpiry) {
+    return cachedGoogleCerts;
+  }
+  try {
+    const res = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+    if (!res.ok) throw new Error(`HTTP ${res.status} fetching Google certs`);
+    const cacheControl = res.headers.get('cache-control') || '';
+    const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
+    const maxAgeMs = maxAgeMatch ? parseInt(maxAgeMatch[1], 10) * 1000 : 6 * 3600 * 1000;
+    cachedGoogleCerts = await res.json();
+    googleCertsExpiry = now + maxAgeMs;
+    return cachedGoogleCerts;
+  } catch (err) {
+    console.error('Failed to load Google certificates:', err.message);
+    if (cachedGoogleCerts) return cachedGoogleCerts;
+    throw err;
+  }
+}
+
+async function verifyGoogleIdToken(token) {
+  if (!token || typeof token !== 'string') {
+    throw new Error('ID token is missing or invalid');
+  }
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Malformed ID token structure');
+  }
+
+  const [headerB64, payloadB64, signatureB64] = parts;
+  let header, payload;
+  try {
+    header = JSON.parse(Buffer.from(headerB64, 'base64url').toString('utf8'));
+    payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+  } catch (e) {
+    throw new Error('Failed to parse token segments');
+  }
+
+  if (header.alg !== 'RS256') {
+    throw new Error(`Unsupported token algorithm: ${header.alg}`);
+  }
+  if (!header.kid) {
+    throw new Error('Token header is missing kid');
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (payload.exp && payload.exp < nowSeconds) {
+    throw new Error('Token has expired');
+  }
+
+  const expectedProjectId = 'anatolya-staff-portal';
+  if (payload.iss !== `https://securetoken.google.com/${expectedProjectId}`) {
+    throw new Error(`Invalid token issuer: ${payload.iss}`);
+  }
+  if (payload.aud !== expectedProjectId) {
+    throw new Error(`Invalid token audience: ${payload.aud}`);
+  }
+
+  const certs = await getGooglePublicCerts();
+  const cert = certs[header.kid];
+  if (!cert) {
+    throw new Error(`No certificate found matching key ID ${header.kid}`);
+  }
+
+  const verifier = crypto.createVerify('RSA-SHA256');
+  verifier.update(`${headerB64}.${payloadB64}`);
+  const isValid = verifier.verify(cert, signatureB64, 'base64url');
+  if (!isValid) {
+    throw new Error('Cryptographic signature verification failed');
+  }
+
+  return payload;
+}
+
+// Authentication Middleware: Verifies Google token & enforces manager whitelist
+async function requireAuthorizedManager(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Missing or malformed Authorization header. Expected Bearer <ID_TOKEN>.'
+    });
+  }
+
+  const idToken = authHeader.slice(7).trim();
+  try {
+    const claims = await verifyGoogleIdToken(idToken);
+    const email = (claims.email || '').trim().toLowerCase();
+
+    const isWhitelisted = AUTHORIZED_MANAGERS.some(m => m.toLowerCase() === email);
+    if (!isWhitelisted) {
+      console.warn(`[Security] Denied access to non-whitelisted account: ${email}`);
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: `Account '${email}' is not authorized to access management data.`
+      });
+    }
+
+    req.user = claims;
+    next();
+  } catch (err) {
+    console.warn(`[Security] Token verification failed: ${err.message}`);
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: `Invalid or expired session token: ${err.message}`
+    });
+  }
+}
+
+// Supabase query helper on the server using service role / backend key
+async function supabaseServerFetch(path, options = {}) {
+  const url = `${SUPABASE_URL}/rest/v1/${path}`;
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Supabase query failed [${res.status}]: ${errText}`);
+  }
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await res.json();
+  }
+  return null;
+}
+
+// Health endpoint for keep-alive cron & monitoring (Public)
 app.get(['/', '/health'], (req, res) => {
   res.json({
     status: 'ok',
@@ -60,8 +202,211 @@ app.get(['/', '/health'], (req, res) => {
   });
 });
 
-// Manual HTTP trigger
-app.get('/sync', async (req, res) => {
+// Secure Data Retrieval (Staff, Roster, Hourly Sales, Expenses)
+app.post('/api/data', requireAuthorizedManager, async (req, res) => {
+  try {
+    const [staffRows, rosterRows, salesRows, expenseRows] = await Promise.all([
+      supabaseServerFetch('staff?select=*&order=name.asc'),
+      supabaseServerFetch('roster?select=*&order=date.asc'),
+      supabaseServerFetch('hourly_sales?select=*&order=date.asc'),
+      supabaseServerFetch('expenses?select=*&order=date.desc')
+    ]);
+
+    const cleanDateStr = (d) => {
+      if (!d) return '';
+      let str = d.toString().trim();
+      if (str.includes('T')) return str.split('T')[0];
+      const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+      return match ? match[0] : str;
+    };
+
+    const logs = (rosterRows || []).map(r => ({
+      date: r.date,
+      weekCommencing: r.week_commencing || r.date,
+      name: r.name,
+      from: r.shift_from || '',
+      to: r.shift_to || '',
+      cashRate: Number(r.cash_rate) || 0,
+      taxRate: Number(r.tax_rate) || 0,
+      totalHours: Number(r.total_hours) || 0,
+      cashHours: Number(r.cash_hours) || 0,
+      taxHours: Number(r.tax_hours) || 0
+    }));
+
+    const staff = (staffRows || []).map(s => {
+      const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
+      return {
+        name: s.name,
+        cashRate: isOwner ? 0 : (Number(s.cash_rate) || 25),
+        taxRate: isOwner ? 0 : (Number(s.tax_rate) || 30),
+        status: s.status || 'Active'
+      };
+    });
+
+    const sales = (salesRows || []).map(s => ({
+      date: s.date,
+      totalSales: Number(s.total_sales) || 0,
+      hourly: s.hourly || {},
+      updatedAt: s.updated_at || ''
+    }));
+
+    const expenses = (expenseRows || []).map(x => ({
+      id: x.id,
+      date: cleanDateStr(x.date),
+      category: x.category || 'Others',
+      amount: Number(x.amount) || 0,
+      notes: x.notes || ''
+    }));
+
+    res.json({ logs, staff, sales, expenses });
+  } catch (err) {
+    console.error('Error in /api/data:', err);
+    res.status(500).json({ error: 'Failed to fetch data', message: err.message });
+  }
+});
+
+// Secure Data Mutations (Save/Delete shifts, expenses, sales, copy week)
+app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
+  const payload = req.body;
+  if (!payload || !payload.action) {
+    return res.status(400).json({ error: 'Missing mutation action' });
+  }
+
+  const cleanDateStr = (d) => {
+    if (!d) return '';
+    let str = d.toString().trim();
+    if (str.includes('T')) return str.split('T')[0];
+    const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    return match ? match[0] : str;
+  };
+
+  const getMondayString = (d) => {
+    const dt = new Date(d + 'T12:00:00Z');
+    const day = dt.getUTCDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    dt.setUTCDate(dt.getUTCDate() + diff);
+    return dt.toISOString().split('T')[0];
+  };
+
+  const addDaysString = (dateStr, days) => {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().split('T')[0];
+  };
+
+  try {
+    if (payload.action === 'save' && payload.entry) {
+      const e = payload.entry;
+      const cleanD = cleanDateStr(e.date);
+      const row = {
+        date: cleanD,
+        week_commencing: e.weekCommencing || getMondayString(cleanD),
+        name: e.name.toString().trim(),
+        shift_from: e.from || '',
+        shift_to: e.to || '',
+        cash_rate: Number(e.cashRate) || 0,
+        tax_rate: Number(e.taxRate) || 0,
+        total_hours: Number(e.totalHours) || 0,
+        cash_hours: Number(e.cashHours) || 0,
+        tax_hours: Number(e.taxHours) || 0,
+        updated_at: new Date().toISOString()
+      };
+      await supabaseServerFetch('roster?on_conflict=date,name', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(row)
+      });
+      return res.json({ status: 'success' });
+    }
+
+    if (payload.action === 'save_expense' && payload.expense) {
+      const x = payload.expense;
+      const row = {
+        date: cleanDateStr(x.date),
+        category: x.category || 'Others',
+        amount: Number(x.amount) || 0,
+        notes: x.notes || ''
+      };
+      const result = await supabaseServerFetch('expenses', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify(row)
+      });
+      return res.json({ status: 'success', item: result && result[0] ? result[0] : row });
+    }
+
+    if (payload.action === 'delete_expense' && payload.id) {
+      await supabaseServerFetch(`expenses?id=eq.${payload.id}`, {
+        method: 'DELETE'
+      });
+      return res.json({ status: 'success' });
+    }
+
+    if (payload.action === 'delete') {
+      const cleanD = cleanDateStr(payload.date);
+      const nameEnc = encodeURIComponent(payload.name.toString().trim());
+      await supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+        method: 'DELETE'
+      });
+      return res.json({ status: 'success' });
+    }
+
+    if (payload.action === 'save_hourly_sales') {
+      const cleanD = cleanDateStr(payload.date);
+      const row = {
+        date: cleanD,
+        total_sales: Number(payload.totalSales) || 0,
+        hourly: payload.hourly || {},
+        updated_at: new Date().toISOString()
+      };
+      await supabaseServerFetch('hourly_sales?on_conflict=date', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(row)
+      });
+      return res.json({ status: 'success' });
+    }
+
+    if (payload.action === 'copy_previous_week') {
+      const targetMon = payload.targetWeekMonday;
+      const prevMon = addDaysString(targetMon, -7);
+      const prevShifts = await supabaseServerFetch(`roster?week_commencing=eq.${prevMon}`);
+      if (!prevShifts || prevShifts.length === 0) {
+        return res.json({ status: 'success', count: 0 });
+      }
+      const copied = prevShifts.map(s => {
+        const nextDate = addDaysString(s.date, 7);
+        return {
+          date: nextDate,
+          week_commencing: targetMon,
+          name: s.name,
+          shift_from: s.shift_from || '',
+          shift_to: s.shift_to || '',
+          cash_rate: Number(s.cash_rate) || 0,
+          tax_rate: Number(s.tax_rate) || 0,
+          total_hours: Number(s.total_hours) || 0,
+          cash_hours: Number(s.cash_hours) || 0,
+          tax_hours: Number(s.tax_hours) || 0,
+          updated_at: new Date().toISOString()
+        };
+      });
+      await supabaseServerFetch('roster?on_conflict=date,name', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(copied)
+      });
+      return res.json({ status: 'success', count: copied.length });
+    }
+
+    return res.status(400).json({ error: `Unknown action ${payload.action}` });
+  } catch (err) {
+    console.error('Error in /api/mutate:', err);
+    res.status(500).json({ error: 'Mutation failed', message: err.message });
+  }
+});
+
+// Manual HTTP trigger (Protected by manager whitelist)
+app.all('/sync', requireAuthorizedManager, async (req, res) => {
   const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
   const notifyTelegram = req.query.notify === 'true' || req.query.notify === '1';
 
