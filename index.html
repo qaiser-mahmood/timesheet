@@ -19,11 +19,85 @@
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
-    <div id="appContainer" class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
+    <!-- Dedicated Professional Login Screen (Visible when logged out) -->
+    <div id="loginContainer" class="min-h-[85vh] flex items-center justify-center p-3">
+        <div class="w-full max-w-md bg-slate-900 text-white rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-800 space-y-5">
+            <!-- Brand Icon / Avatar -->
+            <div class="flex justify-center">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-purple-600 flex items-center justify-center text-3xl shadow-xl shadow-orange-500/20 border border-white/10 ring-4 ring-orange-500/10">
+                    🥙
+                </div>
+            </div>
+
+            <!-- Header Titles -->
+            <div class="text-center space-y-1">
+                <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Anatolya Turkish Kebabs</h1>
+                <p class="text-xs text-slate-400 font-medium">Staff Timesheet & Operations Intelligence Portal</p>
+            </div>
+
+            <!-- Logout Success Banner (shown upon logout) -->
+            <div id="logoutNoticeBanner" class="hidden p-2.5 rounded-lg bg-emerald-950/70 border border-emerald-800 text-emerald-300 text-xs font-semibold text-center flex items-center justify-center gap-1.5 shadow-sm">
+                <span>✅</span> <span>You have been securely signed out.</span>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="loginErrorMessage" class="hidden p-2.5 rounded-lg bg-red-950/70 border border-red-800 text-red-300 text-xs text-center font-medium"></div>
+
+            <!-- Portal Feature Cards -->
+            <div class="grid grid-cols-3 gap-2 text-center py-1">
+                <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-0.5">
+                    <div class="text-base">⚡</div>
+                    <div class="text-[10px] font-bold text-slate-200">Live Epos</div>
+                    <div class="text-[9px] text-slate-400">Auto Sync</div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-0.5">
+                    <div class="text-base">📊</div>
+                    <div class="text-[10px] font-bold text-slate-200">Analytics</div>
+                    <div class="text-[9px] text-slate-400">Sales & Wages</div>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-0.5">
+                    <div class="text-base">💸</div>
+                    <div class="text-[10px] font-bold text-slate-200">Ledger</div>
+                    <div class="text-[9px] text-slate-400">P&L Expenses</div>
+                </div>
+            </div>
+
+            <!-- Google Sign-In Action Card -->
+            <div class="pt-2 space-y-3">
+                <p class="text-[11px] text-slate-400 text-center">
+                    Sign in with your authorized Google account to manage timesheets, view sales intelligence, and log expenses.
+                </p>
+
+                <button type="button" id="googleSignInBtn" onclick="handleGoogleSignIn()" class="w-full bg-white hover:bg-gray-100 text-gray-800 font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-3 border border-gray-200 cursor-pointer active:scale-[0.99]">
+                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span class="text-sm font-semibold tracking-wide text-gray-700">Sign in with Google</span>
+                </button>
+            </div>
+
+            <!-- Footer / Security Note -->
+            <div class="pt-3 border-t border-slate-800 text-center space-y-1">
+                <div class="text-[10px] text-slate-500 font-medium flex items-center justify-center gap-1.5">
+                    <span>🔒</span> <span>Restricted Access • Authorized Staff & Management Only</span>
+                </div>
+                <div class="text-[9px] text-slate-600">
+                    © 2026 Anatolya Turkish Kebabs
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authenticated App Container (Hidden when logged out) -->
+    <div id="appContainer" class="hidden max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
         
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
-            <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-center gap-2 shrink-0">
                 <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-800 tracking-tight whitespace-nowrap">Anatolya Kebabs Roster</h1>
+                <span id="userEmailBadge" class="hidden text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 truncate max-w-[150px]"></span>
             </div>
 
             <div class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
@@ -36,8 +110,8 @@
                 <button type="button" onclick="openEposModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700" title="Cloud Worker Status & Settings">
                     ⚙️ Worker
                 </button>
-                <button id="authButton" type="button" class="hide-on-share bg-red-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-red-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    🔐 Login with Google
+                <button id="authButton" type="button" class="hide-on-share bg-red-600 hover:bg-red-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer">
+                    🚪 Logout
                 </button>
             </div>
         </div>
@@ -3433,39 +3507,117 @@ function convertHourStr(hStr) {
             container.innerHTML = rowsHtml;
         }
 
-        document.getElementById("authButton").onclick = async () => {
-            const user = auth.currentUser;
-            if (user) {
-                // Logout
-                try {
-                    await signOut(auth);
-                } catch(error) {
-                    alert(error.message);
+        async function handleGoogleSignIn() {
+            const btn = document.getElementById("googleSignInBtn");
+            const errEl = document.getElementById("loginErrorMessage");
+            const noticeEl = document.getElementById("logoutNoticeBanner");
+            if (errEl) errEl.classList.add("hidden");
+            if (noticeEl) noticeEl.classList.add("hidden");
+
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = `
+                        <span class="inline-block animate-spin mr-1 text-base">⏳</span>
+                        <span class="text-sm font-semibold text-gray-700">Signing in with Google...</span>
+                    `;
                 }
-            } else {
-                // Login
-                try {
-                    await signInWithPopup(auth, provider);
-                } catch(error) {
-                    alert(error.message);
+                await signInWithPopup(auth, provider);
+            } catch (error) {
+                console.error("Sign-in error:", error);
+                if (errEl) {
+                    errEl.innerText = error.message || "Failed to sign in. Please try again.";
+                    errEl.classList.remove("hidden");
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                        </svg>
+                        <span class="text-sm font-semibold tracking-wide text-gray-700">Sign in with Google</span>
+                    `;
                 }
             }
-        };
+        }
+        window.handleGoogleSignIn = handleGoogleSignIn;
 
-        onAuthStateChanged(auth, (user)=>{
-            const authButton = document.getElementById("authButton");
-            if(user){
-                console.log(user.email);
-                authButton.innerHTML = "🚪 Logout";
+        async function handleLogout() {
+            try {
+                // Close any open modals and popovers
+                closeExpenseModal();
+                closeEposModal();
+                closeRangeCalendarPopover();
+                closeLedgerCalendarPopover();
+
+                // Show logout banner on login screen
+                const noticeEl = document.getElementById("logoutNoticeBanner");
+                if (noticeEl) noticeEl.classList.remove("hidden");
+
+                await signOut(auth);
+            } catch(error) {
+                console.error("Logout error:", error);
+                alert(error.message);
+            }
+        }
+        window.handleLogout = handleLogout;
+
+        const authBtn = document.getElementById("authButton");
+        if (authBtn) {
+            authBtn.onclick = async () => {
+                const user = auth.currentUser;
+                if (user) {
+                    await handleLogout();
+                } else {
+                    await handleGoogleSignIn();
+                }
+            };
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            const loginContainer = document.getElementById("loginContainer");
+            const appContainer = document.getElementById("appContainer");
+            const userEmailBadge = document.getElementById("userEmailBadge");
+
+            if (user) {
+                console.log("Authenticated as:", user.email);
+
+                // Show Dashboard, Hide Login Screen
+                if (loginContainer) loginContainer.classList.add("hidden");
+                if (appContainer) appContainer.classList.remove("hidden");
+
+                if (userEmailBadge) {
+                    userEmailBadge.innerText = user.email;
+                    userEmailBadge.title = `Signed in as ${user.email}`;
+                    userEmailBadge.classList.remove("hidden");
+                }
+
                 loadCloudData();
                 renderWeeklyTable();
-            }else{
+            } else {
+                console.log("Logged out / Unauthenticated");
+
+                // Hide Dashboard, Show Login Screen
+                if (appContainer) appContainer.classList.add("hidden");
+                if (loginContainer) loginContainer.classList.remove("hidden");
+
+                if (userEmailBadge) {
+                    userEmailBadge.innerText = "";
+                    userEmailBadge.classList.add("hidden");
+                }
+
+                // Purge all in-memory sensitive business data
                 dataStore = [];
                 staffRegistry = [];
+                hourlySalesStore = [];
+                expensesStore = [];
+
                 renderWeeklyTable();
                 populateStaffDropdowns();
-                console.log("Not logged in");
-                authButton.innerHTML = "🔐 Login with Google";
             }
         });
 
