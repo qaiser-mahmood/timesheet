@@ -19,6 +19,21 @@
         .roster-share-active th { background-color: #4b5563 !important; color: #ffffff !important; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; display: inline-block; }
+        @media print {
+            body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; }
+            #loginContainer, #mainHeader, #navTabs, #analyticsRangeControls, #analyticsDateRangeContainer, #analyticsCompareContainer, #analyticsExpensesContainer, #analyticsHeatmapContainer, #analyticsDailyContainer, #rosterSection, #tabBasBtn, #basToolbar, .no-print, nav, header { display: none !important; }
+            #appContainer { max-width: 100% !important; box-shadow: none !important; padding: 10px !important; margin: 0 !important; width: 100% !important; }
+            #analyticsBasContainer { display: block !important; }
+            .bg-slate-900, .bg-slate-800, .bg-slate-950, .bg-gradient-to-br, .bg-gradient-to-r { background: #ffffff !important; color: #000000 !important; border: 1px solid #cbd5e1 !important; }
+            .text-white, .text-slate-200, .text-slate-300 { color: #0f172a !important; }
+            .text-slate-400, .text-slate-500 { color: #475569 !important; }
+            .text-blue-400 { color: #1d4ed8 !important; }
+            .text-purple-400 { color: #7e22ce !important; }
+            .text-emerald-400 { color: #047857 !important; }
+            .text-amber-400, .text-amber-300 { color: #b45309 !important; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
@@ -257,6 +272,9 @@
                     </button>
                     <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="View business expenses ledger">
                         📋 Ledger
+                    </button>
+                    <button type="button" id="tabBasBtn" onclick="switchAnalyticsTab('bas')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Australian Business Activity Statement (BAS) Quarterly Tax Report">
+                        📑 BAS
                     </button>
                 </div>
             </div>
@@ -561,6 +579,264 @@
                 </div>
             </div>
 
+            <!-- VIEW 2.5: Australian Business Activity Statement (BAS) Tax Report -->
+            <div id="analyticsBasContainer" class="hidden space-y-4">
+                <!-- BAS Toolbar: Financial Year, Quarter Buttons, & Print Action -->
+                <div id="basToolbar" class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                    <!-- Left: Quarters & FY Selector -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">FY:</span>
+                            <select id="basFinancialYear" onchange="changeBasFinancialYear(this.value)" class="bg-slate-900 border border-slate-700 text-white text-xs font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-amber-500 shadow-xs">
+                                <option value="2026">2026 / 2027</option>
+                                <option value="2025">2025 / 2026</option>
+                                <option value="2024">2024 / 2025</option>
+                            </select>
+                        </div>
+
+                        <div class="flex items-center gap-1 bg-slate-900/80 p-1 rounded-lg border border-slate-700/80 flex-wrap">
+                            <button type="button" id="basQ1Btn" onclick="switchBasQuarter('Q1')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition text-white bg-amber-600 shadow-sm" title="Q1: 1 July – 30 September">
+                                Q1 (Jul–Sep)
+                            </button>
+                            <button type="button" id="basQ2Btn" onclick="switchBasQuarter('Q2')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition text-slate-400 hover:text-white" title="Q2: 1 October – 31 December">
+                                Q2 (Oct–Dec)
+                            </button>
+                            <button type="button" id="basQ3Btn" onclick="switchBasQuarter('Q3')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition text-slate-400 hover:text-white" title="Q3: 1 January – 31 March">
+                                Q3 (Jan–Mar)
+                            </button>
+                            <button type="button" id="basQ4Btn" onclick="switchBasQuarter('Q4')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition text-slate-400 hover:text-white" title="Q4: 1 April – 30 June">
+                                Q4 (Apr–Jun)
+                            </button>
+                            <button type="button" id="basFullYearBtn" onclick="switchBasQuarter('FY')" class="px-2.5 py-1 rounded-md text-[11px] font-bold transition text-slate-400 hover:text-white" title="Full Financial Year: 1 July – 30 June">
+                                Full Year
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Print / Export Button -->
+                    <div class="flex items-center gap-2 self-end sm:self-center">
+                        <button type="button" onclick="printBasReport()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 whitespace-nowrap">
+                            <span>🖨️</span> <span>Print / Save PDF</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Active Quarter Info Banner -->
+                <div class="bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40 border border-amber-500/30 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-black border border-amber-500/40 flex items-center justify-center p-1 shrink-0">
+                            <img src="logo.png" alt="Anatolya Logo" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black text-white tracking-wide" id="basPeriodTitle">Q1 2026/2027 Business Activity Statement</span>
+                                <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">ATO Ready</span>
+                            </div>
+                            <div class="text-[11px] text-slate-300" id="basPeriodDates">1 July 2026 – 30 September 2026 (92 days)</div>
+                        </div>
+                    </div>
+                    <div class="text-right text-[11px] text-slate-400">
+                        <div>Trading Days Tracked: <span class="text-white font-bold" id="basTradingDaysCount">0</span></div>
+                        <div>Expense Records: <span class="text-white font-bold" id="basExpenseRecordsCount">0</span></div>
+                    </div>
+                </div>
+
+                <!-- ATO BAS Standard Boxes Grid (Official Box Numbers G1, 1A, G11, 1B, W1, W2, 3) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Box 1A & G1: GST on Sales -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">1A</span>
+                                <span class="text-xs font-bold text-slate-200">GST on Sales</span>
+                            </div>
+                            <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">10% GST</span>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-[11px] text-slate-400">Box [G1] Total Sales:</span>
+                                <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxG1">$0.00</span>
+                            </div>
+                            <div class="flex items-baseline justify-between pt-1">
+                                <span class="text-xs font-semibold text-slate-300">Box [1A] GST on Sales:</span>
+                                <span class="text-lg font-black text-blue-400 font-mono" id="basBox1A">$0.00</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">G1 ÷ 11 (Hot cooked food & takeaway is 100% taxable)</p>
+                    </div>
+
+                    <!-- Box 1B & G11: GST on Purchases -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded bg-purple-600 text-white font-black text-[10px] flex items-center justify-center">1B</span>
+                                <span class="text-xs font-bold text-slate-200">GST on Purchases</span>
+                            </div>
+                            <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">Input Credits</span>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-[11px] text-slate-400">Box [G11] Purchases:</span>
+                                <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxG11">$0.00</span>
+                            </div>
+                            <div class="flex items-baseline justify-between pt-1">
+                                <span class="text-xs font-semibold text-slate-300">Box [1B] GST Credits:</span>
+                                <span class="text-lg font-black text-purple-400 font-mono" id="basBox1B">$0.00</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">10% GST on rent, utilities, packaging, repairs & supplies</p>
+                    </div>
+
+                    <!-- Box 3: Net GST -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded bg-emerald-600 text-white font-black text-[10px] flex items-center justify-center">3</span>
+                                <span class="text-xs font-bold text-slate-200">Net GST Settlement</span>
+                            </div>
+                            <span id="basNetGstBadge" class="text-[9px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Owed to ATO</span>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-[11px] text-slate-400">Formula:</span>
+                                <span class="text-[10px] text-slate-300 font-mono">[1A] minus [1B]</span>
+                            </div>
+                            <div class="flex items-baseline justify-between pt-1">
+                                <span class="text-xs font-semibold text-slate-300">Box [3] Net GST:</span>
+                                <span class="text-lg font-black text-emerald-400 font-mono" id="basBox3">$0.00</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">GST collected from sales minus GST credits on expenses</p>
+                    </div>
+
+                    <!-- Box W1 & W2: PAYG Withholding from Wages -->
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded bg-amber-600 text-white font-black text-[10px] flex items-center justify-center">W</span>
+                                <span class="text-xs font-bold text-slate-200">PAYG Tax Withheld</span>
+                            </div>
+                            <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">Salaries</span>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-baseline justify-between">
+                                <span class="text-[11px] text-slate-400">Box [W1] Gross Wages:</span>
+                                <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxW1">$0.00</span>
+                            </div>
+                            <div class="flex items-baseline justify-between pt-1">
+                                <span class="text-xs font-semibold text-slate-300">Box [W2] Tax Withheld:</span>
+                                <span class="text-lg font-black text-amber-400 font-mono" id="basBoxW2">$0.00</span>
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Total roster wages & estimated PAYG withholding</p>
+                    </div>
+
+                    <!-- Total Settlement to ATO (Box 3 + Box W2) -->
+                    <div class="bg-gradient-to-br from-slate-900 to-indigo-950 border border-indigo-500/40 rounded-xl p-3.5 space-y-2 shadow-lg relative overflow-hidden sm:col-span-2 lg:col-span-2">
+                        <div class="flex items-center justify-between border-b border-indigo-800/60 pb-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-base">🏛️</span>
+                                <span class="text-xs font-extrabold text-white">Total Amount Payable to ATO</span>
+                            </div>
+                            <span class="text-[9px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2 py-0.5 rounded-full font-bold">BAS Settlement</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 items-center">
+                            <div>
+                                <div class="text-[10px] text-slate-300">Net GST (Box 3) + PAYG Withheld (Box W2)</div>
+                                <div class="text-[9px] text-slate-400 italic">Pre-calculated for your ATO MyGov / Business Portal lodgement</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-black text-amber-400 font-mono" id="basTotalPayable">$0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Audit Breakdowns (3 Tabs/Cards: Monthly, Expenses, Wages) -->
+                <div class="space-y-3">
+                    <!-- Monthly Summary Table -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-2 shadow">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <span>📅</span> <span>Monthly Breakdown for Selected Quarter</span>
+                            </h4>
+                            <span class="text-[10px] text-slate-400 italic">3-Month Trajectory</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse min-w-[500px]">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
+                                        <th class="p-2">Month</th>
+                                        <th class="p-2 text-right">Trading Days</th>
+                                        <th class="p-2 text-right">Gross Sales (G1)</th>
+                                        <th class="p-2 text-right">GST on Sales (1A)</th>
+                                        <th class="p-2 text-right">Expenses (G11)</th>
+                                        <th class="p-2 text-right">GST Credits (1B)</th>
+                                        <th class="p-2 text-right">Net GST</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="basMonthlyTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Expense Categories GST Audit Table -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-2 shadow">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <span>💸</span> <span>Purchases & Input Tax Credits Audit by Category</span>
+                            </h4>
+                            <span class="text-[10px] text-slate-400 italic">ATO GST Classification</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse min-w-[500px]">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
+                                        <th class="p-2">Category</th>
+                                        <th class="p-2">GST Classification</th>
+                                        <th class="p-2 text-right">Total Purchases (G11)</th>
+                                        <th class="p-2 text-right">GST Claimable Amount</th>
+                                        <th class="p-2 text-right">Input Tax Credit (1B)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="basExpenseCategoriesTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Staff Wages & PAYG Withholding Table -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-2 shadow">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <span>👥</span> <span>Staff Salaries & Wages Summary (Quarterly W1 / W2)</span>
+                            </h4>
+                            <span class="text-[10px] text-slate-400 italic">Timesheet Roster Distribution</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse min-w-[500px]">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
+                                        <th class="p-2">Staff Member</th>
+                                        <th class="p-2 text-right">Total Shifts</th>
+                                        <th class="p-2 text-right">Total Hours</th>
+                                        <th class="p-2 text-right">Tax Hours</th>
+                                        <th class="p-2 text-right">Gross Pay (W1)</th>
+                                        <th class="p-2 text-right">Tax Withheld (W2)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="basStaffTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- VIEW 3: 7-Day Hourly Heatmap -->
             <div id="analyticsHeatmapContainer" class="hidden space-y-3">
                 <!-- Heatmap Controls & Legend Header -->
@@ -846,6 +1122,10 @@
         window.selectLedgerPreset = selectLedgerPreset;
         window.navigateLedgerPreset = navigateLedgerPreset;
         window.setLedgerPreset = selectLedgerPreset;
+        window.switchBasQuarter = switchBasQuarter;
+        window.changeBasFinancialYear = changeBasFinancialYear;
+        window.printBasReport = printBasReport;
+        window.renderBasReportView = renderBasReportView;
 
         // 2. Core State
         const EPOS_WORKER_URL = "https://epos-sync-worker.onrender.com";
@@ -1955,12 +2235,14 @@
             const tabRange = document.getElementById('tabRangeBtn');
             const tabCompare = document.getElementById('tabCompareBtn');
             const tabExpenses = document.getElementById('tabExpensesBtn');
+            const tabBas = document.getElementById('tabBasBtn');
             const tabHeatmap = document.getElementById('tabHeatmapBtn');
             const tabDaily = document.getElementById('tabDailyBtn');
             
             const contRange = document.getElementById('analyticsDateRangeContainer');
             const contCompare = document.getElementById('analyticsCompareContainer');
             const contExpenses = document.getElementById('analyticsExpensesContainer');
+            const contBas = document.getElementById('analyticsBasContainer');
             const contHeatmap = document.getElementById('analyticsHeatmapContainer');
             const contDaily = document.getElementById('analyticsDailyContainer');
 
@@ -1974,10 +2256,12 @@
             if (tabHeatmap) tabHeatmap.className = (tabName === 'heatmap' ? activeClass : inactiveClass);
             if (tabDaily) tabDaily.className = (tabName === 'daily' ? activeClass : inactiveClass);
             if (tabExpenses) tabExpenses.className = (tabName === 'expenses' ? tabHeaderActive : tabHeaderInactive);
+            if (tabBas) tabBas.className = (tabName === 'bas' ? tabHeaderActive : tabHeaderInactive);
 
             if (contRange) contRange.classList.toggle('hidden', tabName !== 'range');
             if (contCompare) contCompare.classList.toggle('hidden', tabName !== 'compare');
             if (contExpenses) contExpenses.classList.toggle('hidden', tabName !== 'expenses');
+            if (contBas) contBas.classList.toggle('hidden', tabName !== 'bas');
             if (contHeatmap) contHeatmap.classList.toggle('hidden', tabName !== 'heatmap');
             if (contDaily) contDaily.classList.toggle('hidden', tabName !== 'daily');
 
@@ -2015,6 +2299,8 @@
                 renderComparisonView();
             } else if (currentAnalyticsTab === 'expenses') {
                 renderExpensesLedgerView();
+            } else if (currentAnalyticsTab === 'bas') {
+                renderBasReportView();
             } else if (currentAnalyticsTab === 'heatmap') {
                 renderHourlyHeatmapView();
             } else {
@@ -2849,6 +3135,480 @@
                     `;
                 });
                 tbody.innerHTML = rowsHtml;
+            }
+        }
+
+        // ==================== BAS QUARTERLY TAX REPORT ====================
+        let currentBasQuarter = 'Q1'; // 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'FY'
+        let currentBasFY = '2026'; // Default 2026 / 2027
+
+        const BAS_GST_RULES = {
+            'Meat': { taxable: false, rate: 0, label: 'GST-Free (Basic Food / Fresh Meat)' },
+            'Vegies': { taxable: false, rate: 0, label: 'GST-Free (Fresh Produce)' },
+            'Bread': { taxable: false, rate: 0, label: 'GST-Free (Plain Bakery / Bread)' },
+            'Packaging': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Containers & Bags)' },
+            'Campbels': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Consumables & Stock)' },
+            'Drinks': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Beverages)' },
+            'Rent': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Commercial Lease & Power)' },
+            'Others': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Services & Repairs)' }
+        };
+
+        function getBasQuarterDates(quarter, fyYear) {
+            const y = parseInt(fyYear, 10);
+            const nextY = y + 1;
+            if (quarter === 'Q1') {
+                return {
+                    start: `${y}-07-01`,
+                    end: `${y}-09-30`,
+                    title: `Q1 (Jul – Sep ${y})`,
+                    fullName: `Quarter 1: 1 July ${y} – 30 September ${y}`,
+                    days: 92,
+                    months: [
+                        { key: `${y}-07`, name: `July ${y}`, start: `${y}-07-01`, end: `${y}-07-31` },
+                        { key: `${y}-08`, name: `August ${y}`, start: `${y}-08-01`, end: `${y}-08-31` },
+                        { key: `${y}-09`, name: `September ${y}`, start: `${y}-09-01`, end: `${y}-09-30` }
+                    ]
+                };
+            } else if (quarter === 'Q2') {
+                return {
+                    start: `${y}-10-01`,
+                    end: `${y}-12-31`,
+                    title: `Q2 (Oct – Dec ${y})`,
+                    fullName: `Quarter 2: 1 October ${y} – 31 December ${y}`,
+                    days: 92,
+                    months: [
+                        { key: `${y}-10`, name: `October ${y}`, start: `${y}-10-01`, end: `${y}-10-31` },
+                        { key: `${y}-11`, name: `November ${y}`, start: `${y}-11-01`, end: `${y}-11-30` },
+                        { key: `${y}-12`, name: `December ${y}`, start: `${y}-12-01`, end: `${y}-12-31` }
+                    ]
+                };
+            } else if (quarter === 'Q3') {
+                const isLeap = (nextY % 4 === 0 && nextY % 100 !== 0) || (nextY % 400 === 0);
+                const febEnd = isLeap ? `${nextY}-02-29` : `${nextY}-02-28`;
+                const q3Days = isLeap ? 91 : 90;
+                return {
+                    start: `${nextY}-01-01`,
+                    end: `${nextY}-03-31`,
+                    title: `Q3 (Jan – Mar ${nextY})`,
+                    fullName: `Quarter 3: 1 January ${nextY} – 31 March ${nextY}`,
+                    days: q3Days,
+                    months: [
+                        { key: `${nextY}-01`, name: `January ${nextY}`, start: `${nextY}-01-01`, end: `${nextY}-01-31` },
+                        { key: `${nextY}-02`, name: `February ${nextY}`, start: `${nextY}-02-01`, end: febEnd },
+                        { key: `${nextY}-03`, name: `March ${nextY}`, start: `${nextY}-03-01`, end: `${nextY}-03-31` }
+                    ]
+                };
+            } else if (quarter === 'Q4') {
+                return {
+                    start: `${nextY}-04-01`,
+                    end: `${nextY}-06-30`,
+                    title: `Q4 (Apr – Jun ${nextY})`,
+                    fullName: `Quarter 4: 1 April ${nextY} – 30 June ${nextY}`,
+                    days: 91,
+                    months: [
+                        { key: `${nextY}-04`, name: `April ${nextY}`, start: `${nextY}-04-01`, end: `${nextY}-04-30` },
+                        { key: `${nextY}-05`, name: `May ${nextY}`, start: `${nextY}-05-01`, end: `${nextY}-05-31` },
+                        { key: `${nextY}-06`, name: `June ${nextY}`, start: `${nextY}-06-01`, end: `${nextY}-06-30` }
+                    ]
+                };
+            } else { // 'FY'
+                return {
+                    start: `${y}-07-01`,
+                    end: `${nextY}-06-30`,
+                    title: `Full FY ${y}/${nextY}`,
+                    fullName: `Full Financial Year: 1 July ${y} – 30 June ${nextY}`,
+                    days: 365,
+                    months: [
+                        { key: `${y}-07`, name: `Jul ${y}`, start: `${y}-07-01`, end: `${y}-07-31` },
+                        { key: `${y}-08`, name: `Aug ${y}`, start: `${y}-08-01`, end: `${y}-08-31` },
+                        { key: `${y}-09`, name: `Sep ${y}`, start: `${y}-09-01`, end: `${y}-09-30` },
+                        { key: `${y}-10`, name: `Oct ${y}`, start: `${y}-10-01`, end: `${y}-10-31` },
+                        { key: `${y}-11`, name: `Nov ${y}`, start: `${y}-11-01`, end: `${y}-11-30` },
+                        { key: `${y}-12`, name: `Dec ${y}`, start: `${y}-12-01`, end: `${y}-12-31` },
+                        { key: `${nextY}-01`, name: `Jan ${nextY}`, start: `${nextY}-01-01`, end: `${nextY}-01-31` },
+                        { key: `${nextY}-02`, name: `Feb ${nextY}`, start: `${nextY}-02-01`, end: `${nextY}-02-28` },
+                        { key: `${nextY}-03`, name: `Mar ${nextY}`, start: `${nextY}-03-01`, end: `${nextY}-03-31` },
+                        { key: `${nextY}-04`, name: `Apr ${nextY}`, start: `${nextY}-04-01`, end: `${nextY}-04-30` },
+                        { key: `${nextY}-05`, name: `May ${nextY}`, start: `${nextY}-05-01`, end: `${nextY}-05-31` },
+                        { key: `${nextY}-06`, name: `Jun ${nextY}`, start: `${nextY}-06-01`, end: `${nextY}-06-30` }
+                    ]
+                };
+            }
+        }
+
+        function switchBasQuarter(qKey) {
+            currentBasQuarter = qKey;
+            updateBasQuarterButtonsUI();
+            renderBasReportView();
+        }
+
+        function changeBasFinancialYear(yearStr) {
+            currentBasFY = yearStr;
+            renderBasReportView();
+        }
+
+        function updateBasQuarterButtonsUI() {
+            const qButtons = [
+                { id: 'basQ1Btn', key: 'Q1' },
+                { id: 'basQ2Btn', key: 'Q2' },
+                { id: 'basQ3Btn', key: 'Q3' },
+                { id: 'basQ4Btn', key: 'Q4' },
+                { id: 'basFullYearBtn', key: 'FY' }
+            ];
+            qButtons.forEach(b => {
+                const el = document.getElementById(b.id);
+                if (!el) return;
+                if (b.key === currentBasQuarter) {
+                    el.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition text-white bg-amber-600 shadow-sm";
+                } else {
+                    el.className = "px-2.5 py-1 rounded-md text-[11px] font-bold transition text-slate-400 hover:text-white";
+                }
+            });
+        }
+
+        function printBasReport() {
+            window.print();
+        }
+
+        function renderBasReportView() {
+            updateBasQuarterButtonsUI();
+            const fySelect = document.getElementById('basFinancialYear');
+            if (fySelect && fySelect.value !== currentBasFY) {
+                fySelect.value = currentBasFY;
+            }
+
+            const qInfo = getBasQuarterDates(currentBasQuarter, currentBasFY);
+            const startIso = qInfo.start;
+            const endIso = qInfo.end;
+
+            // Top analytics header badge
+            const salesBadge = document.getElementById('salesSelectedDayBadge');
+            if (salesBadge) {
+                salesBadge.innerText = `BAS: ${qInfo.title}`;
+            }
+
+            // Banner Title & Dates
+            const periodTitleEl = document.getElementById('basPeriodTitle');
+            if (periodTitleEl) {
+                periodTitleEl.innerText = `${qInfo.title} Business Activity Statement`;
+            }
+            const periodDatesEl = document.getElementById('basPeriodDates');
+            if (periodDatesEl) {
+                periodDatesEl.innerText = `${formatDisplayDateStr(startIso)} – ${formatDisplayDateStr(endIso)} (${qInfo.days} days)`;
+            }
+
+            // 1. Calculate Gross Sales (G1) & GST on Sales (1A)
+            const qSales = hourlySalesStore.filter(s => {
+                const d = cleanDateStr(s.date);
+                return d >= startIso && d <= endIso;
+            });
+            let totalSalesG1 = 0;
+            qSales.forEach(s => totalSalesG1 += Number(s.totalSales || 0));
+            const gstOnSales1A = totalSalesG1 / 11;
+            const tradingDaysCount = qSales.length;
+
+            const daysBadge = document.getElementById('basTradingDaysCount');
+            if (daysBadge) daysBadge.innerText = `${tradingDaysCount} days`;
+
+            const g1El = document.getElementById('basBoxG1');
+            if (g1El) g1El.innerText = `$${totalSalesG1.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const box1AEl = document.getElementById('basBox1A');
+            if (box1AEl) box1AEl.innerText = `$${gstOnSales1A.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // 2. Calculate Total Non-Capital Purchases (G11) & GST on Purchases (1B)
+            const qExpenses = expensesStore.filter(x => {
+                if (!x.date) return false;
+                const d = cleanDateStr(x.date);
+                return d >= startIso && d <= endIso;
+            });
+
+            const expBadge = document.getElementById('basExpenseRecordsCount');
+            if (expBadge) expBadge.innerText = `${qExpenses.length} records`;
+
+            let totalPurchasesG11 = 0;
+            let totalGstCredits1B = 0;
+
+            const categoryBreakdown = {};
+            EXPENSE_CATEGORIES.forEach(c => {
+                const rule = BAS_GST_RULES[c.key] || { taxable: true, rate: 1/11, label: 'Taxable (10% GST)' };
+                categoryBreakdown[c.key] = {
+                    key: c.key,
+                    icon: c.icon,
+                    total: 0,
+                    isTaxable: rule.taxable,
+                    claimableAmt: 0,
+                    gstCredit: 0,
+                    classification: rule.label
+                };
+            });
+
+            qExpenses.forEach(x => {
+                const amt = Number(x.amount || 0);
+                const catKey = x.category || 'Others';
+                totalPurchasesG11 += amt;
+
+                if (!categoryBreakdown[catKey]) {
+                    const rule = BAS_GST_RULES[catKey] || { taxable: true, rate: 1/11, label: 'Taxable (10% GST)' };
+                    categoryBreakdown[catKey] = {
+                        key: catKey,
+                        icon: '💸',
+                        total: 0,
+                        isTaxable: rule.taxable,
+                        claimableAmt: 0,
+                        gstCredit: 0,
+                        classification: rule.label
+                    };
+                }
+
+                categoryBreakdown[catKey].total += amt;
+                if (categoryBreakdown[catKey].isTaxable) {
+                    const cred = amt / 11;
+                    categoryBreakdown[catKey].claimableAmt += amt;
+                    categoryBreakdown[catKey].gstCredit += cred;
+                    totalGstCredits1B += cred;
+                }
+            });
+
+            const g11El = document.getElementById('basBoxG11');
+            if (g11El) g11El.innerText = `$${totalPurchasesG11.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const box1BEl = document.getElementById('basBox1B');
+            if (box1BEl) box1BEl.innerText = `$${totalGstCredits1B.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // 3. Net GST Settlement (Box 3)
+            const netGstBox3 = gstOnSales1A - totalGstCredits1B;
+            const box3El = document.getElementById('basBox3');
+            if (box3El) box3El.innerText = `$${Math.abs(netGstBox3).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const netBadge = document.getElementById('basNetGstBadge');
+            if (netBadge) {
+                if (netGstBox3 >= 0) {
+                    netBadge.className = "text-[9px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                    netBadge.innerText = "Owed to ATO";
+                } else {
+                    netBadge.className = "text-[9px] px-2 py-0.5 rounded-full font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30";
+                    netBadge.innerText = "Refund from ATO";
+                }
+            }
+
+            // 4. Wages & PAYG Withholding (Box W1 & W2)
+            const qShifts = dataStore.filter(entry => {
+                if (!entry.date || !entry.from || !entry.to) return false;
+                const d = cleanDateStr(entry.date);
+                return d >= startIso && d <= endIso;
+            });
+
+            let totalWagesW1 = 0;
+            let totalTaxWithheldW2 = 0;
+            const staffMap = {};
+
+            qShifts.forEach(shift => {
+                const name = (shift.name || 'Unknown').trim();
+                const isOwner = (name.toLowerCase() === 'qaiser');
+                const totH = Number(shift.totalHours) || 0;
+                const cr = Number(shift.cashRate) || 0;
+                const tr = Number(shift.taxRate) || 0;
+                const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                const th = Math.max(0, totH - ch);
+
+                let shiftGross = 0;
+                let shiftTaxPay = 0;
+                let shiftWithheld = 0;
+
+                if (!isOwner) {
+                    shiftGross = (ch * cr) + (th * tr);
+                    shiftTaxPay = (th * tr);
+                    // 15% standard PAYG withholding on tax portion
+                    shiftWithheld = shiftTaxPay * (shift.taxRate ? ESTIMATED_TAX_RATE : 0);
+                    totalWagesW1 += shiftGross;
+                    totalTaxWithheldW2 += shiftWithheld;
+                }
+
+                if (!staffMap[name]) {
+                    staffMap[name] = {
+                        name,
+                        shifts: 0,
+                        hours: 0,
+                        taxHours: 0,
+                        grossPay: 0,
+                        taxWithheld: 0,
+                        isOwner
+                    };
+                }
+
+                staffMap[name].shifts += 1;
+                staffMap[name].hours += totH;
+                staffMap[name].taxHours += th;
+                staffMap[name].grossPay += shiftGross;
+                staffMap[name].taxWithheld += shiftWithheld;
+            });
+
+            const boxW1El = document.getElementById('basBoxW1');
+            if (boxW1El) boxW1El.innerText = `$${totalWagesW1.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const boxW2El = document.getElementById('basBoxW2');
+            if (boxW2El) boxW2El.innerText = `$${totalTaxWithheldW2.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // 5. Total Settlement to ATO (Net GST Box 3 + PAYG Box W2)
+            const totalPayableToAto = (netGstBox3 > 0 ? netGstBox3 : 0) + totalTaxWithheldW2;
+            const payableEl = document.getElementById('basTotalPayable');
+            if (payableEl) {
+                payableEl.innerText = `$${totalPayableToAto.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+
+            // ================= RENDER AUDIT TABLES =================
+
+            // Table 1: Monthly Summary
+            const monthlyTbody = document.getElementById('basMonthlyTableBody');
+            if (monthlyTbody) {
+                let monthlyRowsHtml = '';
+                qInfo.months.forEach(m => {
+                    const mSalesList = hourlySalesStore.filter(s => {
+                        const d = cleanDateStr(s.date);
+                        return d >= m.start && d <= m.end;
+                    });
+                    let mG1 = 0;
+                    mSalesList.forEach(s => mG1 += Number(s.totalSales || 0));
+                    const m1A = mG1 / 11;
+                    const mTradingDays = mSalesList.length;
+
+                    const mExpList = expensesStore.filter(x => {
+                        if (!x.date) return false;
+                        const d = cleanDateStr(x.date);
+                        return d >= m.start && d <= m.end;
+                    });
+                    let mG11 = 0;
+                    let m1B = 0;
+                    mExpList.forEach(x => {
+                        const amt = Number(x.amount || 0);
+                        mG11 += amt;
+                        const cat = x.category || 'Others';
+                        const rule = BAS_GST_RULES[cat] || { taxable: true, rate: 1/11 };
+                        if (rule.taxable) {
+                            m1B += (amt / 11);
+                        }
+                    });
+
+                    const mNetGst = m1A - m1B;
+
+                    monthlyRowsHtml += `
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="p-2 font-bold text-slate-200">${m.name}</td>
+                            <td class="p-2 text-right font-mono text-slate-300">${mTradingDays}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mG1.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-blue-400 font-bold">$${m1A.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mG11.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-purple-400 font-bold">$${m1B.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono font-black ${mNetGst >= 0 ? 'text-emerald-400' : 'text-sky-400'}">
+                                ${mNetGst < 0 ? '-' : ''}$${Math.abs(mNetGst).toFixed(2)}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Summary footer row
+                monthlyRowsHtml += `
+                    <tr class="bg-slate-950/80 font-black border-t-2 border-slate-700 text-slate-100">
+                        <td class="p-2 uppercase text-[10px] text-amber-400">Quarter Total</td>
+                        <td class="p-2 text-right font-mono text-amber-300">${tradingDaysCount}</td>
+                        <td class="p-2 text-right font-mono text-white">$${totalSalesG1.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-blue-300">$${gstOnSales1A.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-white">$${totalPurchasesG11.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-purple-300">$${totalGstCredits1B.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-amber-400">$${netGstBox3.toFixed(2)}</td>
+                    </tr>
+                `;
+
+                monthlyTbody.innerHTML = monthlyRowsHtml;
+            }
+
+            // Table 2: Category GST Audit
+            const catTbody = document.getElementById('basExpenseCategoriesTableBody');
+            if (catTbody) {
+                let catRowsHtml = '';
+                let totalClaimableSum = 0;
+                Object.values(categoryBreakdown).forEach(c => {
+                    totalClaimableSum += c.claimableAmt;
+                    catRowsHtml += `
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="p-2 font-bold text-slate-200 flex items-center gap-1.5">
+                                <span>${c.icon}</span> <span>${c.key}</span>
+                            </td>
+                            <td class="p-2 text-[11px]">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.isTaxable ? 'bg-purple-950/70 text-purple-300 border border-purple-800' : 'bg-emerald-950/70 text-emerald-300 border border-emerald-800'}">
+                                    ${c.classification}
+                                </span>
+                            </td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${c.total.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-slate-300">$${c.claimableAmt.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono font-bold ${c.gstCredit > 0 ? 'text-purple-400' : 'text-slate-500'}">
+                                $${c.gstCredit.toFixed(2)}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Total footer row
+                catRowsHtml += `
+                    <tr class="bg-slate-950/80 font-black border-t-2 border-slate-700 text-slate-100">
+                        <td colspan="2" class="p-2 uppercase text-[10px] text-amber-400">Audit Total [Box G11 & 1B]</td>
+                        <td class="p-2 text-right font-mono text-white">$${totalPurchasesG11.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-slate-300">$${totalClaimableSum.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-amber-400">$${totalGstCredits1B.toFixed(2)}</td>
+                    </tr>
+                `;
+
+                catTbody.innerHTML = catRowsHtml;
+            }
+
+            // Table 3: Staff Salaries & PAYG Withholding
+            const staffTbody = document.getElementById('basStaffTableBody');
+            if (staffTbody) {
+                const staffList = Object.values(staffMap).sort((a, b) => b.hours - a.hours);
+                if (staffList.length === 0) {
+                    staffTbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500 italic">No roster shifts recorded for this period.</td></tr>`;
+                } else {
+                    let staffRowsHtml = '';
+                    let totalShiftsCount = 0;
+                    let totalHoursSum = 0;
+                    let totalTaxHoursSum = 0;
+
+                    staffList.forEach(s => {
+                        totalShiftsCount += s.shifts;
+                        totalHoursSum += s.hours;
+                        totalTaxHoursSum += s.taxHours;
+
+                        staffRowsHtml += `
+                            <tr class="hover:bg-slate-800/40 transition">
+                                <td class="p-2 font-bold text-slate-200 flex items-center gap-1.5">
+                                    <span>${s.isOwner ? '👑' : '👤'}</span>
+                                    <span>${s.name}</span>
+                                    ${s.isOwner ? '<span class="text-[9px] text-amber-400 bg-amber-950/60 border border-amber-900/60 px-1.5 py-0.2 rounded font-semibold ml-1">Owner</span>' : ''}
+                                </td>
+                                <td class="p-2 text-right font-mono text-slate-300">${s.shifts}</td>
+                                <td class="p-2 text-right font-mono text-slate-200 font-bold">${s.hours.toFixed(1)} hrs</td>
+                                <td class="p-2 text-right font-mono text-slate-400">${s.taxHours.toFixed(1)} hrs</td>
+                                <td class="p-2 text-right font-mono font-bold text-amber-300">$${s.grossPay.toFixed(2)}</td>
+                                <td class="p-2 text-right font-mono font-bold text-amber-400">$${s.taxWithheld.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
+
+                    // Summary footer row
+                    staffRowsHtml += `
+                        <tr class="bg-slate-950/80 font-black border-t-2 border-slate-700 text-slate-100">
+                            <td class="p-2 uppercase text-[10px] text-amber-400">Total [Box W1 & W2]</td>
+                            <td class="p-2 text-right font-mono text-slate-300">${totalShiftsCount}</td>
+                            <td class="p-2 text-right font-mono text-white">${totalHoursSum.toFixed(1)} hrs</td>
+                            <td class="p-2 text-right font-mono text-slate-300">${totalTaxHoursSum.toFixed(1)} hrs</td>
+                            <td class="p-2 text-right font-mono text-amber-300">$${totalWagesW1.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-amber-400">$${totalTaxWithheldW2.toFixed(2)}</td>
+                        </tr>
+                    `;
+
+                    staffTbody.innerHTML = staffRowsHtml;
+                }
             }
         }
 
