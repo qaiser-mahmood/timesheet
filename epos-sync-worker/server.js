@@ -246,12 +246,27 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       };
     });
 
-    const sales = (salesRows || []).map(s => ({
-      date: s.date,
-      totalSales: Number(s.total_sales) || 0,
-      hourly: s.hourly || {},
-      updatedAt: s.updated_at || ''
-    }));
+    const sales = (salesRows || []).map(s => {
+      const tot = Number(s.total_sales) || 0;
+      let h = s.hourly || {};
+      if (typeof h === 'string') {
+        try { h = JSON.parse(h); } catch (_) { h = {}; }
+      }
+      const card = s.card_sales !== undefined && s.card_sales !== null 
+        ? Number(s.card_sales) 
+        : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
+      const cash = s.cash_sales !== undefined && s.cash_sales !== null 
+        ? Number(s.cash_sales) 
+        : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+      return {
+        date: s.date,
+        totalSales: tot,
+        cardSales: card,
+        cashSales: cash,
+        hourly: h,
+        updatedAt: s.updated_at || ''
+      };
+    });
 
     const expenses = (expenseRows || []).map(x => ({
       id: x.id,
@@ -356,10 +371,16 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
 
     if (payload.action === 'save_hourly_sales') {
       const cleanD = cleanDateStr(payload.date);
+      let h = payload.hourly || {};
+      if (typeof h === 'string') {
+        try { h = JSON.parse(h); } catch (_) { h = {}; }
+      }
+      if (payload.cardSales !== undefined) h._cardSales = Number(payload.cardSales) || 0;
+      if (payload.cashSales !== undefined) h._cashSales = Number(payload.cashSales) || 0;
       const row = {
         date: cleanD,
         total_sales: Number(payload.totalSales) || 0,
-        hourly: payload.hourly || {},
+        hourly: h,
         updated_at: new Date().toISOString()
       };
       await supabaseServerFetch('hourly_sales?on_conflict=date', {
@@ -1124,7 +1145,9 @@ async function runSync(isManual = false, notifyTelegram = true) {
           var rowHour = parseTimeStr(rowTime);
           var rowAmt = parseFloat(tMatch[3]);
           if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
-            pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
+            var afterMatch = pageText.slice(tMatch.index, tMatch.index + 120);
+            var isCash = /\bcash\b/i.test(afterMatch);
+            pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, isCash: isCash, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
           }
         }
 
@@ -1135,7 +1158,9 @@ async function runSync(isManual = false, notifyTelegram = true) {
             var hourStr = parseTimeStr(timeStr);
             var amt = parseFloat(tMatch[2]);
             if (hourStr !== null && !isNaN(amt)) {
-              pageTxList.push({ date: defaultDate, time: timeStr, hour: hourStr, amount: amt, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
+              var afterMatch2 = pageText.slice(tMatch.index, tMatch.index + 120);
+              var isCash2 = /\bcash\b/i.test(afterMatch2);
+              pageTxList.push({ date: defaultDate, time: timeStr, hour: hourStr, amount: amt, isCash: isCash2, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
             }
           }
         }
@@ -1147,7 +1172,9 @@ async function runSync(isManual = false, notifyTelegram = true) {
             var timeStr2 = tMatch[2];
             var hourStr2 = parseTimeStr(timeStr2);
             if (hourStr2 !== null && !isNaN(amt2)) {
-              pageTxList.push({ date: defaultDate, time: timeStr2, hour: hourStr2, amount: amt2, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
+              var afterMatch3 = pageText.slice(tMatch.index, tMatch.index + 120);
+              var isCash3 = /\bcash\b/i.test(afterMatch3);
+              pageTxList.push({ date: defaultDate, time: timeStr2, hour: hourStr2, amount: amt2, isCash: isCash3, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
             }
           }
         }
@@ -1211,10 +1238,15 @@ async function runSync(isManual = false, notifyTelegram = true) {
         var tx = txList[i];
         var dKey = tx.date;
         if (!daysGroup[dKey]) {
-          daysGroup[dKey] = { totalSales: 0, count: 0, hourly: {} };
+          daysGroup[dKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
         }
         daysGroup[dKey].count++;
         daysGroup[dKey].totalSales += tx.amount;
+        if (tx.isCash) {
+          daysGroup[dKey].cashSales += tx.amount;
+        } else {
+          daysGroup[dKey].cardSales += tx.amount;
+        }
         daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
       }
 
@@ -1223,10 +1255,21 @@ async function runSync(isManual = false, notifyTelegram = true) {
       for (var d = 0; d < sortedDays.length; d++) {
         var dayDate = sortedDays[d];
         daysGroup[dayDate].totalSales = Math.round(daysGroup[dayDate].totalSales * 100) / 100;
+        daysGroup[dayDate].cardSales = Math.round(daysGroup[dayDate].cardSales * 100) / 100;
+        daysGroup[dayDate].cashSales = Math.round(daysGroup[dayDate].cashSales * 100) / 100;
         for (var hk in daysGroup[dayDate].hourly) {
           daysGroup[dayDate].hourly[hk] = Math.round(daysGroup[dayDate].hourly[hk] * 100) / 100;
         }
-        daysBatch.push({ date: dayDate, totalSales: daysGroup[dayDate].totalSales, count: daysGroup[dayDate].count, hourly: daysGroup[dayDate].hourly });
+        daysGroup[dayDate].hourly._cardSales = daysGroup[dayDate].cardSales;
+        daysGroup[dayDate].hourly._cashSales = daysGroup[dayDate].cashSales;
+        daysBatch.push({
+          date: dayDate,
+          totalSales: daysGroup[dayDate].totalSales,
+          cardSales: daysGroup[dayDate].cardSales,
+          cashSales: daysGroup[dayDate].cashSales,
+          count: daysGroup[dayDate].count,
+          hourly: daysGroup[dayDate].hourly
+        });
       }
 
       var txRows = txList.map(function(t, idx) {

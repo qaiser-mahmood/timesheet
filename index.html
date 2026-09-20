@@ -643,26 +643,30 @@
 
                 <!-- ATO BAS Standard Boxes Grid (Official Box Numbers G1, 1A, G11, 1B, W1, W2, 3) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <!-- Box 1A & G1: GST on Sales -->
+                    <!-- Box 1A & G1: GST on Sales (Card Only) -->
                     <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
                         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                             <div class="flex items-center gap-1.5">
                                 <span class="w-5 h-5 rounded bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">1A</span>
-                                <span class="text-xs font-bold text-slate-200">GST on Sales</span>
+                                <span class="text-xs font-bold text-slate-200">GST on Card Sales</span>
                             </div>
                             <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">10% GST</span>
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-baseline justify-between">
-                                <span class="text-[11px] text-slate-400">Box [G1] Total Sales:</span>
+                                <span class="text-[11px] text-slate-400">Box [G1] Card Sales:</span>
                                 <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxG1">$0.00</span>
                             </div>
-                            <div class="flex items-baseline justify-between pt-1">
+                            <div class="flex items-baseline justify-between text-[10px] text-slate-400">
+                                <span>Cash Sales (Excluded):</span>
+                                <span class="font-mono text-slate-400" id="basBoxG1Cash">$0.00</span>
+                            </div>
+                            <div class="flex items-baseline justify-between pt-1 border-t border-slate-800/60">
                                 <span class="text-xs font-semibold text-slate-300">Box [1A] GST on Sales:</span>
                                 <span class="text-lg font-black text-blue-400 font-mono" id="basBox1A">$0.00</span>
                             </div>
                         </div>
-                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">G1 ÷ 11 (Hot cooked food & takeaway is 100% taxable)</p>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Card G1 ÷ 11 (Cash sales excluded from BAS)</p>
                     </div>
 
                     <!-- Box 1B & G11: GST on Purchases -->
@@ -768,7 +772,8 @@
                                     <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
                                         <th class="p-2">Month</th>
                                         <th class="p-2 text-right">Trading Days</th>
-                                        <th class="p-2 text-right">Gross Sales (G1)</th>
+                                        <th class="p-2 text-right" title="Card Sales included in BAS">Card Sales (G1)</th>
+                                        <th class="p-2 text-right text-slate-400" title="Cash Sales excluded from BAS">Cash (excl.)</th>
                                         <th class="p-2 text-right">GST on Sales (1A)</th>
                                         <th class="p-2 text-right">Expenses (G11)</th>
                                         <th class="p-2 text-right">GST Credits (1B)</th>
@@ -904,7 +909,10 @@
                 <!-- Summary KPI Cards (3 Clean Cards, Labor % removed) -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</span>
+                            <span id="kpiCardCashSplit" class="text-[9px] text-slate-400 font-mono"></span>
+                        </div>
                         <div id="kpiSalesTotal" class="text-sm sm:text-base font-extrabold text-emerald-400">$0.00</div>
                     </div>
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
@@ -1577,6 +1585,13 @@
                                 if (typeof s.hourly === 'string') {
                                     try { s.hourly = JSON.parse(s.hourly); } catch(e) { s.hourly = {}; }
                                 }
+                                const h = s.hourly || {};
+                                s.cardSales = s.cardSales !== undefined && s.cardSales !== null 
+                                    ? Number(s.cardSales) 
+                                    : (h._cardSales !== undefined ? Number(h._cardSales) : s.totalSales);
+                                s.cashSales = s.cashSales !== undefined && s.cashSales !== null 
+                                    ? Number(s.cashSales) 
+                                    : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, s.totalSales - s.cardSales));
                                 return s;
                             });
                         }
@@ -2109,8 +2124,9 @@
             const headers = splitCsvRow(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
             let dateIdx = headers.findIndex(h => h.includes('date') || h.includes('time') || h.includes('created'));
             let amtIdx = headers.findIndex(h => h.includes('total') || h.includes('amount') || h.includes('net') || h.includes('gross') || h.includes('subtotal'));
+            let payIdx = headers.findIndex(h => h.includes('payment') || h.includes('tender') || h.includes('method') || h.includes('type'));
 
-            let daysMap = {}; // isoDate -> { totalSales: 0, hourly: {}, count: 0 }
+            let daysMap = {}; // isoDate -> { totalSales: 0, cardSales: 0, cashSales: 0, hourly: {}, count: 0 }
 
             for (let i = 1; i < lines.length; i++) {
                 const cols = splitCsvRow(lines[i]);
@@ -2119,7 +2135,7 @@
 
                 if (!dateStr || !amtStr) {
                     for (let c of cols) {
-                        if (!dateStr && (/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(c) || /\d{4}-\\d{2}-\\d{2}/.test(c))) {
+                        if (!dateStr && (/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(c) || /\d{4}-\d{2}-\d{2}/.test(c))) {
                             dateStr = c;
                         } else if (!amtStr && /[\$£€]?\s*-?\d+[\.,]\d{2}/.test(c)) {
                             amtStr = c;
@@ -2130,6 +2146,16 @@
                 if (!dateStr || !amtStr) continue;
 
                 let cleanAmt = parseFloat(amtStr.replace(/[^0-9.-]+/g, '')) || 0;
+
+                // Determine if this transaction was paid by Cash or Card
+                let isCash = false;
+                if (payIdx !== -1 && cols[payIdx]) {
+                    if (cols[payIdx].toLowerCase().includes('cash')) isCash = true;
+                } else {
+                    for (let c of cols) {
+                        if (/\bcash\b/i.test(c)) { isCash = true; break; }
+                    }
+                }
 
                 let isoDate = '';
                 const dm = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -2157,12 +2183,17 @@
                 }
 
                 if (!daysMap[isoDate]) {
-                    daysMap[isoDate] = { totalSales: 0, hourly: {}, count: 0 };
+                    daysMap[isoDate] = { totalSales: 0, cardSales: 0, cashSales: 0, hourly: {}, count: 0 };
                 }
 
                 if (hour !== null) {
                     let hKey = hour.toString().padStart(2, '0') + ':00';
                     daysMap[isoDate].hourly[hKey] = (daysMap[isoDate].hourly[hKey] || 0) + cleanAmt;
+                }
+                if (isCash) {
+                    daysMap[isoDate].cashSales += cleanAmt;
+                } else {
+                    daysMap[isoDate].cardSales += cleanAmt;
                 }
                 daysMap[isoDate].totalSales += cleanAmt;
                 daysMap[isoDate].count++;
@@ -2175,9 +2206,13 @@
 
             for (let d of parsedDates) {
                 daysMap[d].totalSales = Math.round(daysMap[d].totalSales * 100) / 100;
+                daysMap[d].cardSales = Math.round((daysMap[d].cardSales || 0) * 100) / 100;
+                daysMap[d].cashSales = Math.round((daysMap[d].cashSales || 0) * 100) / 100;
                 for (let h in daysMap[d].hourly) {
                     daysMap[d].hourly[h] = Math.round(daysMap[d].hourly[h] * 100) / 100;
                 }
+                daysMap[d].hourly._cardSales = daysMap[d].cardSales;
+                daysMap[d].hourly._cashSales = daysMap[d].cashSales;
             }
 
             if (statusEl) {
@@ -2190,6 +2225,8 @@
                     action: "save_hourly_sales",
                     date: d,
                     totalSales: daysMap[d].totalSales,
+                    cardSales: daysMap[d].cardSales,
+                    cashSales: daysMap[d].cashSales,
                     hourly: daysMap[d].hourly
                 });
 
@@ -2197,6 +2234,8 @@
                 hourlySalesStore.push({
                     date: d,
                     totalSales: daysMap[d].totalSales,
+                    cardSales: daysMap[d].cardSales,
+                    cashSales: daysMap[d].cashSales,
                     hourly: daysMap[d].hourly,
                     updatedAt: new Date().toISOString()
                 });
@@ -3297,13 +3336,27 @@
                 periodDatesEl.innerText = `${formatDisplayDateStr(startIso)} – ${formatDisplayDateStr(endIso)} (${qInfo.days} days)`;
             }
 
-            // 1. Calculate Gross Sales (G1) & GST on Sales (1A)
+            // 1. Calculate Card Sales (G1), Cash Sales (excluded), & GST on Sales (1A)
             const qSales = hourlySalesStore.filter(s => {
                 const d = cleanDateStr(s.date);
                 return d >= startIso && d <= endIso;
             });
-            let totalSalesG1 = 0;
-            qSales.forEach(s => totalSalesG1 += Number(s.totalSales || 0));
+            let totalCardSales = 0;
+            let totalCashSales = 0;
+            let totalAllSales = 0;
+
+            qSales.forEach(s => {
+                const tot = Number(s.totalSales || 0);
+                const h = s.hourly || {};
+                const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
+                const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+                totalCardSales += card;
+                totalCashSales += cash;
+                totalAllSales += tot;
+            });
+
+            // For BAS, Box G1 strictly includes Card Sales as requested by user
+            const totalSalesG1 = totalCardSales;
             const gstOnSales1A = totalSalesG1 / 11;
             const tradingDaysCount = qSales.length;
 
@@ -3312,6 +3365,9 @@
 
             const g1El = document.getElementById('basBoxG1');
             if (g1El) g1El.innerText = `$${totalSalesG1.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const g1CashEl = document.getElementById('basBoxG1Cash');
+            if (g1CashEl) g1CashEl.innerText = `$${totalCashSales.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             const box1AEl = document.getElementById('basBox1A');
             if (box1AEl) box1AEl.innerText = `$${gstOnSales1A.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -3466,9 +3522,17 @@
                         const d = cleanDateStr(s.date);
                         return d >= m.start && d <= m.end;
                     });
-                    let mG1 = 0;
-                    mSalesList.forEach(s => mG1 += Number(s.totalSales || 0));
-                    const m1A = mG1 / 11;
+                    let mCardG1 = 0;
+                    let mCash = 0;
+                    mSalesList.forEach(s => {
+                        const tot = Number(s.totalSales || 0);
+                        const h = s.hourly || {};
+                        const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
+                        const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+                        mCardG1 += card;
+                        mCash += cash;
+                    });
+                    const m1A = mCardG1 / 11;
                     const mTradingDays = mSalesList.length;
 
                     const mExpList = expensesStore.filter(x => {
@@ -3494,7 +3558,8 @@
                         <tr class="hover:bg-slate-800/40 transition">
                             <td class="p-2 font-bold text-slate-200">${m.name}</td>
                             <td class="p-2 text-right font-mono text-slate-300">${mTradingDays}</td>
-                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mG1.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mCardG1.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-slate-400">$${mCash.toFixed(2)}</td>
                             <td class="p-2 text-right font-mono text-blue-400 font-bold">$${m1A.toFixed(2)}</td>
                             <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mG11.toFixed(2)}</td>
                             <td class="p-2 text-right font-mono text-purple-400 font-bold">$${m1B.toFixed(2)}</td>
@@ -3511,6 +3576,7 @@
                         <td class="p-2 uppercase text-[10px] text-amber-400">Quarter Total</td>
                         <td class="p-2 text-right font-mono text-amber-300">${tradingDaysCount}</td>
                         <td class="p-2 text-right font-mono text-white">$${totalSalesG1.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-slate-400">$${totalCashSales.toFixed(2)}</td>
                         <td class="p-2 text-right font-mono text-blue-300">$${gstOnSales1A.toFixed(2)}</td>
                         <td class="p-2 text-right font-mono text-white">$${totalPurchasesG11.toFixed(2)}</td>
                         <td class="p-2 text-right font-mono text-purple-300">$${totalGstCredits1B.toFixed(2)}</td>
@@ -4248,6 +4314,16 @@ function convertHourStr(hStr) {
             const kpiPeak = document.getElementById('kpiPeakHour');
 
             if (kpiSales) kpiSales.innerText = `$${totalDaySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const cardCashBadge = document.getElementById('kpiCardCashSplit');
+            if (cardCashBadge) {
+                const cSales = salesRecord ? (salesRecord.cardSales !== undefined ? Number(salesRecord.cardSales) : (hourlyData._cardSales !== undefined ? Number(hourlyData._cardSales) : totalDaySales)) : 0;
+                const mCash = salesRecord ? (salesRecord.cashSales !== undefined ? Number(salesRecord.cashSales) : (hourlyData._cashSales !== undefined ? Number(hourlyData._cashSales) : Math.max(0, totalDaySales - cSales))) : 0;
+                if (mCash > 0 || cSales > 0) {
+                    cardCashBadge.innerText = `💳 $${cSales.toFixed(0)} | 💵 $${mCash.toFixed(0)}`;
+                } else {
+                    cardCashBadge.innerText = '';
+                }
+            }
             if (kpiWages) kpiWages.innerText = `$${totalDayLaborCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             if (kpiLabor) {
