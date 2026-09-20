@@ -27,14 +27,17 @@
             </div>
 
             <div class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
-                <button id="authButton" type="button" class="hide-on-share bg-red-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-amber-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    🔐 Login with Google
+                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    👁️ View Roster
                 </button>
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    📋 Copy Previous Week
+                    📋 Copy Last Week
                 </button>
-                                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    👁️ View Roster
+                <button type="button" onclick="openEposModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700" title="Cloud Worker Status & Settings">
+                    ⚙️ Worker
+                </button>
+                <button id="authButton" type="button" class="hide-on-share bg-red-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-red-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
+                    🔐 Login with Google
                 </button>
             </div>
         </div>
@@ -154,7 +157,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-sm sm:text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
-                        📊 Sales & Labor Intelligence
+                        📊 Sales & Expenses
                     </span>
                     <span id="salesSelectedDayBadge" class="bg-purple-600/90 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm">
                         -
@@ -163,37 +166,40 @@
                 </div>
                 <div class="flex items-center gap-2 text-xs">
                     <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Scrape latest live sales directly from Epos Now">
-                        <span id="liveEposSyncSpinner" class="inline-block">⚡</span> <span id="liveEposSyncText">Sync Epos</span>
+                        <span id="liveEposSyncSpinner" class="inline-block">⚡</span> <span id="liveEposSyncText">Sync</span>
                     </button>
-                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm border border-slate-700" title="Quick reload from Supabase database">
-                        <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>DB</span>
+                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Quick reload from Supabase database">
+                        <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>Refresh</span>
                     </button>
-                    <button type="button" onclick="openExpenseModal()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        💸 Log Expense
-                    </button>
-                    <button type="button" onclick="openEposModal()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Cloud Worker Status & Settings">
-                        ⚙️ Worker
+                    <button type="button" onclick="openExpenseModal()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm" title="Log a new business expense">
+                        💸 Expenses
                     </button>
                 </div>
             </div>
 
-            <!-- Analytics Navigation Tabs -->
-            <div class="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs overflow-x-auto">
-                <button type="button" id="tabRangeBtn" onclick="switchAnalyticsTab('range')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5 whitespace-nowrap">
-                    📅 Date Range Chart
-                </button>
-                <button type="button" id="tabCompareBtn" onclick="switchAnalyticsTab('compare')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
-                    ⚖️ Compare Periods
-                </button>
-                <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
-                    📋 Expenses Ledger
-                </button>
-                <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="flex-1 min-w-[130px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
-                    🔥 7-Day Hourly Heatmap
-                </button>
-                <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap">
-                    ⏱️ Single Day Breakdown
-                </button>
+            <!-- Analytics Navigation Tabs (2 Rows, No Horizontal Scrolling) -->
+            <div class="p-1.5 bg-slate-950/80 rounded-xl border border-slate-800/80 space-y-1.5 text-xs">
+                <!-- Row 1: Chart, Compare, Ledger -->
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button type="button" id="tabRangeBtn" onclick="switchAnalyticsTab('range')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1 whitespace-nowrap">
+                        📅 Chart
+                    </button>
+                    <button type="button" id="tabCompareBtn" onclick="switchAnalyticsTab('compare')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                        ⚖️ Compare
+                    </button>
+                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                        📋 Ledger
+                    </button>
+                </div>
+                <!-- Row 2: Heatmap, Hourly Chart -->
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                        🔥 Heatmap
+                    </button>
+                    <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                        ⏱️ Hourly Chart
+                    </button>
+                </div>
             </div>
 
             <!-- VIEW 1: Custom Date Range Chart -->
@@ -205,7 +211,7 @@
                         <!-- Today Preset Group -->
                         <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
                             <button type="button" onclick="navigatePreset('day', -1)" title="Previous Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition">Today</button>
+                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="px-2.5 py-1 text-xs font-black bg-purple-600 text-white rounded shadow transition whitespace-nowrap">Today</button>
                             <button type="button" onclick="navigatePreset('day', 1)" title="Next Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
                         </div>
 
@@ -983,7 +989,7 @@
                         if (btn) btn.disabled = false;
                         if (btnIcon) btnIcon.classList.remove('animate-spin');
                         setTimeout(() => {
-                            if (btnText) btnText.innerText = 'Sync Epos';
+                            if (btnText) btnText.innerText = 'Sync';
                         }, 3000);
                         isCloudLoading = false;
                         setRefreshSpinners(false);
@@ -1147,7 +1153,7 @@
                         renderWeeklyTable();
                         alert(`Success! Copied ${count} shifts from previous week.`);
                     } finally {
-                        btn.innerText = "📋 Copy Previous Week";
+                        btn.innerText = "📋 Copy Last Week";
                         btn.disabled = false;
                         loadCloudData();
                     }
@@ -1721,8 +1727,8 @@
             const contHeatmap = document.getElementById('analyticsHeatmapContainer');
             const contDaily = document.getElementById('analyticsDailyContainer');
 
-            const activeClass = "flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1.5 whitespace-nowrap";
-            const inactiveClass = "flex-1 min-w-[120px] py-2 px-2.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1.5 whitespace-nowrap";
+            const activeClass = "w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1 whitespace-nowrap";
+            const inactiveClass = "w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap";
 
             if (tabRange) tabRange.className = (tabName === 'range' ? activeClass : inactiveClass);
             if (tabCompare) tabCompare.className = (tabName === 'compare' ? activeClass : inactiveClass);
@@ -1780,7 +1786,7 @@
         // ==================== DATE RANGE VIEW ====================
 
         // --- ENHANCED DATE RANGE CONTROLS (TODAY / WEEK / MONTH WITH ◀ ▶ AND 2-CLICK CALENDAR) ---
-        let currentPresetType = 'week'; // 'day' | 'week' | 'month' | 'custom'
+        let currentPresetType = 'day'; // 'day' | 'week' | 'month' | 'custom'
         let presetRefDate = new Date();
         let rangeCalViewYear = new Date().getFullYear();
         let rangeCalViewMonth = new Date().getMonth(); // 0-11
@@ -1925,15 +1931,13 @@
             const fromInput = document.getElementById('chartRangeFrom');
             const toInput = document.getElementById('chartRangeTo');
             if (fromInput && !fromInput.value) {
-                // Default to current week
+                // Default to Today
                 const nowIso = new Date().toISOString().split('T')[0];
-                const mon = getMondayString(nowIso);
-                const sun = addDaysString(mon, 6);
-                fromInput.value = mon;
-                toInput.value = sun;
-                currentPresetType = 'week';
+                fromInput.value = nowIso;
+                toInput.value = nowIso;
+                currentPresetType = 'day';
                 updatePresetButtonsUI();
-                updateCalendarDisplayButton(mon, sun);
+                updateCalendarDisplayButton(nowIso, nowIso);
             }
         }
 
