@@ -152,23 +152,27 @@
         <div id="hourlySalesSection" class="hide-on-share bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-5 space-y-4 shadow-xl border border-slate-800">
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <span class="text-sm sm:text-base font-extrabold tracking-tight text-white flex items-center gap-1.5">
                         📊 Sales & Labor Intelligence
                     </span>
                     <span id="salesSelectedDayBadge" class="bg-purple-600/90 text-white text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm">
                         -
                     </span>
+                    <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
                 <div class="flex items-center gap-2 text-xs">
-                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Refresh data from database">
-                        <span class="cloud-refresh-icon inline-block">🔄</span> <span>Sync</span>
+                    <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Scrape latest live sales directly from Epos Now">
+                        <span id="liveEposSyncSpinner" class="inline-block">⚡</span> <span id="liveEposSyncText">Sync Epos</span>
+                    </button>
+                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 shadow-sm border border-slate-700" title="Quick reload from Supabase database">
+                        <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>DB</span>
                     </button>
                     <button type="button" onclick="openExpenseModal()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
                         💸 Log Expense
                     </button>
-                    <button type="button" onclick="openEposModal()" class="text-[11px] bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                        ⚡ Setup / Sync Epos
+                    <button type="button" onclick="openEposModal()" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Cloud Worker Status & Settings">
+                        ⚙️ Worker
                     </button>
                 </div>
             </div>
@@ -544,6 +548,30 @@
                 <button type="button" onclick="closeEposModal()" class="text-gray-400 hover:text-gray-700 text-lg font-bold">✕</button>
             </div>
 
+            <!-- 24/7 Autonomous Cloud Worker Card -->
+            <div class="bg-gradient-to-br from-indigo-50 via-purple-50 to-emerald-50 border border-purple-200 p-3.5 rounded-xl space-y-2 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="font-bold text-xs text-purple-950 flex items-center gap-1.5">
+                        ☁️ <b>Autonomous Cloud Worker</b>
+                    </div>
+                    <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full shadow-xs">
+                        ● 24/7 Active
+                    </span>
+                </div>
+                <div class="text-[11px] text-gray-600 leading-snug">
+                    Your cloud worker runs continuously on Render, automatically scraping Epos Now and updating Supabase.
+                </div>
+                <button type="button" onclick="closeEposModal(); syncDirectFromEpos();" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold py-2 px-3 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5">
+                    ⚡ Trigger Live Epos Sync Right Now
+                </button>
+            </div>
+
+            <div class="relative flex py-1 items-center">
+                <div class="flex-grow border-t border-gray-200"></div>
+                <span class="flex-shrink mx-2 text-[10px] text-gray-400 uppercase font-bold">Manual Alternatives</span>
+                <div class="flex-grow border-t border-gray-200"></div>
+            </div>
+
             <!-- Bookmarklet Instructions -->
             <div class="space-y-2.5 text-xs text-gray-700">
                 <div class="font-bold text-purple-900 bg-purple-50 p-2.5 rounded-lg border border-purple-200">
@@ -614,6 +642,7 @@
         window.closeEposModal = closeEposModal;
         window.copyBookmarkletCode = copyBookmarkletCode;
         window.handleEposCsvFileSelect = handleEposCsvFileSelect;
+        window.syncDirectFromEpos = syncDirectFromEpos;
         window.refreshCloudData = refreshCloudData;
         window.loadCloudData = loadCloudData;
         window.switchAnalyticsTab = switchAnalyticsTab;
@@ -868,6 +897,97 @@
                             icon.classList.remove('animate-spin');
                         }
                     });
+                }
+
+                const EPOS_WORKER_URL = 'https://epos-sync-worker.onrender.com';
+
+                async function syncDirectFromEpos() {
+                    const user = auth.currentUser;
+                    if (!user) {
+                        alert("Please login first to use this feature.");
+                        return;
+                    }
+                    if (isCloudLoading) return;
+
+                    const btn = document.getElementById('liveEposSyncBtn');
+                    const btnText = document.getElementById('liveEposSyncText');
+                    const btnIcon = document.getElementById('liveEposSyncSpinner');
+                    const pill = document.getElementById('salesSyncNotificationPill');
+
+                    function setSyncStatus(text, bgClass = 'bg-indigo-600 text-white') {
+                        if (pill) {
+                            pill.className = `text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300 ${bgClass}`;
+                            pill.innerText = text;
+                            pill.classList.remove('hidden');
+                        }
+                    }
+
+                    function clearSyncStatus(delay = 5000) {
+                        setTimeout(() => {
+                            if (pill) pill.classList.add('hidden');
+                        }, delay);
+                    }
+
+                    try {
+                        isCloudLoading = true;
+                        setRefreshSpinners(true);
+                        if (btn) btn.disabled = true;
+                        if (btnIcon) btnIcon.classList.add('animate-spin');
+                        if (btnText) btnText.innerText = 'Connecting...';
+                        setSyncStatus('⚡ Connecting to Epos Worker...', 'bg-purple-600 text-white');
+
+                        const progressTimer = setTimeout(() => {
+                            if (btnText) btnText.innerText = 'Scraping Epos...';
+                            setSyncStatus('🔄 Scraping Epos Now live...', 'bg-indigo-600 text-white');
+                        }, 3000);
+
+                        const controller = new AbortController();
+                        const abortTimeout = setTimeout(() => controller.abort(), 55000);
+
+                        let workerResult = null;
+                        try {
+                            const resp = await fetch(`${EPOS_WORKER_URL}/sync?wait=true&notify=false`, {
+                                signal: controller.signal,
+                                cache: 'no-cache'
+                            });
+                            clearTimeout(progressTimer);
+                            clearTimeout(abortTimeout);
+
+                            if (resp.ok) {
+                                const data = await resp.json();
+                                workerResult = data.lastSyncResult;
+                            }
+                        } catch (netErr) {
+                            clearTimeout(progressTimer);
+                            clearTimeout(abortTimeout);
+                            console.warn("Direct Epos scrape request encountered issue:", netErr);
+                        }
+
+                        if (btnText) btnText.innerText = 'Updating DB...';
+                        await loadCloudData({ silent: true });
+
+                        if (workerResult && workerResult.txCount !== undefined) {
+                            setSyncStatus(`✅ Synced ${workerResult.txCount} txs (${workerResult.topDay || 'Live'})`, 'bg-emerald-600 text-white');
+                            if (btnText) btnText.innerText = 'Synced!';
+                        } else {
+                            setSyncStatus('✅ Database Updated', 'bg-emerald-600 text-white');
+                            if (btnText) btnText.innerText = 'Synced!';
+                        }
+                        clearSyncStatus(6000);
+                    } catch (err) {
+                        console.error("Direct Epos sync error:", err);
+                        setSyncStatus('⚠️ Loaded database only', 'bg-amber-700 text-white');
+                        clearSyncStatus(5000);
+                        await loadCloudData({ silent: true });
+                    } finally {
+                        if (btn) btn.disabled = false;
+                        if (btnIcon) btnIcon.classList.remove('animate-spin');
+                        setTimeout(() => {
+                            if (btnText) btnText.innerText = 'Sync Epos';
+                        }, 3000);
+                        isCloudLoading = false;
+                        setRefreshSpinners(false);
+                    }
                 }
 
                 async function refreshCloudData(force = false) {

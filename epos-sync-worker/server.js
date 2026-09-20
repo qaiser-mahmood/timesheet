@@ -36,6 +36,15 @@ const appState = {
 const app = express();
 app.use(express.json());
 
+// CORS Middleware for web browser calls from Timesheet dashboard
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
 // Health endpoint for keep-alive cron & monitoring
 app.get(['/', '/health'], (req, res) => {
   res.json({
@@ -53,11 +62,42 @@ app.get(['/', '/health'], (req, res) => {
 
 // Manual HTTP trigger
 app.get('/sync', async (req, res) => {
+  const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
+  const notifyTelegram = req.query.notify === 'true' || req.query.notify === '1';
+
   if (appState.isSyncing) {
-    return res.json({ status: 'in_progress', message: 'Sync already underway' });
+    if (!shouldWait) {
+      return res.json({ status: 'in_progress', message: 'Sync already underway' });
+    }
+    // Wait for the active sync to complete (up to 45 seconds)
+    const start = Date.now();
+    while (appState.isSyncing && (Date.now() - start < 45000)) {
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    return res.json({
+      status: 'ok',
+      message: 'Sync completed',
+      lastSyncResult: appState.lastSyncResult,
+      lastSyncTime: appState.lastSyncTime
+    });
   }
-  runSync(true).catch(console.error);
-  res.json({ status: 'triggered', message: 'Sync process initiated' });
+
+  if (shouldWait) {
+    try {
+      await runSync(true, notifyTelegram);
+      return res.json({
+        status: 'ok',
+        message: 'Sync completed',
+        lastSyncResult: appState.lastSyncResult,
+        lastSyncTime: appState.lastSyncTime
+      });
+    } catch (err) {
+      return res.status(500).json({ status: 'error', message: err.message });
+    }
+  } else {
+    runSync(true, notifyTelegram).catch(console.error);
+    return res.json({ status: 'triggered', message: 'Sync process initiated' });
+  }
 });
 
 // ----------------------------------------------------
@@ -500,7 +540,7 @@ async function ensureLoggedIn(force = false, isManual = false) {
 // ----------------------------------------------------
 // Sync Engine (Runs Scraper & Upserts to Supabase)
 // ----------------------------------------------------
-async function runSync(isManual = false) {
+async function runSync(isManual = false, notifyTelegram = true) {
   if (appState.isSyncing) {
     console.log('Sync is already running. Skipping.');
     return;
@@ -509,11 +549,11 @@ async function runSync(isManual = false) {
 
   try {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\n============================`);
-    const page = await ensureLoggedIn(false, isManual);
+    const page = await ensureLoggedIn(false, isManual && notifyTelegram);
 
     // Always open a fresh view of the transactions report page
     console.log('Loading fresh transactions report page...');
-    if (isManual) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
+    if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(2500);
@@ -914,8 +954,8 @@ async function runSync(isManual = false) {
     };
     appState.consecutiveFailures = 0;
 
-    // Send summary to Telegram if manually triggered
-    if (isManual) {
+    // Send summary to Telegram if manually triggered with notifications
+    if (isManual && notifyTelegram) {
       const summaryLines = scrapeResult.daysBatch.map(d => `• *${d.date}*: $${d.totalSales.toFixed(2)} (${d.count} txs)`);
       await sendTelegramMessage(
         `✅ *Sync Complete!*\n\n` +
@@ -924,12 +964,14 @@ async function runSync(isManual = false) {
         summaryLines.join('\n')
       );
     }
+    return appState.lastSyncResult;
   } catch (err) {
     appState.consecutiveFailures++;
     console.error('Sync failed:', err);
-    if (isManual || appState.consecutiveFailures === 3) {
+    if ((isManual && notifyTelegram) || appState.consecutiveFailures === 3) {
       await sendTelegramMessage(`⚠️ *Epos Sync Error*: ${err.message}`);
     }
+    throw err;
   } finally {
     appState.isSyncing = false;
   }
