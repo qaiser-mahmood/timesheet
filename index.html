@@ -174,30 +174,26 @@
                     <button type="button" onclick="openExpenseModal()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm" title="Log a new business expense">
                         💸 Expenses
                     </button>
-                </div>
-            </div>
-
-            <!-- Analytics Navigation Tabs (2 Rows, No Horizontal Scrolling) -->
-            <div class="p-1.5 bg-slate-950/80 rounded-xl border border-slate-800/80 space-y-1.5 text-xs">
-                <!-- Row 1: Chart, Compare, Ledger -->
-                <div class="grid grid-cols-3 gap-1.5">
-                    <button type="button" id="tabRangeBtn" onclick="switchAnalyticsTab('range')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1 whitespace-nowrap">
-                        📅 Chart
-                    </button>
-                    <button type="button" id="tabCompareBtn" onclick="switchAnalyticsTab('compare')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
-                        ⚖️ Compare
-                    </button>
-                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="View business expenses ledger">
                         📋 Ledger
                     </button>
                 </div>
-                <!-- Row 2: Heatmap, Hourly Chart -->
-                <div class="grid grid-cols-2 gap-1.5">
-                    <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+            </div>
+
+            <!-- Analytics Navigation Tabs (Single Row with 4 Tabs) -->
+            <div class="p-1.5 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs">
+                <div class="grid grid-cols-4 gap-1.5">
+                    <button type="button" id="tabRangeBtn" onclick="switchAnalyticsTab('range')" class="w-full py-2 px-1 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1 whitespace-nowrap">
+                        🏠 Home
+                    </button>
+                    <button type="button" id="tabCompareBtn" onclick="switchAnalyticsTab('compare')" class="w-full py-2 px-1 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                        ⚖️ Compare
+                    </button>
+                    <button type="button" id="tabHeatmapBtn" onclick="switchAnalyticsTab('heatmap')" class="w-full py-2 px-1 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
                         🔥 Heatmap
                     </button>
-                    <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
-                        ⏱️ Hourly Chart
+                    <button type="button" id="tabDailyBtn" onclick="switchAnalyticsTab('daily')" class="w-full py-2 px-1 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap">
+                        📊 Chart
                     </button>
                 </div>
             </div>
@@ -345,9 +341,7 @@
                             <div class="text-[10px] uppercase font-bold text-indigo-400 flex items-center gap-1">
                                 <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Period A (Baseline)
                             </div>
-                            <div id="compPickerAContainer">
-                                <!-- Injected by JS -->
-                            </div>
+                            <div id="compPickerAContainer"></div>
                         </div>
 
                         <!-- Period B Picker -->
@@ -355,9 +349,7 @@
                             <div class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
                                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Period B (Comparison)
                             </div>
-                            <div id="compPickerBContainer">
-                                <!-- Injected by JS -->
-                            </div>
+                            <div id="compPickerBContainer"></div>
                         </div>
                     </div>
                 </div>
@@ -1727,14 +1719,16 @@
             const contHeatmap = document.getElementById('analyticsHeatmapContainer');
             const contDaily = document.getElementById('analyticsDailyContainer');
 
-            const activeClass = "w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1 whitespace-nowrap";
-            const inactiveClass = "w-full py-2 px-1.5 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap";
+            const activeClass = "w-full py-2 px-1 rounded-lg font-bold text-[11px] sm:text-xs transition text-white bg-purple-600 shadow flex items-center justify-center gap-1 whitespace-nowrap";
+            const inactiveClass = "w-full py-2 px-1 rounded-lg font-bold text-[11px] sm:text-xs transition text-slate-400 hover:text-white hover:bg-slate-800/60 flex items-center justify-center gap-1 whitespace-nowrap";
+            const tabHeaderActive = "text-[11px] bg-amber-600 text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-amber-500/50";
+            const tabHeaderInactive = "text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700";
 
             if (tabRange) tabRange.className = (tabName === 'range' ? activeClass : inactiveClass);
             if (tabCompare) tabCompare.className = (tabName === 'compare' ? activeClass : inactiveClass);
-            if (tabExpenses) tabExpenses.className = (tabName === 'expenses' ? activeClass : inactiveClass);
             if (tabHeatmap) tabHeatmap.className = (tabName === 'heatmap' ? activeClass : inactiveClass);
             if (tabDaily) tabDaily.className = (tabName === 'daily' ? activeClass : inactiveClass);
+            if (tabExpenses) tabExpenses.className = (tabName === 'expenses' ? tabHeaderActive : tabHeaderInactive);
 
             if (contRange) contRange.classList.toggle('hidden', tabName !== 'range');
             if (contCompare) contCompare.classList.toggle('hidden', tabName !== 'compare');
@@ -2704,8 +2698,9 @@
         }
         
         function renderComparisonView() {
-            const pA = document.getElementById('compPickerAContainer');
-            if (pA && !pA.innerHTML.trim()) {
+            const inputA = document.getElementById('compDateA');
+            const inputB = document.getElementById('compDateB');
+            if (!inputA || !inputB) {
                 renderComparisonPickers();
             }
             runComparison();
