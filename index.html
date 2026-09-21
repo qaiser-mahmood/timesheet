@@ -1500,6 +1500,58 @@
                     return match ? match[0] : str;
                 }
 
+                function isStoreMatch(itemStoreId, targetStore = currentStore) {
+                    const sId = itemStoreId || "anatolya";
+                    if (!targetStore || targetStore === "all") return true;
+                    return sId === targetStore;
+                }
+
+                function isExpenseMatch(itemStoreId, targetStore = currentStore) {
+                    const sId = itemStoreId || "anatolya";
+                    if (!targetStore || targetStore === "all") return true;
+                    return sId === targetStore || sId === "company_shared";
+                }
+
+                function getStoreSalesForDate(dateStr, storeKey = currentStore) {
+                    const cleanD = cleanDateStr(dateStr);
+                    if (!cleanD) return null;
+                    if (!storeKey || storeKey === "all") {
+                        const matching = hourlySalesStore.filter(s => cleanDateStr(s.date) === cleanD);
+                        if (matching.length === 0) return null;
+                        let totalSales = 0;
+                        let cardSales = 0;
+                        let cashSales = 0;
+                        const mergedHourly = {};
+                        matching.forEach(m => {
+                            totalSales += Number(m.totalSales || 0);
+                            cardSales += Number(m.cardSales || 0);
+                            cashSales += Number(m.cashSales || 0);
+                            const h = m.hourly || {};
+                            for (const [hk, val] of Object.entries(h)) {
+                                if (hk.startsWith("_")) continue;
+                                mergedHourly[hk] = (mergedHourly[hk] || 0) + Number(val || 0);
+                            }
+                        });
+                        mergedHourly._cardSales = cardSales;
+                        mergedHourly._cashSales = cashSales;
+                        return {
+                            date: cleanD,
+                            store_id: "all",
+                            totalSales: Math.round(totalSales * 100) / 100,
+                            cardSales: Math.round(cardSales * 100) / 100,
+                            cashSales: Math.round(cashSales * 100) / 100,
+                            hourly: mergedHourly
+                        };
+                    } else {
+                        const found = hourlySalesStore.find(s => cleanDateStr(s.date) === cleanD && (s.store_id || "anatolya") === storeKey);
+                        return found || null;
+                    }
+                }
+
+                window.isStoreMatch = isStoreMatch;
+                window.isExpenseMatch = isExpenseMatch;
+                window.getStoreSalesForDate = getStoreSalesForDate;
+
                 async function supabaseFetch(path, options = {}) {
                     const url = `${SUPABASE_URL}/rest/v1/${path}`;
                     const headers = {
@@ -3710,7 +3762,8 @@
                 await loadCloudData();
             } catch (err) {
                 console.error("Loyverse sync error:", err);
-                alert(`❌ Loyverse Sync Error:\n\n${err.message}\n\nMake sure LOYVERSE_TOKEN is configured in Render environment variables.`);
+                const isTokenErr = err.message && (err.message.toLowerCase().includes("token") || err.message.toLowerCase().includes("unauthorized") || err.message.includes("401"));
+                alert(`❌ Loyverse Sync Error:\n\n${err.message}${isTokenErr ? '\n\nMake sure LOYVERSE_TOKEN is configured in Render environment variables.' : ''}`);
             } finally {
                 if (btn) {
                     btn.disabled = false;
