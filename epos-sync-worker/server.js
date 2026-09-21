@@ -1339,7 +1339,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   const allTxList = [];
   const seenIds = new Set();
   let pageNum = 0;
-  const maxPages = 150; // allows up to 15,000 transactions
+  const maxPages = 40; // allows up to 4,000 transactions at 100/page
 
   while (pageNum < maxPages) {
     pageNum++;
@@ -1486,27 +1486,33 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 
     console.log(`[EposScrape] Page ${pageNum}: found ${pageRows.length} rows, added ${addedThisPage} new (total: ${allTxList.length})`);
 
-    // Check Next Page button
-    const nextBtn = page.locator('button[aria-label="Go to next page"], button[title="Go to next page"]').first();
-    if (await nextBtn.count() === 0) {
-      console.log('[EposScrape] No next page button found.');
+    // If no new rows were added, we have reached the end or duplicated page
+    if (addedThisPage === 0 && pageNum > 1) {
+      console.log(`[EposScrape] Page ${pageNum}: 0 new rows added. Finishing pagination.`);
       break;
     }
 
-    const isDisabled = await nextBtn.isDisabled().catch(() => true);
-    if (isDisabled) {
-      console.log('[EposScrape] Next page button is disabled. Reached final page.');
-      break;
-    }
-
+    // Click Next Page button via DOM (ensures no out-of-viewport exceptions)
     const firstRowBefore = pageRows[0] ? (pageRows[0].eposId || pageRows[0].raw) : '';
-    await nextBtn.scrollIntoViewIfNeeded().catch(() => {});
-    await nextBtn.click({ force: true });
+    const nextClicked = await page.evaluate(() => {
+      const btn = document.querySelector('button[aria-label="Go to next page"], button[title="Go to next page"]');
+      if (btn && !btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
+        btn.scrollIntoView({ behavior: 'instant', block: 'center' });
+        btn.click();
+        return true;
+      }
+      return false;
+    });
 
-    // Wait for next page to load
+    if (!nextClicked) {
+      console.log('[EposScrape] Next page button is disabled or not found. Reached final page.');
+      break;
+    }
+
+    // Wait for next page to load (up to 2.5s)
     let changed = false;
-    for (let w = 0; w < 15; w++) {
-      await page.waitForTimeout(300);
+    for (let w = 0; w < 10; w++) {
+      await page.waitForTimeout(250);
       const newFirstRow = await page.evaluate(() => {
         const first = document.querySelector('.MuiDataGrid-row, tr[data-id]');
         if (!first) return '';
