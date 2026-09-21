@@ -625,12 +625,82 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
   }
 });
 
-// Manual HTTP trigger (Protected by manager whitelist)
+// Endpoint for browser bookmarklet sync (e.g. past months or custom ranges scraped directly by user in browser)
+app.post('/api/bookmarklet-sync', async (req, res) => {
+  try {
+    const { days, transactions } = req.body;
+    if (!days || !Array.isArray(days)) {
+      return res.status(400).json({ error: 'Missing or invalid days array' });
+    }
+
+    console.log(`[BookmarkletSync] Received ${days.length} day(s) and ${transactions ? transactions.length : 0} transactions.`);
+
+    // 1. Upsert hourly_sales rows
+    const hsRows = days.map(d => {
+      let h = d.hourly || {};
+      if (typeof h === 'string') {
+        try { h = JSON.parse(h); } catch (_) { h = {}; }
+      }
+      const cardVal = d.cardSales !== undefined ? Number(d.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : Number(d.totalSales || 0));
+      const cashVal = d.cashSales !== undefined ? Number(d.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : 0);
+      h._cardSales = Math.round(cardVal * 100) / 100;
+      h._cashSales = Math.round(cashVal * 100) / 100;
+
+      return {
+        date: d.date,
+        total_sales: Number(d.totalSales) || 0,
+        card_sales: h._cardSales,
+        cash_sales: h._cashSales,
+        hourly: h,
+        updated_at: new Date().toISOString()
+      };
+    });
+
+    await supabaseServerFetch('hourly_sales?on_conflict=date', {
+      method: 'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(hsRows)
+    });
+
+    // 2. Upsert raw_transactions if provided
+    let txCount = 0;
+    if (transactions && Array.isArray(transactions) && transactions.length > 0) {
+      for (let i = 0; i < transactions.length; i += 100) {
+        const batch = transactions.slice(i, i + 100).map(t => ({
+          id: t.id || `${t.date}_${(t.time || '').replace(/[^a-zA-Z0-9]/g, '')}_${Number(t.amount).toFixed(2)}_${(t.raw || '').slice(0, 40)}`.replace(/[^a-z0-9_]/gi, '-').slice(0, 120),
+          date: t.date,
+          time: t.time || '',
+          amount: Number(t.amount) || 0,
+          payment_method: t.payment_method || (t.isCash ? 'Cash' : 'Card'),
+          raw_line: (t.raw || '').slice(0, 500)
+        }));
+
+        await supabaseServerFetch('raw_transactions?on_conflict=id', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(batch)
+        }).catch(err => console.warn('[BookmarkletSync] Warning saving raw tx chunk:', err.message));
+      }
+      txCount = transactions.length;
+    }
+
+    console.log(`[BookmarkletSync] Successfully synced ${days.length} day(s) to Supabase.`);
+    return res.json({
+      status: 'success',
+      daysCount: days.length,
+      txCount: txCount,
+      days: days.map(d => d.date)
+    });
+  } catch (err) {
+    console.error('[BookmarkletSync] Error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Manual HTTP trigger (Protected by manager whitelist - Scrapes Today's Live Sales)
 app.all('/sync', requireAuthorizedManager, async (req, res) => {
   const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
   const notifyTelegram = req.query.notify !== 'false';
-  const startDate = req.query.startDate || req.body.startDate || null;
-  const endDate = req.query.endDate || req.body.endDate || null;
 
   if (appState.isSyncing) {
     if (!shouldWait) {
@@ -640,7 +710,7 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
         progress: appState.activeSyncProgress 
       });
     }
-    // Wait for the active sync to complete (up to 45 seconds)
+    // Wait for active sync to complete (up to 45 seconds)
     const start = Date.now();
     while (appState.isSyncing && (Date.now() - start < 45000)) {
       await new Promise(r => setTimeout(r, 1000));
@@ -655,7 +725,7 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
 
   if (shouldWait) {
     try {
-      await runSync(true, notifyTelegram, startDate, endDate);
+      await runSync(true, notifyTelegram);
       return res.json({
         status: 'ok',
         message: 'Sync completed',
@@ -666,21 +736,10 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
       return res.status(500).json({ status: 'error', message: err.message });
     }
   } else {
-    appState.activeSyncProgress = {
-      isSyncing: true,
-      currentChunk: 1,
-      totalChunks: 1,
-      currentRange: `${startDate || 'Today'} to ${endDate || 'Today'}`,
-      totalTx: 0,
-      status: 'starting'
-    };
-    runSync(true, notifyTelegram, startDate, endDate).catch(console.error);
+    runSync(true, notifyTelegram).catch(console.error);
     return res.json({ 
       status: 'triggered', 
-      message: 'Sync process initiated',
-      startDate,
-      endDate,
-      progress: appState.activeSyncProgress
+      message: 'Live sync for Today initiated' 
     });
   }
 });
@@ -1701,8 +1760,8 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   return scrapeResult;
 }
 
-// Main Sync Engine: Supports both fast 'Today' sync and chunked multi-month date ranges
-async function runSync(isManual = false, notifyTelegram = true, startDate = null, endDate = null) {
+// Main Sync Engine: Scrapes Today's live transactions
+async function runSync(isManual = false, notifyTelegram = true) {
   if (appState.isSyncing) {
     console.log('Sync is already running. Skipping.');
     return;
@@ -1718,101 +1777,18 @@ async function runSync(isManual = false, notifyTelegram = true, startDate = null
   }, 210000);
 
   try {
-    console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\nRange: ${startDate || 'Today'} to ${endDate || 'Today'}\n============================`);
+    console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\nMode: Today's Live Sales\n============================`);
     const page = await ensureLoggedIn(false, isManual && notifyTelegram);
 
-    // If date range is specified (and not just today's live trade)
-    if (startDate && endDate) {
-      const chunks = splitDateRangeIntoChunks(startDate, endDate, 31);
-      console.log(`Split date range ${startDate} -> ${endDate} into ${chunks.length} chunk(s) (max 31 days each).`);
-
-      appState.activeSyncProgress = {
-        isSyncing: true,
-        currentChunk: 0,
-        totalChunks: chunks.length,
-        currentRange: `${startDate} to ${endDate}`,
-        totalTx: 0,
-        status: 'running'
-      };
-
-      if (isManual && notifyTelegram) {
-        await sendTelegramMessage(`⚡ Starting sync for *${startDate}* to *${endDate}* (${chunks.length} batch(es) of ≤31 days)...\n\nEpos Now limits queries to 31 days maximum.`);
-      }
-
-      let totalTxCount = 0;
-      let totalDaysCount = 0;
-      let lastDaysBatch = [];
-
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        appState.activeSyncProgress.currentChunk = i + 1;
-        appState.activeSyncProgress.currentRange = `${chunk.from} to ${chunk.to}`;
-
-        console.log(`\n--- Processing Chunk ${i + 1}/${chunks.length} (${chunk.from} to ${chunk.to}) ---`);
-        if (isManual && notifyTelegram) {
-          await sendTelegramMessage(`🔄 *Chunk ${i + 1}/${chunks.length}*: Scraping ${chunk.from} to ${chunk.to}...`);
-        }
-
-        await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
-        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-        await page.waitForTimeout(2000);
-
-        if (notifyTelegram) {
-          await sendStepScreenshot(page, `🌐 Step 1: Navigated to Epos Now Transactions\nChunk ${i + 1}/${chunks.length} (${chunk.from} to ${chunk.to})`);
-        }
-
-        // Apply Epos Now filter for this chunk
-        await applyEposDateFilter(page, chunk.from, chunk.to, notifyTelegram);
-
-        // Scrape and save transactions for this chunk
-        const chunkResult = await scrapeAndSaveCurrentPage(page, `${chunk.from} to ${chunk.to}`, notifyTelegram);
-        if (chunkResult) {
-          totalTxCount += chunkResult.totalTx;
-          totalDaysCount += chunkResult.daysBatch.length;
-          lastDaysBatch = chunkResult.daysBatch;
-          appState.activeSyncProgress.totalTx = totalTxCount;
-        }
-
-        if (i < chunks.length - 1) {
-          await page.waitForTimeout(1500);
-        }
-      }
-
-      appState.activeSyncProgress.status = 'completed';
-      appState.lastSyncTime = new Date().toISOString();
-      appState.lastSyncResult = {
-        days: totalDaysCount,
-        txCount: totalTxCount,
-        batches: chunks.length,
-        topDay: `${startDate} to ${endDate}`
-      };
-      appState.consecutiveFailures = 0;
-
-      if (isManual && notifyTelegram) {
-        await sendTelegramMessage(
-          `✅ *Multi-Month Sync Complete!*\n\n` +
-          `Date Range: *${startDate}* to *${endDate}*\n` +
-          `Processed *${chunks.length}* chunks (≤31 days each).\n` +
-          `Synced *${totalTxCount}* transactions across *${totalDaysCount}* day(s) to Supabase.`
-        );
-      }
-
-      return appState.lastSyncResult;
-    }
-
-    // Default: Single Fast Scrape (Today's live transactions)
     console.log('Loading fresh transactions report page for Today...');
     if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now for Today...');
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(2500);
+    await page.waitForTimeout(2000);
 
     if (notifyTelegram) {
-      await sendStepScreenshot(page, '🌐 Step 1: Navigated to Epos Now Transactions (Today Live Sales)');
+      await sendStepScreenshot(page, '🌐 Navigated to Epos Now Transactions (Today Live Sales)');
     }
-
-    const todayIso = new Date().toISOString().split('T')[0];
-    await applyEposDateFilter(page, todayIso, todayIso, notifyTelegram);
 
     const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today', notifyTelegram);
     if (!scrapeResult || scrapeResult.totalTx === 0) {
@@ -1833,10 +1809,10 @@ async function runSync(isManual = false, notifyTelegram = true, startDate = null
     appState.consecutiveFailures = 0;
 
     if (isManual && notifyTelegram) {
-      const summaryLines = scrapeResult.daysBatch.map(d => `• *${d.date}*: $${d.totalSales.toFixed(2)} (${d.count} txs)`);
+      const summaryLines = scrapeResult.daysBatch.map(d => `• *${d.date}*: $${d.totalSales.toFixed(2)} (Card: $${d.cardSales.toFixed(2)} | Cash: $${d.cashSales.toFixed(2)})`);
       await sendTelegramMessage(
-        `✅ *Sync Complete!*\n\n` +
-        `Auto-loaded *${scrapeResult.pagesLoaded}* batches.\n` +
+        `✅ *Today's Live Sync Complete!*\n\n` +
+        `Auto-loaded *${scrapeResult.pagesLoaded}* page(s).\n` +
         `Synced *${scrapeResult.totalTx}* transactions across *${scrapeResult.daysBatch.length}* day(s) to Supabase:\n\n` +
         summaryLines.join('\n')
       );

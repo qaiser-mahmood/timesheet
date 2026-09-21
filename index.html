@@ -129,8 +129,8 @@
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Last Week
                 </button>
-                <button type="button" onclick="openEposModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700" title="Cloud Worker Status & Settings">
-                    ⚙️ Worker
+                <button type="button" onclick="openEposModal()" class="hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30" title="Epos Bookmarklet for past months & live sales">
+                    ⚡ Bookmarklet
                 </button>
                 <button id="authButton" type="button" class="hide-on-share bg-red-600 hover:bg-red-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer">
                     🚪 Logout
@@ -261,7 +261,7 @@
                     <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
                 <div class="flex items-center gap-2 text-xs">
-                    <button type="button" id="liveEposSyncBtn" onclick="openEposSyncModal()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Sync live sales or automated date ranges from Epos Now">
+                    <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Sync today's live sales from Epos Now">
                         <span id="liveEposSyncSpinner" class="inline-block">⚡</span> <span id="liveEposSyncText">Sync</span>
                     </button>
                     <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Quick reload from Supabase database">
@@ -1697,7 +1697,7 @@
                     syncDirectFromEpos(sDate, eDate);
                 }
 
-                async function syncDirectFromEpos(customStartDate = null, customEndDate = null) {
+                async function syncDirectFromEpos() {
                     const user = auth.currentUser;
                     if (!user || !isAuthorizedEmail(user.email)) {
                         alert("Please login with an authorized management account first.");
@@ -1738,83 +1738,16 @@
                         }
                         const authHeaders = idToken ? { 'Authorization': `Bearer ${idToken}` } : {};
 
-                        // Case A: Custom Date Range (Multi-chunk background sync with live polling)
-                        if (customStartDate && customEndDate) {
-                            if (btnText) btnText.innerText = 'Syncing...';
-                            setSyncStatus(`⚡ Initiating sync ${customStartDate} to ${customEndDate}...`, 'bg-purple-600 text-white');
-
-                            const triggerUrl = `${EPOS_WORKER_URL}/sync?wait=false&notify=true&startDate=${encodeURIComponent(customStartDate)}&endDate=${encodeURIComponent(customEndDate)}`;
-                            const triggerResp = await fetch(triggerUrl, { headers: authHeaders, cache: 'no-cache' });
-                            
-                            if (!triggerResp.ok) {
-                                const errTxt = await triggerResp.text();
-                                throw new Error(`Worker sync request failed: ${errTxt}`);
-                            }
-
-                            // Poll /sync-status with active-sync guard
-                            let isComplete = false;
-                            let pollAttempts = 0;
-                            const maxPolls = 100;
-                            let lastResult = null;
-                            let hasSeenActiveSync = false;
-
-                            // Allow worker 1.5s initial startup time
-                            await new Promise(r => setTimeout(r, 1500));
-
-                            while (!isComplete && pollAttempts < maxPolls) {
-                                pollAttempts++;
-                                try {
-                                    const statusRes = await fetch(`${EPOS_WORKER_URL}/sync-status`, { cache: 'no-cache' });
-                                    if (statusRes.ok) {
-                                        const statusData = await statusRes.json();
-                                        if (statusData.isSyncing) {
-                                            hasSeenActiveSync = true;
-                                            const p = statusData.progress || {};
-                                            if (p.totalChunks > 1) {
-                                                setSyncStatus(`🔄 Batch ${p.currentChunk}/${p.totalChunks} (${p.currentRange}) [${p.totalTx || 0} txs]`, 'bg-indigo-600 text-white');
-                                            } else {
-                                                setSyncStatus(`🔄 Scraping Epos Now (${p.currentRange || customStartDate})... [${p.totalTx || 0} txs]`, 'bg-indigo-600 text-white');
-                                            }
-                                        } else {
-                                            // Only finish if we previously saw active syncing or after initial poll buffer
-                                            if (hasSeenActiveSync || pollAttempts >= 2) {
-                                                isComplete = true;
-                                                lastResult = statusData.lastSyncResult;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                } catch (pollErr) {
-                                    console.warn("Poll status check issue:", pollErr);
-                                }
-                                await new Promise(r => setTimeout(r, 2500));
-                            }
-
-                            if (btnText) btnText.innerText = 'Updating DB...';
-                            isCloudLoading = false;
-                            await loadCloudData({ silent: true });
-
-                            if (lastResult && lastResult.txCount !== undefined) {
-                                setSyncStatus(`✅ Synced ${lastResult.txCount} txs across ${lastResult.days || 1} day(s)!`, 'bg-emerald-600 text-white');
-                            } else {
-                                setSyncStatus('✅ Database Updated', 'bg-emerald-600 text-white');
-                            }
-                            if (btnText) btnText.innerText = 'Synced!';
-                            clearSyncStatus(7000);
-                            return;
-                        }
-
-                        // Case B: Today's Live Sales (Fast Synchronous Scrape)
                         if (btnText) btnText.innerText = 'Connecting...';
                         setSyncStatus('⚡ Connecting to Epos Worker...', 'bg-purple-600 text-white');
 
                         const progressTimer = setTimeout(() => {
                             if (btnText) btnText.innerText = 'Scraping Epos...';
                             setSyncStatus('🔄 Scraping Epos Now live...', 'bg-indigo-600 text-white');
-                        }, 3000);
+                        }, 2500);
 
                         const controller = new AbortController();
-                        const abortTimeout = setTimeout(() => controller.abort(), 55000);
+                        const abortTimeout = setTimeout(() => controller.abort(), 60000);
 
                         let workerResult = null;
                         try {
@@ -1841,12 +1774,11 @@
                         await loadCloudData({ silent: true });
 
                         if (workerResult && workerResult.txCount !== undefined) {
-                            setSyncStatus(`✅ Synced ${workerResult.txCount} txs (${workerResult.topDay || 'Live'})`, 'bg-emerald-600 text-white');
-                            if (btnText) btnText.innerText = 'Synced!';
+                            setSyncStatus(`✅ Synced ${workerResult.txCount} txs (Live)`, 'bg-emerald-600 text-white');
                         } else {
                             setSyncStatus('✅ Database Updated', 'bg-emerald-600 text-white');
-                            if (btnText) btnText.innerText = 'Synced!';
                         }
+                        if (btnText) btnText.innerText = 'Synced!';
                         clearSyncStatus(6000);
                     } catch (err) {
                         console.error("Direct Epos sync error:", err);
@@ -2363,7 +2295,7 @@
 }
 
         function getBookmarkletCodeString() {
-            return "javascript:alert('Sales sync is handled 24/7 autonomously by your Render cloud worker. Manual bookmarklet is no longer needed.');";
+            return `javascript:(async function(){var W_URL="https://epos-sync-worker.onrender.com/api/bookmarklet-sync";var b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='14px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='99999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='14px 24px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 35px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif';b.style.fontSize='13px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.transition='all 0.3s ease';document.body.appendChild(b);}b.innerHTML='⚡ Scanning Epos Now Transactions...';b.style.backgroundColor='#1e1b4b';function sB(msg,bg,timeout){b.innerHTML=msg;if(bg)b.style.backgroundColor=bg;if(timeout)setTimeout(function(){if(b)b.remove();},timeout);}try{function toIso(y,m,d){return String(y)+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}function parseAnyDate(str){if(!str)return null;var now=new Date();var curYear=now.getFullYear();var s=str.trim();if(s.toLowerCase()==='today')return now.toISOString().split('T')[0];if(s.toLowerCase()==='yesterday'){var yD=new Date(now);yD.setDate(yD.getDate()-1);return yD.toISOString().split('T')[0];}var mIso=s.match(/\\b(\\d{4})-(\\d{2})-(\\d{2})\\b/);if(mIso)return mIso[0];var mSlash=s.match(/\\b(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})\\b/);if(mSlash){var d=parseInt(mSlash[1],10);var mo=parseInt(mSlash[2],10);var yr=mSlash[3].length===2?'20'+mSlash[3]:mSlash[3];if(d>=1&&d<=31&&mo>=1&&mo<=12)return toIso(yr,mo,d);}var months=['january','february','march','april','may','june','july','august','september','october','november','december'];var sMonths=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];var mWord=s.match(/\\b(\\d{1,2})(?:st|nd|rd|th)?[\\s\\-\\/]+([A-Za-z]{3,9})(?:[\\s\\-\\/,]+(\\d{2,4}))?\\b/i);if(mWord){var mName=mWord[2].toLowerCase();var mIdx=months.indexOf(mName);if(mIdx===-1)mIdx=sMonths.indexOf(mName.slice(0,3));if(mIdx!==-1){var yr2=mWord[3]?(mWord[3].length===2?'20'+mWord[3]:mWord[3]):String(curYear);return toIso(yr2,mIdx+1,mWord[1]);}}return null;}function parseTimeStr(timeStr){if(!timeStr)return null;var tm=timeStr.match(/(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\s*([apAP][mM])?/i);if(!tm)return null;var h=parseInt(tm[1],10);var ampm=tm[4]?tm[4].toUpperCase():'';if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;return String(h).padStart(2,'0')+':00';}try{var combobox=document.querySelector('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-select');if(combobox&&(combobox.innerText||'').trim()!=='100'){combobox.click();await new Promise(function(r){setTimeout(r,300);});var opt100=document.querySelector('li[data-value="100"], [role="option"][data-value="100"]');if(opt100){opt100.click();sB('⏳ Switched table to 100 rows/page. Loading...','#312e81');await new Promise(function(r){setTimeout(r,2000);});}}}catch(e){}var allTxList=[];var seenIds=new Set();var maxPages=40;var pageNum=0;while(pageNum<maxPages){pageNum++;sB('🔍 Scanning transactions (page '+pageNum+')...','#312e81');var pageRows=[];var gridRows=document.querySelectorAll('.MuiDataGrid-row, tr[data-id]');for(var i=0;i<gridRows.length;i++){var rEl=gridRows[i];var eposId=rEl.getAttribute('data-id')||'';var rText=(rEl.innerText||rEl.textContent||'').replace(/\\s+/g,' ').trim();if(!rText||rText.toLowerCase().includes('transaction report'))continue;var dM=rText.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b)/);var tM=rText.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/);var aM=rText.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);var payStr='';var payCell=rEl.querySelector('[data-field*="pay" i], [data-field*="method" i], td[class*="pay" i]');if(payCell)payStr=payCell.innerText.trim();var isoDate=dM?parseAnyDate(dM[1]):null;var timeStr=tM?tM[1]:'';var amountVal=aM?parseFloat(aM[1]):null;var isCash=payStr.toLowerCase().includes('cash')||(/\\bcash\\b/i.test(rText)&&!/\\bcard\\b/i.test(rText));if(isoDate&&amountVal!==null&&!isNaN(amountVal)){pageRows.push({eposId:eposId,date:isoDate,time:timeStr,hour:parseTimeStr(timeStr)||'12:00',amount:amountVal,isCash:isCash,raw:rText});}}if(pageRows.length===0){var trs=document.querySelectorAll('tbody tr, table tr');for(var j=0;j<trs.length;j++){var trText=(trs[j].innerText||trs[j].textContent||'').replace(/\\s+/g,' ').trim();if(!trText||trText.toLowerCase().includes('transaction report'))continue;var tdM=trText.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b)/);var ttM=trText.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/);var taM=trText.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(tdM&&ttM&&taM){var tIso=parseAnyDate(tdM[1]);var tAmt=parseFloat(taM[1]);var tCash=/\\bcash\\b/i.test(trText);if(tIso&&!isNaN(tAmt)){pageRows.push({eposId:'',date:tIso,time:ttM[1],hour:parseTimeStr(ttM[1])||'12:00',amount:tAmt,isCash:tCash,raw:trText});}}}}if(pageRows.length===0)break;var addedThisPage=0;for(var k=0;k<pageRows.length;k++){var r=pageRows[k];var uKey=r.eposId?('epos_'+r.eposId):(r.date+'_'+r.time+'_'+r.amount.toFixed(2)+'_'+r.raw);if(!seenIds.has(uKey)){seenIds.add(uKey);allTxList.push(r);addedThisPage++;}}if(addedThisPage===0&&pageNum>1)break;var nextBtn=document.querySelector('button[aria-label="Go to next page"], button[title="Go to next page"]');if(nextBtn&&!nextBtn.disabled&&nextBtn.getAttribute('aria-disabled')!=='true'){nextBtn.scrollIntoView({behavior:'instant',block:'center'});nextBtn.click();await new Promise(function(r){setTimeout(r,2000);});}else{break;}}if(allTxList.length===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure the Epos Now Transactions report table is loaded.</span>','#991b1b',7000);return;}var daysGroup={};for(var m=0;m<allTxList.length;m++){var tx=allTxList[m];var dKey=tx.date;if(!daysGroup[dKey]){daysGroup[dKey]={totalSales:0,cardSales:0,cashSales:0,count:0,hourly:{}};}daysGroup[dKey].count++;daysGroup[dKey].totalSales+=tx.amount;if(tx.isCash){daysGroup[dKey].cashSales+=tx.amount;}else{daysGroup[dKey].cardSales+=tx.amount;}daysGroup[dKey].hourly[tx.hour]=(daysGroup[dKey].hourly[tx.hour]||0)+tx.amount;}var sortedDays=Object.keys(daysGroup).sort().reverse();var daysBatch=[];for(var d=0;d<sortedDays.length;d++){var dayDate=sortedDays[d];daysGroup[dayDate].totalSales=Math.round(daysGroup[dayDate].totalSales*100)/100;daysGroup[dayDate].cardSales=Math.round(daysGroup[dayDate].cardSales*100)/100;daysGroup[dayDate].cashSales=Math.round(daysGroup[dayDate].cashSales*100)/100;for(var hk in daysGroup[dayDate].hourly){daysGroup[dayDate].hourly[hk]=Math.round(daysGroup[dayDate].hourly[hk]*100)/100;}daysGroup[dayDate].hourly._cardSales=daysGroup[dayDate].cardSales;daysGroup[dayDate].hourly._cashSales=daysGroup[dayDate].cashSales;daysBatch.push({date:dayDate,totalSales:daysGroup[dayDate].totalSales,cardSales:daysGroup[dayDate].cardSales,cashSales:daysGroup[dayDate].cashSales,count:daysGroup[dayDate].count,hourly:daysGroup[dayDate].hourly});}sB('⏳ Uploading '+sortedDays.length+' day(s) ('+allTxList.length+' txs) to Supabase via Worker...','#1e1b4b');var resp=await fetch(W_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:daysBatch,transactions:allTxList.map(function(t){return {id:t.eposId||'',date:t.date,time:t.time,amount:t.amount,payment_method:t.isCash?'Cash':'Card',raw:t.raw};})})});if(!resp.ok){var errTxt=await resp.text();throw new Error('Worker upload failed: '+errTxt);}var summaryLines=daysBatch.map(function(d){return d.date+': $'+d.totalSales.toFixed(2)+' (Card: $'+d.cardSales.toFixed(2)+' | Cash: $'+d.cashSales.toFixed(2)+')';});sB('✅ <b>Successfully Synced '+sortedDays.length+' day(s) & '+allTxList.length+' txs to Supabase!</b><br><span style="font-size:11px;font-weight:normal;opacity:0.95;">'+summaryLines.slice(0,6).join('<br>')+(summaryLines.length>6?'<br>+ '+(summaryLines.length-6)+' more days...':'')+'</span>','#065f46',12000);}catch(err){console.error('Bookmarklet error:',err);sB('❌ Error: '+(err.message||err),'#991b1b',10000);}})();`;
         }
 
         function openEposModal() {
