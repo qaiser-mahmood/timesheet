@@ -14,7 +14,11 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ckyutsdgpdamnhsqoail.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '';
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/15 * * * *';
+const TIMEZONE = process.env.TIMEZONE || process.env.TZ || 'Australia/Perth';
+const PEAK_START_HOUR = parseInt(process.env.PEAK_START_HOUR || '11', 10); // 11 AM
+const PEAK_END_HOUR = parseInt(process.env.PEAK_END_HOUR || '15', 10);     // 3 PM
+const PEAK_INTERVAL_MINUTES = parseInt(process.env.PEAK_INTERVAL_MINUTES || '5', 10);
+const OFFPEAK_INTERVAL_MINUTES = parseInt(process.env.OFFPEAK_INTERVAL_MINUTES || '15', 10);
 const STORAGE_STATE_PATH = path.join(__dirname, 'storageState.json');
 const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
 
@@ -707,7 +711,7 @@ app.post('/api/bookmarklet-sync', async (req, res) => {
 // Manual HTTP trigger (Protected by manager whitelist - Scrapes Today's Live Sales)
 app.all('/sync', requireAuthorizedManager, async (req, res) => {
   const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
-  const notifyTelegram = req.query.notify !== 'false';
+  const notifyTelegram = req.query.notify === 'true' || req.query.notify === '1';
 
   if (appState.isSyncing) {
     if (!shouldWait) {
@@ -810,15 +814,9 @@ async function sendTelegramPhoto(photoBuffer, caption = '') {
   }
 }
 
-// Captures and sends step-by-step progress screenshot to Telegram
+// Captures and sends step-by-step progress screenshot to Telegram (Disabled per user request)
 async function sendStepScreenshot(page, caption = '') {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !page) return;
-  try {
-    const buf = await page.screenshot({ fullPage: false });
-    await sendTelegramPhoto(buf, caption);
-  } catch (err) {
-    console.warn('[TelegramPhoto] Warning capturing step screenshot:', err.message);
-  }
+  return;
 }
 
 // Telegram polling loop
@@ -865,8 +863,11 @@ async function pollTelegram() {
             `When 2FA SMS is requested, reply directly here with your 6-digit code.`
           );
         } else if (cmd === '/status') {
+          const { formatted } = getLocalTimeParts();
           await sendTelegramMessage(
             `📊 *Worker Status*\n\n` +
+            `• Local Time: ${formatted} (${TIMEZONE})\n` +
+            `• Schedule: Every ${PEAK_INTERVAL_MINUTES} min (Peak 11am–3pm), every ${OFFPEAK_INTERVAL_MINUTES} min (Off-Peak)\n` +
             `• Authenticated: ${appState.isAuthenticated ? '✅ Yes' : '⚠️ No'}\n` +
             `• Login in progress: ${appState.isLoggingIn ? '⏳ Yes' : 'No'}\n` +
             `• Sync in progress: ${appState.isSyncing ? '⏳ Yes' : 'No'}\n` +
@@ -1026,7 +1027,6 @@ async function ensureLoggedIn(force = false, isManual = false) {
     const page = await getActivePage();
 
     console.log(`Checking session on ${TARGET_URL}...`);
-    if (isManual) await sendTelegramMessage(`🌐 Opening Epos Now...`);
 
     // Wait for full load including HTTP and JS redirects
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
@@ -1042,7 +1042,6 @@ async function ensureLoggedIn(force = false, isManual = false) {
     if (!isLoginPage && !force) {
       console.log('Already logged in to Epos Now.');
       appState.isAuthenticated = true;
-      if (isManual) await sendTelegramMessage('✅ Already logged in! Session is active.');
       return page;
     }
 
@@ -1052,8 +1051,6 @@ async function ensureLoggedIn(force = false, isManual = false) {
       await sendTelegramMessage(msg);
       throw new Error(msg);
     }
-
-    await sendTelegramMessage(`🔑 Entering credentials for ${EPOS_USERNAME}...`);
 
     // Target inputs on https://login.eposnowhq.com using safe locators
     const userField = page.locator('#username, input[name="username"], input[type="email"]');
@@ -1065,7 +1062,6 @@ async function ensureLoggedIn(force = false, isManual = false) {
     await passField.first().fill(EPOS_PASSWORD);
 
     // Submit form and cleanly wait for page navigation
-    await sendTelegramMessage('🖱️ Submitting login credentials...');
     const submitBtn = page.locator('button[type="submit"], .submission-form__btn, input[type="submit"]');
     
     await Promise.all([
@@ -1768,7 +1764,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 }
 
 // Main Sync Engine: Scrapes Today's live transactions
-async function runSync(isManual = false, notifyTelegram = true) {
+async function runSync(isManual = false, notifyTelegram = false) {
   if (appState.isSyncing) {
     console.log('Sync is already running. Skipping.');
     return;
@@ -1785,22 +1781,17 @@ async function runSync(isManual = false, notifyTelegram = true) {
 
   try {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\nMode: Today's Live Sales\n============================`);
-    const page = await ensureLoggedIn(false, isManual && notifyTelegram);
+    const page = await ensureLoggedIn(false, false);
 
     console.log('Loading fresh transactions report page for Today...');
-    if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now for Today...');
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(2000);
 
-    if (notifyTelegram) {
-      await sendStepScreenshot(page, '🌐 Navigated to Epos Now Transactions (Today Live Sales)');
-    }
-
-    const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today', notifyTelegram);
+    const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today', false);
     if (!scrapeResult || scrapeResult.totalTx === 0) {
       console.warn('No transactions parsed on page.');
-      if (isManual && notifyTelegram) {
+      if (notifyTelegram) {
         await sendTelegramMessage('⚠️ Scrape completed: 0 transactions found for Today yet.');
       }
       return;
@@ -1815,11 +1806,11 @@ async function runSync(isManual = false, notifyTelegram = true) {
     };
     appState.consecutiveFailures = 0;
 
-    if (isManual && notifyTelegram) {
+    // Send completion summary only if notifyTelegram is explicitly requested (e.g. via Telegram /sync command)
+    if (notifyTelegram) {
       const summaryLines = scrapeResult.daysBatch.map(d => `• *${d.date}*: $${d.totalSales.toFixed(2)} (Card: $${d.cardSales.toFixed(2)} | Cash: $${d.cashSales.toFixed(2)})`);
       await sendTelegramMessage(
         `✅ *Today's Live Sync Complete!*\n\n` +
-        `Auto-loaded *${scrapeResult.pagesLoaded}* page(s).\n` +
         `Synced *${scrapeResult.totalTx}* transactions across *${scrapeResult.daysBatch.length}* day(s) to Supabase:\n\n` +
         summaryLines.join('\n')
       );
@@ -1828,7 +1819,7 @@ async function runSync(isManual = false, notifyTelegram = true) {
   } catch (err) {
     appState.consecutiveFailures++;
     console.error('Sync failed:', err);
-    if ((isManual && notifyTelegram) || appState.consecutiveFailures === 3) {
+    if (notifyTelegram || appState.consecutiveFailures === 3) {
       await sendTelegramMessage(`⚠️ *Epos Sync Error*: ${err.message}`);
     }
     throw err;
@@ -1857,10 +1848,45 @@ async function sessionHeartbeat() {
   } catch (_) {}
 }
 
-// Schedule Cron (Every 15 minutes during operating hours)
-cron.schedule(CRON_SCHEDULE, () => {
-  console.log('Scheduled cron triggered.');
-  runSync(false).catch(console.error);
+// Helper to get local time in configured timezone (default Australia/Perth)
+function getLocalTimeParts() {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-AU', {
+      timeZone: TIMEZONE,
+      hour: 'numeric',
+      minute: 'numeric',
+      hourCycle: 'h23'
+    });
+    const parts = formatter.formatToParts(new Date());
+    const hour = parseInt(parts.find(p => p.type === 'hour').value, 10);
+    const minute = parseInt(parts.find(p => p.type === 'minute').value, 10);
+    return { hour, minute, formatted: formatter.format(new Date()) };
+  } catch (e) {
+    const now = new Date();
+    const hour = (now.getUTCHours() + 8) % 24;
+    const minute = now.getUTCMinutes();
+    return { hour, minute, formatted: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` };
+  }
+}
+
+// Smart Cron: Evaluates every 5 minutes whether to sync based on Peak (11am-3pm) vs Off-Peak
+cron.schedule('*/5 * * * *', () => {
+  const { hour, minute, formatted } = getLocalTimeParts();
+  // Peak sale hours: 11:00 AM to 3:00 PM (hours 11, 12, 13, 14, and 15:00)
+  const isPeak = (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR);
+
+  if (isPeak) {
+    console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Peak hours (${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00). Running 5-min sync.`);
+    runSync(false, false).catch(console.error);
+  } else {
+    // Outside peak hours: run every 15 minutes (at :00, :15, :30, :45)
+    if (minute % OFFPEAK_INTERVAL_MINUTES === 0) {
+      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Off-peak hours. Running ${OFFPEAK_INTERVAL_MINUTES}-min sync.`);
+      runSync(false, false).catch(console.error);
+    } else {
+      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Off-peak hours. Skipping (next sync at :${String(Math.ceil((minute + 1) / OFFPEAK_INTERVAL_MINUTES) * OFFPEAK_INTERVAL_MINUTES % 60).padStart(2, '0')}).`);
+    }
+  }
 });
 
 // Schedule Heartbeat every 4 minutes
@@ -1876,7 +1902,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Epos Now Sync Worker listening on port ${PORT}`);
   console.log(`Supabase Target: ${SUPABASE_URL}`);
   console.log(`Epos Username: ${EPOS_USERNAME}`);
-  console.log(`Cron: ${CRON_SCHEDULE}`);
+  console.log(`Schedule: Every ${PEAK_INTERVAL_MINUTES} min during peak (${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00 ${TIMEZONE}), every ${OFFPEAK_INTERVAL_MINUTES} min off-peak`);
   console.log(`=============================================`);
 
   // Start Telegram polling
@@ -1885,7 +1911,8 @@ app.listen(PORT, '0.0.0.0', () => {
   // Send boot notification
   sendTelegramMessage(
     `🚀 *Epos Now Sync Worker Online*\n\n` +
-    `Worker restarted with enhanced Playwright & Telegram error recovery.\n\n` +
-    `Type /login to sign in or /screenshot to view screen.`
+    `• Schedule: 5-min sync during peak (11am–3pm), 15-min off-peak\n` +
+    `• Step notifications disabled for clean background operation.\n\n` +
+    `Type /status to check worker status.`
   ).catch(console.error);
 });
