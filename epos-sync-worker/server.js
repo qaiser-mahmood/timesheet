@@ -199,10 +199,19 @@ async function supabaseServerFetch(path, options = {}) {
 }
 
 // Instant reset endpoint if sync ever gets stuck
-app.get('/sync-reset', (req, res) => {
+app.get('/sync-reset', async (req, res) => {
   appState.isSyncing = false;
   appState.isLoggingIn = false;
   appState.activeSyncProgress = null;
+  try {
+    if (appState.context) {
+      await appState.context.close().catch(() => {});
+      appState.context = null;
+      appState.activePage = null;
+    }
+  } catch (e) {
+    console.warn('Notice during sync-reset context close:', e.message);
+  }
   res.json({ status: 'ok', message: 'Sync state reset successfully' });
 });
 

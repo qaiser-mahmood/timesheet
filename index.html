@@ -1238,6 +1238,8 @@
 
         // 2. Core State
         const EPOS_WORKER_URL = "https://epos-sync-worker.onrender.com";
+        const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf";
         const ESTIMATED_TAX_RATE = 0.15;
         let isShareModeActive = false;
         let dataStore = [];
@@ -1291,6 +1293,9 @@
                     const res = await fetch(url, { ...options, headers });
                     if (!res.ok) {
                         const errText = await res.text();
+                        if (res.status === 401 || res.status === 403) {
+                            throw new Error("Worker service is waking up or database requires manager login. Please wait 15 seconds and click Refresh.");
+                        }
                         throw new Error(`Supabase error [${res.status}]: ${errText}`);
                     }
                     const contentType = res.headers.get("content-type");
@@ -1315,11 +1320,11 @@
                         console.warn("Could not retrieve ID token:", tokErr);
                     }
 
-                    // 2. Primary Route: High-security Render Worker API (with 3.5s timeout guard)
+                    // 2. Primary Route: High-security Render Worker API (with 12s timeout guard)
                     if (idToken) {
                         try {
                             const beController = new AbortController();
-                            const beTimeout = setTimeout(() => beController.abort(), 3500);
+                            const beTimeout = setTimeout(() => beController.abort(), 12000);
 
                             if (payload.action === "get") {
                                 const beResp = await fetch(`${EPOS_WORKER_URL}/api/data`, {
@@ -1786,6 +1791,7 @@
                             }
 
                             if (btnText) btnText.innerText = 'Updating DB...';
+                            isCloudLoading = false;
                             await loadCloudData({ silent: true });
 
                             if (lastResult && lastResult.txCount !== undefined) {
@@ -1831,6 +1837,7 @@
                         }
 
                         if (btnText) btnText.innerText = 'Updating DB...';
+                        isCloudLoading = false;
                         await loadCloudData({ silent: true });
 
                         if (workerResult && workerResult.txCount !== undefined) {
@@ -1845,6 +1852,7 @@
                         console.error("Direct Epos sync error:", err);
                         setSyncStatus('⚠️ Loaded database only', 'bg-amber-700 text-white');
                         clearSyncStatus(5000);
+                        isCloudLoading = false;
                         await loadCloudData({ silent: true });
                     } finally {
                         if (btn) btn.disabled = false;
