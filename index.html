@@ -1734,6 +1734,44 @@
                         return { logs, staff, sales, expenses };
                     }
 
+                    if (payload.action === "save_staff" && payload.staff) {
+                        const s = payload.staff;
+                        const isOwner = (s.name && s.name.toString().trim().toLowerCase() === "qaiser");
+                        const cRate = isOwner ? 0 : (Number(s.cash_rate !== undefined ? s.cash_rate : s.cashRate) || 0);
+                        const tRate = isOwner ? 0 : (Number(s.tax_rate !== undefined ? s.tax_rate : s.taxRate) || 0);
+                        const gjCRate = isOwner ? 0 : (Number(s.gj_cash_rate !== undefined ? s.gj_cash_rate : s.gjCashRate) || cRate || 0);
+                        const gjSunRate = isOwner ? 0 : (Number(s.gj_sunday_rate !== undefined ? s.gj_sunday_rate : s.gjSundayRate) || gjCRate || cRate || 0);
+                        let storesVal = s.stores || "anatolya,green_juice";
+                        if (Array.isArray(storesVal)) storesVal = storesVal.join(",");
+
+                        const row = {
+                            name: s.name.toString().trim(),
+                            cash_rate: cRate,
+                            tax_rate: tRate,
+                            gj_cash_rate: gjCRate,
+                            gj_sunday_rate: gjSunRate,
+                            stores: storesVal,
+                            status: s.status || "Active"
+                        };
+                        try {
+                            await supabaseFetch("staff?on_conflict=name", {
+                                method: "POST",
+                                headers: { "Prefer": "resolution=merge-duplicates" },
+                                body: JSON.stringify(row)
+                            });
+                        } catch (e) {
+                            delete row.gj_cash_rate;
+                            delete row.gj_sunday_rate;
+                            delete row.stores;
+                            await supabaseFetch("staff?on_conflict=name", {
+                                method: "POST",
+                                headers: { "Prefer": "resolution=merge-duplicates" },
+                                body: JSON.stringify(row)
+                            });
+                        }
+                        return { status: "success" };
+                    }
+
                     if (payload.action === "save" && payload.entry) {
                         const e = payload.entry;
                         const row = {
@@ -3587,9 +3625,13 @@
             const updated = {
                 name: s.name,
                 cash_rate: isOwner ? 0 : (parseFloat(akCash ? akCash.value : s.cashRate) || 0),
+                cashRate: isOwner ? 0 : (parseFloat(akCash ? akCash.value : s.cashRate) || 0),
                 tax_rate: isOwner ? 0 : (parseFloat(akTax ? akTax.value : s.taxRate) || 0),
+                taxRate: isOwner ? 0 : (parseFloat(akTax ? akTax.value : s.taxRate) || 0),
                 gj_cash_rate: isOwner ? 0 : (parseFloat(gjCash ? gjCash.value : s.gjCashRate) || 0),
+                gjCashRate: isOwner ? 0 : (parseFloat(gjCash ? gjCash.value : s.gjCashRate) || 0),
                 gj_sunday_rate: isOwner ? 0 : (parseFloat(gjSun ? gjSun.value : s.gjSundayRate) || 0),
+                gjSundayRate: isOwner ? 0 : (parseFloat(gjSun ? gjSun.value : s.gjSundayRate) || 0),
                 stores: stores,
                 status: (statusBox && statusBox.checked) ? "Active" : "Inactive"
             };
@@ -3638,9 +3680,13 @@
             const newStaff = {
                 name: cleanName,
                 cash_rate: 25.00,
+                cashRate: 25.00,
                 tax_rate: 30.00,
+                taxRate: 30.00,
                 gj_cash_rate: 25.00,
+                gjCashRate: 25.00,
                 gj_sunday_rate: 25.00,
+                gjSundayRate: 25.00,
                 stores: ['anatolya', 'green_juice'],
                 status: "Active"
             };

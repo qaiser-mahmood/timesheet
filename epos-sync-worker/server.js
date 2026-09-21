@@ -611,13 +611,22 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
 
     if (payload.action === 'save_staff' && payload.staff) {
       const s = payload.staff;
+      const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
+      const cRate = isOwner ? 0 : (Number(s.cash_rate !== undefined ? s.cash_rate : s.cashRate) || 0);
+      const tRate = isOwner ? 0 : (Number(s.tax_rate !== undefined ? s.tax_rate : s.taxRate) || 0);
+      const gjCRate = isOwner ? 0 : (Number(s.gj_cash_rate !== undefined ? s.gj_cash_rate : s.gjCashRate) || cRate || 0);
+      const gjSunRate = isOwner ? 0 : (Number(s.gj_sunday_rate !== undefined ? s.gj_sunday_rate : s.gjSundayRate) || gjCRate || cRate || 0);
+      
+      let storesVal = s.stores || 'anatolya,green_juice';
+      if (Array.isArray(storesVal)) storesVal = storesVal.join(',');
+
       const row = {
         name: s.name.toString().trim(),
-        cash_rate: Number(s.cashRate) || 0,
-        tax_rate: Number(s.taxRate) || 0,
-        gj_cash_rate: Number(s.gjCashRate) || Number(s.cashRate) || 0,
-        gj_sunday_rate: Number(s.gjSundayRate) || Number(s.gjCashRate) || Number(s.cashRate) || 0,
-        stores: s.stores || 'anatolya,green_juice',
+        cash_rate: cRate,
+        tax_rate: tRate,
+        gj_cash_rate: gjCRate,
+        gj_sunday_rate: gjSunRate,
+        stores: storesVal,
         status: s.status || 'Active'
       };
       try {
