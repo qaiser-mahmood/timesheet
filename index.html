@@ -1216,6 +1216,24 @@
                     </div>
                 </div>
 
+                <!-- CSV Import Section for Unlimited History -->
+                <div class="pt-3 border-t border-slate-800/80 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                            <span>📁</span> Import Historical Loyverse CSV
+                        </span>
+                        <span class="text-[9px] text-amber-400 font-semibold">Free • Unlimited History</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-tight">
+                        Need data older than 31 days? Export <b>Sales by day</b> or <b>Receipts</b> CSV from Loyverse Back Office and upload here.
+                    </p>
+                    <input type="file" id="loyverseCsvFileInput" accept=".csv" onchange="handleLoyverseCsvUpload(event)" class="hidden">
+                    <button type="button" onclick="document.getElementById('loyverseCsvFileInput').click()" class="w-full py-2 px-3 rounded-lg border border-dashed border-emerald-600/70 hover:border-emerald-500 bg-emerald-950/20 hover:bg-emerald-950/40 text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer">
+                        <span>📥 Select Loyverse CSV File (Sales by Day / Receipts)</span>
+                    </button>
+                    <div id="loyverseCsvStatus" class="text-[11px] text-center font-medium"></div>
+                </div>
+
                 <div class="pt-2 flex items-center justify-end gap-2">
                     <button type="button" onclick="closeLoyverseSyncModal()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition">Cancel</button>
                     <button type="button" id="triggerLoyverseSyncBtn" onclick="executeLoyverseSync()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow flex items-center gap-1.5">
@@ -1451,6 +1469,7 @@
         window.closeLoyverseSyncModal = closeLoyverseSyncModal;
         window.setLoyversePreset = setLoyversePreset;
         window.executeLoyverseSync = executeLoyverseSync;
+        window.handleLoyverseCsvUpload = handleLoyverseCsvUpload;
         window.openActiveStoreSyncModal = openActiveStoreSyncModal;
 
         // 2. Core State
@@ -3821,9 +3840,17 @@
                 }
 
                 if (data.daysCount > 0) {
-                    alert(`✅ Loyverse Sync Success!\n\nSynced ${data.daysCount} day(s) (${data.totalReceipts || data.receiptsCount || 0} receipts) between ${startDate} and ${endDate}.\n\n• Total Sales: $${(data.totalSales || 0).toFixed(2)}\n• Card Sales: $${(data.totalCard || 0).toFixed(2)}\n• Cash Sales: $${(data.totalCash || 0).toFixed(2)}`);
+                    let msg = `✅ Loyverse Sync Success!\n\nSynced ${data.daysCount} day(s) (${data.totalReceipts || data.receiptsCount || 0} receipts) between ${data.clampedStart || startDate} and ${endDate}.\n\n• Total Sales: $${(data.totalSales || 0).toFixed(2)}\n• Card Sales: $${(data.totalCard || 0).toFixed(2)}\n• Cash Sales: $${(data.totalCash || 0).toFixed(2)}`;
+                    if (data.limitReached) {
+                        msg += `\n\n⚠️ Note: Loyverse Free API limits direct sync to the last 31 days (requested from ${data.requestedStart}).\n\nTo import older sales earlier in the year without paying Loyverse for a subscription:\n1. Open Loyverse Back Office -> Reports -> Sales by Day (or Receipts)\n2. Select your date range and Export CSV\n3. Click "📥 Select Loyverse CSV File" in this window!`;
+                    }
+                    alert(msg);
                 } else {
-                    alert(`ℹ️ Loyverse Sync Complete:\n\n0 receipts found in Loyverse between ${startDate} and ${endDate}.`);
+                    let msg = `ℹ️ Loyverse Sync Complete:\n\n0 receipts found in Loyverse between ${data.clampedStart || startDate} and ${endDate}.`;
+                    if (data.limitReached) {
+                        msg += `\n\n⚠️ Note: Loyverse Free API limits direct sync to the last 31 days. Use the CSV Import button below to import earlier dates.`;
+                    }
+                    alert(msg);
                 }
                 closeLoyverseSyncModal();
                 await loadCloudData();
@@ -3836,6 +3863,169 @@
                     btn.disabled = false;
                     btn.innerHTML = '<span>🚀 Sync Loyverse Sales</span>';
                 }
+            }
+        }
+
+        // ==================== LOYVERSE CSV IMPORT ====================
+        function parseLoyverseCsv(csvText) {
+            const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (lines.length < 2) throw new Error("CSV file is empty or missing data.");
+
+            const parseRow = (line) => {
+                const res = [];
+                let cur = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const c = line[i];
+                    if (c === '"') { inQuotes = !inQuotes; }
+                    else if (c === ',' && !inQuotes) { res.push(cur.trim()); cur = ''; }
+                    else { cur += c; }
+                }
+                res.push(cur.trim());
+                return res;
+            };
+
+            const header = parseRow(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+            const daysMap = {};
+
+            const dateIdx = header.findIndex(h => h.includes('date'));
+            let totalIdx = header.findIndex(h => h === 'netsales' || h.includes('netsales'));
+            if (totalIdx === -1) totalIdx = header.findIndex(h => h === 'total' || h.includes('totalmoney'));
+            if (totalIdx === -1) totalIdx = header.findIndex(h => h === 'grosssales' || h.includes('grosssales'));
+            if (totalIdx === -1) totalIdx = header.findIndex(h => h.includes('sales'));
+
+            const cardIdx = header.findIndex(h => h.includes('card') || h.includes('electronic') || h.includes('eftpos'));
+            const cashIdx = header.findIndex(h => h.includes('cash'));
+            const typeIdx = header.findIndex(h => h.includes('payment') || h.includes('type'));
+
+            if (dateIdx === -1 || totalIdx === -1) {
+                throw new Error("Could not find Date or Sales/Total columns in CSV.");
+            }
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseRow(lines[i]);
+                if (!cols[dateIdx]) continue;
+                
+                let dRaw = cols[dateIdx];
+                let dIso = '';
+                const mIso = dRaw.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (mIso) {
+                    dIso = mIso[0];
+                } else {
+                    const mSlash = dRaw.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+                    if (mSlash) {
+                        let y = mSlash[3].length === 2 ? '20' + mSlash[3] : mSlash[3];
+                        dIso = y + '-' + mSlash[2].padStart(2, '0') + '-' + mSlash[1].padStart(2, '0');
+                    }
+                }
+                if (!dIso) continue;
+
+                const amt = parseFloat((cols[totalIdx] || '0').replace(/[^0-9.-]/g, '')) || 0;
+                if (!daysMap[dIso]) {
+                    daysMap[dIso] = { date: dIso, total: 0, card: 0, cash: 0, count: 0, hourly: {} };
+                }
+
+                daysMap[dIso].total += amt;
+                daysMap[dIso].count++;
+
+                if (cardIdx !== -1 && cols[cardIdx]) {
+                    daysMap[dIso].card += parseFloat((cols[cardIdx] || '0').replace(/[^0-9.-]/g, '')) || 0;
+                }
+                if (cashIdx !== -1 && cols[cashIdx]) {
+                    daysMap[dIso].cash += parseFloat((cols[cashIdx] || '0').replace(/[^0-9.-]/g, '')) || 0;
+                }
+
+                if (typeIdx !== -1) {
+                    const pType = (cols[typeIdx] || '').toLowerCase();
+                    if (pType.includes('cash')) {
+                        daysMap[dIso].cash += amt;
+                    } else {
+                        daysMap[dIso].card += amt;
+                    }
+                }
+            }
+
+            return Object.values(daysMap).map(d => {
+                d.total = Math.round(d.total * 100) / 100;
+                d.card = Math.round(d.card * 100) / 100;
+                d.cash = Math.round(d.cash * 100) / 100;
+                if (d.card === 0 && d.cash === 0) {
+                    d.card = d.total;
+                }
+                d.hourly._cardSales = d.card;
+                d.hourly._cashSales = d.cash;
+                return d;
+            });
+        }
+
+        async function handleLoyverseCsvUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('loyverseCsvStatus');
+            if (statusEl) {
+                statusEl.innerText = `⏳ Parsing ${file.name}...`;
+                statusEl.className = "text-[11px] text-center text-amber-400 font-semibold";
+            }
+
+            try {
+                const text = await file.text();
+                const days = parseLoyverseCsv(text);
+                if (days.length === 0) {
+                    throw new Error("No sales records could be extracted from this CSV.");
+                }
+
+                if (statusEl) {
+                    statusEl.innerText = `⏳ Saving ${days.length} day(s) to database...`;
+                }
+
+                let totalSales = 0;
+                let totalCard = 0;
+                let totalCash = 0;
+
+                for (let d of days) {
+                    totalSales += d.total;
+                    totalCard += d.card;
+                    totalCash += d.cash;
+
+                    await callSheetApi({
+                        action: "save_hourly_sales",
+                        date: d.date,
+                        store_id: "green_juice",
+                        totalSales: d.total,
+                        cardSales: d.card,
+                        cashSales: d.cash,
+                        hourly: d.hourly
+                    });
+
+                    hourlySalesStore = hourlySalesStore.filter(s => !(cleanDateStr(s.date) === d.date && (s.store_id || 'anatolya') === 'green_juice'));
+                    hourlySalesStore.push({
+                        date: d.date,
+                        store_id: "green_juice",
+                        totalSales: d.total,
+                        cardSales: d.card,
+                        cashSales: d.cash,
+                        hourly: d.hourly,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+
+                if (statusEl) {
+                    statusEl.innerText = `✅ Imported ${days.length} days! Total: $${totalSales.toFixed(2)}`;
+                    statusEl.className = "text-[11px] text-center text-emerald-400 font-bold";
+                }
+
+                alert(`🎉 Loyverse CSV Import Success!\n\nImported ${days.length} day(s) for Green Juice Bar.\n\n• Total Sales: $${totalSales.toFixed(2)}\n• Card Sales: $${totalCard.toFixed(2)}\n• Cash Sales: $${totalCash.toFixed(2)}`);
+                await loadCloudData();
+            } catch (err) {
+                console.error("Loyverse CSV import error:", err);
+                if (statusEl) {
+                    statusEl.innerText = `❌ ${err.message}`;
+                    statusEl.className = "text-[11px] text-center text-rose-400 font-semibold";
+                }
+                alert(`❌ Loyverse CSV Import Error:\n\n${err.message}`);
+            } finally {
+                event.target.value = '';
             }
         }
 

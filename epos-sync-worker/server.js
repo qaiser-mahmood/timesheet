@@ -857,8 +857,24 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
 
   const now = new Date();
   const todayPerth = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(now);
-  const start = startDateIso || todayPerth;
+  let start = startDateIso || todayPerth;
   const end = endDateIso || todayPerth;
+
+  const msPerDay = 86400000;
+  const startDateObj = new Date(`${start}T00:00:00+08:00`);
+  const daysAgo = Math.floor((now.getTime() - startDateObj.getTime()) / msPerDay);
+
+  let limitReached = false;
+  let originalStart = start;
+
+  // Loyverse Free API strictly enforces a 31-day history limit. Auto-clamp if exceeded.
+  if (daysAgo > 30) {
+    const thirtyDaysAgo = new Date(now.getTime() - 29 * msPerDay);
+    const clampedDate = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(thirtyDaysAgo);
+    console.log(`[LoyverseSync] Requested start date ${start} is ${daysAgo} days ago (Loyverse free API limit is 31 days). Auto-clamping to ${clampedDate}.`);
+    start = clampedDate;
+    limitReached = true;
+  }
 
   console.log(`[LoyverseSync] Starting sync for Green Juice Bar (${start} to ${end})...`);
 
@@ -887,6 +903,30 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
 
       if (!res.ok) {
         const errTxt = await res.text();
+        if (res.status === 402 && (errTxt.includes('31 days') || errTxt.includes('PAYMENT_REQUIRED'))) {
+          if (!limitReached) {
+            limitReached = true;
+            const safeDaysAgo = new Date(now.getTime() - 28 * msPerDay);
+            start = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(safeDaysAgo);
+            console.warn(`[LoyverseSync] 402 received. Retrying with safe window starting ${start}...`);
+            const retryMinIso = new Date(`${start}T00:00:00+08:00`).toISOString();
+            url.searchParams.set('created_at_min', retryMinIso);
+            const retryRes = await fetch(url.toString(), {
+              headers: {
+                'Authorization': `Bearer ${LOYVERSE_TOKEN}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            if (retryRes.ok) {
+              const retryData = await retryRes.json();
+              const receipts = retryData.receipts || [];
+              allReceipts = allReceipts.concat(receipts);
+              cursor = retryData.cursor || null;
+              continue;
+            }
+          }
+          throw new Error(`Loyverse API 402 (Payment Required): Loyverse requires a paid subscription to access receipts older than 31 days via API. Please use the CSV Import below to load earlier dates for free.`);
+        }
         throw new Error(`Loyverse API error [${res.status}]: ${errTxt}`);
       }
 
@@ -995,7 +1035,10 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       totalSales: Math.round(totalSales * 100) / 100,
       totalCard: Math.round(totalCard * 100) / 100,
       totalCash: Math.round(totalCash * 100) / 100,
-      days: rows.map(r => ({ date: r.date, total: r.total_sales, card: r.card_sales, cash: r.cash_sales }))
+      days: rows.map(r => ({ date: r.date, total: r.total_sales, card: r.card_sales, cash: r.cash_sales })),
+      limitReached,
+      requestedStart: originalStart,
+      clampedStart: start
     };
   } catch (err) {
     console.error('[LoyverseSync] Error:', err);
