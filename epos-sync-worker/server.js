@@ -230,6 +230,70 @@ app.get('/debug/screentext', async (req, res) => {
   }
 });
 
+// Live debug DOM inspection endpoint
+app.get('/debug/dom-inspect', async (req, res) => {
+  try {
+    const page = await getActivePage();
+    const elements = await page.evaluate(() => {
+      const items = [];
+      const all = document.querySelectorAll('*');
+      for (let i = 0; i < all.length; i++) {
+        const el = all[i];
+        const text = (el.innerText || el.textContent || '').trim();
+        const tag = el.tagName.toLowerCase();
+        const role = el.getAttribute('role') || '';
+        const ariaLabel = el.getAttribute('aria-label') || '';
+        const placeholder = el.getAttribute('placeholder') || '';
+        const id = el.id || '';
+        const cls = el.className ? String(el.className) : '';
+
+        // Only look for relevant UI elements
+        if (
+          /filters?|today|yesterday|period|custom|apply|search/i.test(text) ||
+          /filters?|today|yesterday|period|custom|apply|search/i.test(ariaLabel) ||
+          /filters?|today|yesterday|period|custom|apply|search/i.test(placeholder)
+        ) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0 && el.children.length <= 3) {
+            items.push({
+              tag,
+              id,
+              cls: cls.slice(0, 80),
+              role,
+              text: text.slice(0, 80),
+              ariaLabel,
+              rect: { x: Math.round(rect.x), y: Math.round(rect.y), w: Math.round(rect.width), h: Math.round(rect.height) }
+            });
+          }
+        }
+      }
+      return items;
+    });
+    res.json({ url: page.url(), count: elements.length, elements });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Live debug eval endpoint
+app.all('/debug/eval', async (req, res) => {
+  try {
+    const page = await getActivePage();
+    const code = req.query.code || (req.body && req.body.code);
+    if (!code) return res.status(400).send('Missing code parameter');
+    const result = await page.evaluate((c) => {
+      try {
+        return { success: true, result: eval(c) };
+      } catch (e) {
+        return { success: false, error: e.message, stack: e.stack };
+      }
+    }, code);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Health endpoint for keep-alive cron & monitoring (Public)
 app.get(['/', '/health'], (req, res) => {
   res.json({
