@@ -273,9 +273,6 @@
                     <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="View business expenses ledger">
                         📋 Ledger
                     </button>
-                    <button type="button" id="tabBasBtn" onclick="switchAnalyticsTab('bas')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Australian Business Activity Statement (BAS) Quarterly Tax Report">
-                        📑 BAS
-                    </button>
                 </div>
             </div>
 
@@ -373,9 +370,22 @@
 
                 <!-- Range KPI Summary Cards -->
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Gross Revenue</div>
-                        <div id="kpiRangeSales" class="text-base sm:text-lg font-black text-emerald-400">$0.00</div>
+                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between">
+                                <span>Revenue</span>
+                                <span class="text-[9px] text-emerald-400 font-semibold">Total</span>
+                            </div>
+                            <div id="kpiRangeSales" class="text-base sm:text-lg font-black text-emerald-400 leading-tight mt-0.5">$0.00</div>
+                        </div>
+                        <div class="mt-1.5 flex items-center justify-between text-[10px] font-bold border-t border-slate-700/60 pt-1 text-slate-300">
+                            <span class="flex items-center gap-1 text-emerald-300" title="Card Revenue (Included in BAS)">
+                                💳 Card: <strong id="kpiRangeCardSales" class="text-emerald-400 font-black">$0.00</strong>
+                            </span>
+                            <span class="flex items-center gap-1 text-amber-300" title="Cash Revenue">
+                                💵 Cash: <strong id="kpiRangeCashSales" class="text-amber-400 font-black">$0.00</strong>
+                            </span>
+                        </div>
                     </div>
                     <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Wages</div>
@@ -476,10 +486,15 @@
                         </span>
                     </div>
 
-                    <!-- Row 2 on mobile / Right on desktop: Log Exp Button -->
-                    <button type="button" onclick="openExpenseModal()" class="w-full sm:w-auto bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer">
-                        ➕ Log Exp
-                    </button>
+                    <!-- Row 2 on mobile / Right on desktop: Log Exp & BAS Report Buttons -->
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button type="button" onclick="openExpenseModal()" class="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Log a new business expense">
+                            ➕ Log Exp
+                        </button>
+                        <button type="button" id="tabBasBtn" onclick="switchAnalyticsTab('bas')" class="flex-1 sm:flex-none bg-purple-700 hover:bg-purple-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap border border-purple-500/40 cursor-pointer" title="Australian Business Activity Statement (BAS) Quarterly Tax Report">
+                            📑 BAS Report
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Ledger Date Range Controls: Presets (Today/Week/Month with Nav) & All Preset + Popover Calendar -->
@@ -615,6 +630,9 @@
 
                     <!-- Right: Print / Export Button -->
                     <div class="flex items-center gap-2 self-end sm:self-center">
+                        <button type="button" onclick="switchAnalyticsTab('expenses')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 whitespace-nowrap border border-slate-700 cursor-pointer" title="Back to Expenses Ledger">
+                            <span>📋 Ledger</span>
+                        </button>
                         <button type="button" onclick="printBasReport()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 whitespace-nowrap">
                             <span>🖨️</span> <span>Print / Save PDF</span>
                         </button>
@@ -932,7 +950,85 @@
             </div>
         </div>
     </div>
-<!-- Log Expense Modal -->
+<!-- Epos Now Automated Sync Modal -->
+    <div id="eposSyncModal" class="fixed inset-0 bg-black/65 z-50 flex items-center justify-center p-3 hidden backdrop-blur-xs">
+        <div class="bg-slate-900 text-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-5 sm:p-6 space-y-4 border border-purple-500/40">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">⚡</span>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
+                            Sync Epos Now Transactions
+                        </h3>
+                        <p class="text-[10px] text-slate-400">Automate transaction scraping into database</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeEposSyncModal()" class="text-slate-400 hover:text-white text-lg font-bold cursor-pointer">✕</button>
+            </div>
+
+            <!-- Option 1: Quick Today Sync -->
+            <div class="p-3 bg-purple-950/40 rounded-xl border border-purple-800/40 space-y-2">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-purple-200">⚡ Today's Live Sales</div>
+                        <div class="text-[10px] text-slate-400">Quick 10-second scrape of today's live trade</div>
+                    </div>
+                    <button type="button" onclick="closeEposSyncModal(); syncDirectFromEpos();" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1 cursor-pointer">
+                        <span>Sync Today</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Option 2: Automated Date Range Sync -->
+            <form onsubmit="startRangeEposSync(event)" class="space-y-3">
+                <div class="text-xs font-bold text-slate-200 flex items-center justify-between">
+                    <span>📅 Custom Date Range</span>
+                    <span class="text-[10px] text-amber-400 font-semibold">≤ 31-day auto-chunks</span>
+                </div>
+
+                <!-- Presets buttons -->
+                <div class="grid grid-cols-3 gap-1.5 text-[10px]">
+                    <button type="button" onclick="setEposSyncPreset('week')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Week</button>
+                    <button type="button" onclick="setEposSyncPreset('lastWeek')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Week</button>
+                    <button type="button" onclick="setEposSyncPreset('month')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Month</button>
+                    <button type="button" onclick="setEposSyncPreset('lastMonth')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Month</button>
+                    <button type="button" onclick="setEposSyncPreset('curQuarter')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Current Qtr (BAS)</button>
+                    <button type="button" onclick="setEposSyncPreset('prevQuarter')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Prev Qtr (BAS)</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase">From Date</label>
+                        <input type="date" id="eposSyncStartDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-purple-500 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase">To Date</label>
+                        <input type="date" id="eposSyncEndDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-purple-500 shadow-sm">
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700/80 text-[10px] text-slate-300 space-y-1">
+                    <div class="flex items-center gap-1.5 text-amber-400 font-bold">
+                        <span>ℹ️</span> <span>Epos Now 31-Day Rule Automated</span>
+                    </div>
+                    <p class="leading-relaxed">
+                        Epos Now does not allow queries over 31 days. Any selected multi-month period will automatically be divided into sequential 31-day chunks, scraped batch-by-batch, and safely stored in Supabase.
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-1">
+                    <button type="button" onclick="closeEposSyncModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-lg transition cursor-pointer">
+                        Cancel
+                    </button>
+                    <button type="submit" id="startRangeSyncBtn" class="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1.5 cursor-pointer">
+                        <span>🚀 Start Range Sync</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Log Expense Modal -->
     <div id="expenseModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-slate-700">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -1430,7 +1526,11 @@
 
                 function openEposSyncModal() {
                     const modal = document.getElementById('eposSyncModal');
-                    if (!modal) return;
+                    if (!modal) {
+                        console.warn("eposSyncModal element not found, performing direct live sync");
+                        syncDirectFromEpos();
+                        return;
+                    }
                     modal.classList.remove('hidden');
 
                     const sInput = document.getElementById('eposSyncStartDate');
@@ -3885,6 +3985,8 @@
             if (countHeader) countHeader.innerText = `Daily Performance (${dates.length} days)`;
 
             let rangeSales = 0;
+            let rangeCardSales = 0;
+            let rangeCashSales = 0;
             let rangeWages = 0;
             let rangeHours = 0;
             let rangeExpenses = 0;
@@ -3906,6 +4008,17 @@
             dates.forEach(dIso => {
                 const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
                 const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
+                let cAmt = 0;
+                let cashAmt = 0;
+                if (sRec) {
+                    const h = sRec.hourly || {};
+                    cAmt = sRec.cardSales !== undefined && sRec.cardSales !== null
+                        ? Number(sRec.cardSales)
+                        : (h._cardSales !== undefined ? Number(h._cardSales) : sAmt);
+                    cashAmt = sRec.cashSales !== undefined && sRec.cashSales !== null
+                        ? Number(sRec.cashSales)
+                        : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, sAmt - cAmt));
+                }
 
                 const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
                 let dWages = 0;
@@ -3929,6 +4042,8 @@
                 const dayExp = dayExpList.reduce((sum, x) => sum + Number(x.amount || 0), 0);
 
                 rangeSales += sAmt;
+                rangeCardSales += cAmt;
+                rangeCashSales += cashAmt;
                 rangeWages += dWages;
                 rangeHours += dHours;
 
@@ -3944,6 +4059,8 @@
                     dayName,
                     dow,
                     sAmt,
+                    cAmt,
+                    cashAmt,
                     dWages,
                     dayExp,
                     dHours,
@@ -3955,12 +4072,16 @@
 
             // Update KPI Cards
             const kpiSales = document.getElementById('kpiRangeSales');
+            const kpiCardSales = document.getElementById('kpiRangeCardSales');
+            const kpiCashSales = document.getElementById('kpiRangeCashSales');
             const kpiWages = document.getElementById('kpiRangeWages');
             const kpiExpenses = document.getElementById('kpiRangeExpenses');
             const kpiHoursSplh = document.getElementById('kpiRangeHoursSplh');
             const kpiNet = document.getElementById('kpiRangeNet');
 
             if (kpiSales) kpiSales.innerText = `$${rangeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiCardSales) kpiCardSales.innerText = `$${rangeCardSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiCashSales) kpiCashSales.innerText = `$${rangeCashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (kpiWages) kpiWages.innerText = `$${rangeWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (kpiExpenses) kpiExpenses.innerText = `$${rangeExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
