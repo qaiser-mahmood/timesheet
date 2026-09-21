@@ -24,6 +24,10 @@ const OFFPEAK_INTERVAL_MINUTES = parseInt(process.env.OFFPEAK_INTERVAL_MINUTES |
 const STORAGE_STATE_PATH = path.join(__dirname, 'storageState.json');
 const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
 
+// Loyverse POS Configuration (Green Juice Bar)
+const LOYVERSE_TOKEN = process.env.LOYVERSE_TOKEN || '';
+const LOYVERSE_API_BASE = 'https://api.loyverse.com/v1.0';
+
 // Whitelisted management email accounts (Server-enforced, configurable via Render Env Var or code)
 const DEFAULT_MANAGERS = [
   'hqmahmood@gmail.com',
@@ -418,7 +422,8 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       taxRate: Number(r.tax_rate) || 0,
       totalHours: Number(r.total_hours) || 0,
       cashHours: Number(r.cash_hours) || 0,
-      taxHours: Number(r.tax_hours) || 0
+      taxHours: Number(r.tax_hours) || 0,
+      store_id: r.store_id || 'anatolya'
     }));
 
     const staff = (staffRows || []).map(s => {
@@ -427,6 +432,9 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
         name: s.name,
         cashRate: isOwner ? 0 : (Number(s.cash_rate) || 25),
         taxRate: isOwner ? 0 : (Number(s.tax_rate) || 30),
+        gjCashRate: isOwner ? 0 : (Number(s.gj_cash_rate) || Number(s.cash_rate) || 25),
+        gjSundayRate: isOwner ? 0 : (Number(s.gj_sunday_rate) || Number(s.gj_cash_rate) || Number(s.cash_rate) || 25),
+        stores: s.stores || 'anatolya,green_juice',
         status: s.status || 'Active'
       };
     });
@@ -467,6 +475,7 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
         cardSales: Math.round(card * 100) / 100,
         cashSales: Math.round(cash * 100) / 100,
         hourly: h,
+        store_id: s.store_id || 'anatolya',
         updatedAt: s.updated_at || ''
       };
     });
@@ -476,7 +485,8 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       date: cleanDateStr(x.date),
       category: x.category || 'Others',
       amount: Number(x.amount) || 0,
-      notes: x.notes || ''
+      notes: x.notes || '',
+      store_id: x.store_id || 'anatolya'
     }));
 
     res.json({ logs, staff, sales, expenses });
@@ -530,13 +540,24 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         total_hours: Number(e.totalHours) || 0,
         cash_hours: Number(e.cashHours) || 0,
         tax_hours: Number(e.taxHours) || 0,
+        store_id: e.store_id || 'anatolya',
         updated_at: new Date().toISOString()
       };
-      await supabaseServerFetch('roster?on_conflict=date,name', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify(row)
-      });
+      try {
+        await supabaseServerFetch('roster?on_conflict=date,name,store_id', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(row)
+        });
+      } catch (err) {
+        // Fallback if unique constraint or store_id column is not yet migrated
+        delete row.store_id;
+        await supabaseServerFetch('roster?on_conflict=date,name', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(row)
+        });
+      }
       return res.json({ status: 'success' });
     }
 
@@ -546,13 +567,24 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         date: cleanDateStr(x.date),
         category: x.category || 'Others',
         amount: Number(x.amount) || 0,
-        notes: x.notes || ''
+        notes: x.notes || '',
+        store_id: x.store_id || 'anatolya'
       };
-      const result = await supabaseServerFetch('expenses', {
-        method: 'POST',
-        headers: { 'Prefer': 'return=representation' },
-        body: JSON.stringify(row)
-      });
+      let result;
+      try {
+        result = await supabaseServerFetch('expenses', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(row)
+        });
+      } catch (err) {
+        delete row.store_id;
+        result = await supabaseServerFetch('expenses', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(row)
+        });
+      }
       return res.json({ status: 'success', item: result && result[0] ? result[0] : row });
     }
 
@@ -566,9 +598,44 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
     if (payload.action === 'delete') {
       const cleanD = cleanDateStr(payload.date);
       const nameEnc = encodeURIComponent(payload.name.toString().trim());
-      await supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+      const storeFilter = payload.store_id ? `&store_id=eq.${payload.store_id}` : '';
+      await supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}${storeFilter}`, {
         method: 'DELETE'
+      }).catch(() => {
+        return supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+          method: 'DELETE'
+        });
       });
+      return res.json({ status: 'success' });
+    }
+
+    if (payload.action === 'save_staff' && payload.staff) {
+      const s = payload.staff;
+      const row = {
+        name: s.name.toString().trim(),
+        cash_rate: Number(s.cashRate) || 0,
+        tax_rate: Number(s.taxRate) || 0,
+        gj_cash_rate: Number(s.gjCashRate) || Number(s.cashRate) || 0,
+        gj_sunday_rate: Number(s.gjSundayRate) || Number(s.gjCashRate) || Number(s.cashRate) || 0,
+        stores: s.stores || 'anatolya,green_juice',
+        status: s.status || 'Active'
+      };
+      try {
+        await supabaseServerFetch('staff?on_conflict=name', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(row)
+        });
+      } catch (err) {
+        delete row.gj_cash_rate;
+        delete row.gj_sunday_rate;
+        delete row.stores;
+        await supabaseServerFetch('staff?on_conflict=name', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(row)
+        });
+      }
       return res.json({ status: 'success' });
     }
 
@@ -582,22 +649,33 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       if (payload.cashSales !== undefined) h._cashSales = Number(payload.cashSales) || 0;
       const row = {
         date: cleanD,
+        store_id: payload.store_id || 'anatolya',
         total_sales: Number(payload.totalSales) || 0,
         hourly: h,
         updated_at: new Date().toISOString()
       };
-      await supabaseServerFetch('hourly_sales?on_conflict=date', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify(row)
-      });
+      try {
+        await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(row)
+        });
+      } catch (err) {
+        delete row.store_id;
+        await supabaseServerFetch('hourly_sales?on_conflict=date', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(row)
+        });
+      }
       return res.json({ status: 'success' });
     }
 
     if (payload.action === 'copy_previous_week') {
       const targetMon = payload.targetWeekMonday;
       const prevMon = addDaysString(targetMon, -7);
-      const prevShifts = await supabaseServerFetch(`roster?week_commencing=eq.${prevMon}`);
+      const storeParam = payload.store_id && payload.store_id !== 'all' ? `&store_id=eq.${payload.store_id}` : '';
+      const prevShifts = await supabaseServerFetch(`roster?week_commencing=eq.${prevMon}${storeParam}`);
       if (!prevShifts || prevShifts.length === 0) {
         return res.json({ status: 'success', count: 0 });
       }
@@ -614,14 +692,24 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
           total_hours: Number(s.total_hours) || 0,
           cash_hours: Number(s.cash_hours) || 0,
           tax_hours: Number(s.tax_hours) || 0,
+          store_id: s.store_id || 'anatolya',
           updated_at: new Date().toISOString()
         };
       });
-      await supabaseServerFetch('roster?on_conflict=date,name', {
-        method: 'POST',
-        headers: { 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify(copied)
-      });
+      try {
+        await supabaseServerFetch('roster?on_conflict=date,name,store_id', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(copied)
+        });
+      } catch (err) {
+        const stripped = copied.map(c => { const x = { ...c }; delete x.store_id; return x; });
+        await supabaseServerFetch('roster?on_conflict=date,name', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(stripped)
+        });
+      }
       return res.json({ status: 'success', count: copied.length });
     }
 
@@ -754,6 +842,175 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
       status: 'triggered', 
       message: 'Live sync for Today initiated' 
     });
+  }
+});
+
+// ----------------------------------------------------
+// Loyverse POS Sync Engine (Green Juice Bar)
+// ----------------------------------------------------
+async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
+  if (!LOYVERSE_TOKEN) {
+    console.log('[LoyverseSync] LOYVERSE_TOKEN not configured. Skipping Loyverse sync.');
+    return { status: 'skipped', message: 'LOYVERSE_TOKEN not configured in environment' };
+  }
+
+  const now = new Date();
+  const todayPerth = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(now);
+  const start = startDateIso || todayPerth;
+  const end = endDateIso || todayPerth;
+
+  console.log(`[LoyverseSync] Starting sync for Green Juice Bar (${start} to ${end})...`);
+
+  try {
+    const minIso = new Date(`${start}T00:00:00+08:00`).toISOString();
+    const maxIso = new Date(`${end}T23:59:59+08:00`).toISOString();
+
+    let allReceipts = [];
+    let cursor = null;
+    let pageCount = 0;
+
+    do {
+      pageCount++;
+      const url = new URL(`${LOYVERSE_API_BASE}/receipts`);
+      url.searchParams.set('created_at_min', minIso);
+      url.searchParams.set('created_at_max', maxIso);
+      url.searchParams.set('limit', '250');
+      if (cursor) url.searchParams.set('cursor', cursor);
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          'Authorization': `Bearer ${LOYVERSE_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        const errTxt = await res.text();
+        throw new Error(`Loyverse API error [${res.status}]: ${errTxt}`);
+      }
+
+      const data = await res.json();
+      const receipts = data.receipts || [];
+      allReceipts = allReceipts.concat(receipts);
+      cursor = data.cursor || null;
+    } while (cursor && pageCount < 20);
+
+    console.log(`[LoyverseSync] Fetched ${allReceipts.length} receipts from Loyverse.`);
+
+    // Group receipts by date (Perth time) and hour
+    const daysGroup = {};
+    const perthFormatter = new Intl.DateTimeFormat('en-AU', {
+      timeZone: TIMEZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23'
+    });
+
+    for (const r of allReceipts) {
+      if (!r.created_at) continue;
+      const rDate = new Date(r.created_at);
+      const parts = perthFormatter.formatToParts(rDate);
+      const y = parts.find(p => p.type === 'year').value;
+      const m = parts.find(p => p.type === 'month').value;
+      const d = parts.find(p => p.type === 'day').value;
+      const hr = parts.find(p => p.type === 'hour').value;
+      const dateKey = `${y}-${m}-${d}`;
+      const hourKey = `${hr}:00`;
+
+      if (!daysGroup[dateKey]) {
+        daysGroup[dateKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
+      }
+
+      const isRefund = (r.receipt_type === 'REFUND');
+      const multiplier = isRefund ? -1 : 1;
+      const money = (Number(r.total_money) || 0) * multiplier;
+
+      daysGroup[dateKey].count++;
+      daysGroup[dateKey].totalSales += money;
+
+      // Classify payment methods
+      const payments = r.payments || [];
+      if (payments.length > 0) {
+        for (const p of payments) {
+          const pType = (p.type || '').toUpperCase();
+          const pAmount = (Number(p.money_amount) || 0) * multiplier;
+          if (pType === 'CASH') {
+            daysGroup[dateKey].cashSales += pAmount;
+          } else {
+            daysGroup[dateKey].cardSales += pAmount;
+          }
+        }
+      } else {
+        daysGroup[dateKey].cardSales += money;
+      }
+
+      daysGroup[dateKey].hourly[hourKey] = (daysGroup[dateKey].hourly[hourKey] || 0) + money;
+    }
+
+    const rows = [];
+    for (const [dKey, val] of Object.entries(daysGroup)) {
+      val.totalSales = Math.round(val.totalSales * 100) / 100;
+      val.cardSales = Math.round(val.cardSales * 100) / 100;
+      val.cashSales = Math.round(val.cashSales * 100) / 100;
+      for (const hKey in val.hourly) {
+        val.hourly[hKey] = Math.round(val.hourly[hKey] * 100) / 100;
+      }
+      val.hourly._cardSales = val.cardSales;
+      val.hourly._cashSales = val.cashSales;
+
+      rows.push({
+        date: dKey,
+        store_id: 'green_juice',
+        total_sales: val.totalSales,
+        card_sales: val.cardSales,
+        cash_sales: val.cashSales,
+        hourly: val.hourly,
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    if (rows.length > 0) {
+      try {
+        await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(rows)
+        });
+      } catch (err) {
+        await supabaseServerFetch('hourly_sales', {
+          method: 'POST',
+          headers: { 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(rows)
+        });
+      }
+      console.log(`[LoyverseSync] Successfully upserted ${rows.length} day(s) for Green Juice Bar.`);
+    }
+
+    return {
+      status: 'success',
+      store: 'green_juice',
+      receiptsCount: allReceipts.length,
+      daysCount: rows.length,
+      days: rows.map(r => ({ date: r.date, total: r.total_sales, card: r.card_sales, cash: r.cash_sales }))
+    };
+  } catch (err) {
+    console.error('[LoyverseSync] Error:', err);
+    throw err;
+  }
+}
+
+// Endpoint to trigger Loyverse sync (Protected by manager whitelist)
+app.all('/api/loyverse/sync', requireAuthorizedManager, async (req, res) => {
+  try {
+    const from = req.query.from || (req.body && req.body.from);
+    const to = req.query.to || (req.body && req.body.to);
+    const result = await syncLoyverseSales(from, to);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
   }
 });
 

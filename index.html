@@ -795,6 +795,36 @@
 
                 <!-- Detailed Audit Breakdowns (3 Tabs/Cards: Monthly, Expenses, Wages) -->
                 <div class="space-y-3">
+                    <!-- Multi-Store Venue Contribution Table -->
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-2 shadow">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <span>🏢</span> <span>ALHAMD ENTERPRISES • Multi-Store Venue Contribution</span>
+                            </h4>
+                            <span class="text-[10px] text-amber-400 font-semibold">Anatolya Kebabs + Green Juice Bar</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left border-collapse min-w-[600px]">
+                                <thead>
+                                    <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
+                                        <th class="p-2">Store / Venue</th>
+                                        <th class="p-2 text-right">Card Sales (G1)</th>
+                                        <th class="p-2 text-right text-slate-400">Cash Sales</th>
+                                        <th class="p-2 text-right">GST on Sales (1A)</th>
+                                        <th class="p-2 text-right">Purchases (G11)</th>
+                                        <th class="p-2 text-right">GST Credits (1B)</th>
+                                        <th class="p-2 text-right">Tax Wages (W1)</th>
+                                        <th class="p-2 text-right">Tax Withheld (W2)</th>
+                                        <th class="p-2 text-right">Net GST (3)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="basStoreBreakdownTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                     <!-- Monthly Summary Table -->
                     <div class="rounded-xl border border-slate-800 bg-slate-900/80 p-3 space-y-2 shadow">
                         <div class="flex items-center justify-between">
@@ -1254,6 +1284,17 @@
         window.changeBasFinancialYear = changeBasFinancialYear;
         window.printBasReport = printBasReport;
         window.renderBasReportView = renderBasReportView;
+        window.switchStore = switchStore;
+        window.openStaffModal = openStaffModal;
+        window.closeStaffModal = closeStaffModal;
+        window.renderStaffRatesList = renderStaffRatesList;
+        window.saveStaffRateItem = saveStaffRateItem;
+        window.openAddNewStaffPrompt = openAddNewStaffPrompt;
+        window.openLoyverseSyncModal = openLoyverseSyncModal;
+        window.closeLoyverseSyncModal = closeLoyverseSyncModal;
+        window.setLoyversePreset = setLoyversePreset;
+        window.executeLoyverseSync = executeLoyverseSync;
+        window.openActiveStoreSyncModal = openActiveStoreSyncModal;
 
         // 2. Core State
         const EPOS_WORKER_URL = "https://epos-sync-worker.onrender.com";
@@ -1265,6 +1306,7 @@
         let staffRegistry = [];
         let hourlySalesStore = [];
         let expensesStore = [];
+        let currentStore = localStorage.getItem('alhamd_current_store') || 'anatolya'; // 'anatolya' | 'green_juice' | 'all'
         const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
         document.getElementById('filterWeek').value = todayStr;
 
@@ -1399,6 +1441,7 @@
                         const logs = (rosterRows || []).map(r => ({
                             date: r.date,
                             weekCommencing: r.week_commencing || r.date,
+                            store_id: r.store_id || 'anatolya',
                             name: r.name,
                             from: r.shift_from || "",
                             to: r.shift_to || "",
@@ -1411,10 +1454,24 @@
 
                         const staff = (staffRows || []).map(s => {
                             const isOwner = (s.name && s.name.toString().trim().toLowerCase() === "qaiser");
+                            const cRate = Number(s.cash_rate) || 25;
+                            const gjCRate = Number(s.gj_cash_rate) || cRate;
+                            const gjSunRate = Number(s.gj_sunday_rate) || gjCRate;
+                            let storesList = ['anatolya', 'green_juice'];
+                            if (s.stores) {
+                                try {
+                                    storesList = typeof s.stores === 'string' ? JSON.parse(s.stores) : s.stores;
+                                } catch(_) {
+                                    storesList = [s.stores];
+                                }
+                            }
                             return {
                                 name: s.name,
-                                cashRate: isOwner ? 0 : (Number(s.cash_rate) || 25),
+                                cashRate: isOwner ? 0 : cRate,
                                 taxRate: isOwner ? 0 : (Number(s.tax_rate) || 30),
+                                gjCashRate: isOwner ? 0 : gjCRate,
+                                gjSundayRate: isOwner ? 0 : gjSunRate,
+                                stores: Array.isArray(storesList) ? storesList : ['anatolya', 'green_juice'],
                                 status: s.status || "Active"
                             };
                         });
@@ -1447,6 +1504,7 @@
                             }
                             return {
                                 date: s.date,
+                                store_id: s.store_id || 'anatolya',
                                 totalSales: tot,
                                 cardSales: Math.round(card * 100) / 100,
                                 cashSales: Math.round(cash * 100) / 100,
@@ -1458,6 +1516,7 @@
                         const expenses = (expenseRows || []).map(x => ({
                             id: x.id,
                             date: cleanDateStr(x.date),
+                            store_id: x.store_id || 'anatolya',
                             category: x.category || 'Others',
                             amount: Number(x.amount) || 0,
                             notes: x.notes || ''
@@ -1847,6 +1906,11 @@
                                     (s.cashRate !== undefined && s.cashRate !== null && !isNaN(s.cashRate) ? Number(s.cashRate) : 25.00);
                                 s.taxRate = (isOwner || s.taxRate === 0 || s.taxRate === '0') ? 0 : 
                                     (s.taxRate !== undefined && s.taxRate !== null && !isNaN(s.taxRate) ? Number(s.taxRate) : 30.00);
+                                s.gjCashRate = (isOwner || s.gjCashRate === 0 || s.gjCashRate === '0') ? 0 :
+                                    (s.gjCashRate !== undefined && s.gjCashRate !== null && !isNaN(s.gjCashRate) ? Number(s.gjCashRate) : s.cashRate);
+                                s.gjSundayRate = (isOwner || s.gjSundayRate === 0 || s.gjSundayRate === '0') ? 0 :
+                                    (s.gjSundayRate !== undefined && s.gjSundayRate !== null && !isNaN(s.gjSundayRate) ? Number(s.gjSundayRate) : s.gjCashRate);
+                                s.stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
                                 return s;
                             });
                             populateStaffDropdowns();
@@ -1856,6 +1920,7 @@
                                 if (log.name) log.name = log.name.toString().trim();
                                 if (log.date) log.date = cleanDateStr(log.date);
                                 if (log.weekCommencing) log.weekCommencing = cleanDateStr(log.weekCommencing);
+                                log.store_id = log.store_id || 'anatolya';
                                 
                                 const isOwner = (log.name && log.name.toLowerCase() === 'qaiser');
                                 if (isOwner) {
@@ -1871,9 +1936,13 @@
                         }
                         if (responseObj.sales && Array.isArray(responseObj.sales)) {
                             if (responseObj.expenses && Array.isArray(responseObj.expenses)) {
-                            expensesStore = responseObj.expenses;
-                        }
-                        hourlySalesStore = responseObj.sales.map(s => {
+                                expensesStore = responseObj.expenses.map(x => ({
+                                    ...x,
+                                    store_id: x.store_id || 'anatolya'
+                                }));
+                            }
+                            hourlySalesStore = responseObj.sales.map(s => {
+                                s.store_id = s.store_id || 'anatolya';
                                 if (s.date) s.date = cleanDateStr(s.date);
                                 s.totalSales = Number(s.totalSales) || 0;
                                 if (typeof s.hourly === 'string') {
@@ -2004,25 +2073,39 @@
                 function populateStaffDropdowns() {
                     const picker = document.getElementById('staffName');
                     const bulkPicker = document.getElementById('bulkStaffName');
-                    const previouslySelectedStaff = picker.value;
-                    const previouslySelectedBulk = bulkPicker.value;
+                    const previouslySelectedStaff = picker ? picker.value : '';
+                    const previouslySelectedBulk = bulkPicker ? bulkPicker.value : '';
                     
-                    picker.innerHTML = ''; 
-                    bulkPicker.innerHTML = '';
+                    if (picker) picker.innerHTML = ''; 
+                    if (bulkPicker) bulkPicker.innerHTML = '';
 
-                    const activeStaff = staffRegistry.filter(s => !s.status || s.status.toString().toLowerCase() !== 'inactive');
-                    
-                    activeStaff.forEach(person => {
-                        let opt1 = document.createElement('option'); opt1.text = person.name; opt1.value = person.name;
-                        picker.add(opt1);
-                        let opt2 = document.createElement('option'); opt2.text = person.name; opt2.value = person.name;
-                        bulkPicker.add(opt2);
+                    const activeStaff = staffRegistry.filter(s => {
+                        if (s.status && s.status.toString().toLowerCase() === 'inactive') return false;
+                        if (currentStore === 'green_juice') {
+                            const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+                            return stores.includes('green_juice');
+                        } else if (currentStore === 'anatolya') {
+                            const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+                            return stores.includes('anatolya');
+                        }
+                        return true;
                     });
                     
-                    if (previouslySelectedStaff && staffRegistry.some(p => p.name === previouslySelectedStaff)) {
+                    activeStaff.forEach(person => {
+                        if (picker) {
+                            let opt1 = document.createElement('option'); opt1.text = person.name; opt1.value = person.name;
+                            picker.add(opt1);
+                        }
+                        if (bulkPicker) {
+                            let opt2 = document.createElement('option'); opt2.text = person.name; opt2.value = person.name;
+                            bulkPicker.add(opt2);
+                        }
+                    });
+                    
+                    if (picker && previouslySelectedStaff && activeStaff.some(p => p.name === previouslySelectedStaff)) {
                         picker.value = previouslySelectedStaff;
                     }
-                    if (previouslySelectedBulk && staffRegistry.some(p => p.name === previouslySelectedBulk)) {
+                    if (bulkPicker && previouslySelectedBulk && activeStaff.some(p => p.name === previouslySelectedBulk)) {
                         bulkPicker.value = previouslySelectedBulk;
                     }
                     applyStaffRateDefaults();
@@ -2033,10 +2116,34 @@
                     const staffObj = staffRegistry.find(p => p.name === currentSelected);
                     if (staffObj) {
                         const isOwner = (staffObj.name && staffObj.name.toLowerCase().trim() === 'qaiser');
-                        const cRate = isOwner ? 0 : parseFloat(staffObj.cashRate !== undefined && staffObj.cashRate !== null ? staffObj.cashRate : 0);
-                        const tRate = isOwner ? 0 : parseFloat(staffObj.taxRate !== undefined && staffObj.taxRate !== null ? staffObj.taxRate : 0);
-                        document.getElementById('payRate').value = cRate.toFixed(2);
-                        document.getElementById('taxPayRate').value = tRate.toFixed(2);
+                        const selectedDate = document.getElementById('date').value;
+                        let isSunday = false;
+                        if (selectedDate) {
+                            const [y, m, d] = selectedDate.split('-').map(Number);
+                            isSunday = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 0);
+                        }
+
+                        if (currentStore === 'green_juice') {
+                            // Green Juice: 100% Cash, No Tax Pay!
+                            let cRate = 0;
+                            if (!isOwner) {
+                                if (isSunday && staffObj.gjSundayRate !== undefined && staffObj.gjSundayRate !== null && !isNaN(staffObj.gjSundayRate)) {
+                                    cRate = Number(staffObj.gjSundayRate);
+                                } else if (staffObj.gjCashRate !== undefined && staffObj.gjCashRate !== null && !isNaN(staffObj.gjCashRate)) {
+                                    cRate = Number(staffObj.gjCashRate);
+                                } else {
+                                    cRate = Number(staffObj.cashRate) || 25;
+                                }
+                            }
+                            document.getElementById('payRate').value = cRate.toFixed(2);
+                            document.getElementById('taxPayRate').value = "0.00";
+                        } else {
+                            // Anatolya / Combined
+                            const cRate = isOwner ? 0 : parseFloat(staffObj.cashRate !== undefined && staffObj.cashRate !== null ? staffObj.cashRate : 25);
+                            const tRate = isOwner ? 0 : parseFloat(staffObj.taxRate !== undefined && staffObj.taxRate !== null ? staffObj.taxRate : 30);
+                            document.getElementById('payRate').value = cRate.toFixed(2);
+                            document.getElementById('taxPayRate').value = tRate.toFixed(2);
+                        }
                     }
                 }
 
@@ -2080,6 +2187,7 @@
                         }
                     }
                     applyDefaultShiftTimes();
+                    applyStaffRateDefaults();
                     renderHourlySalesView(targetIsoDate);
 
                     // If sales data for this date is not yet loaded or last fetch > 15s, refresh cloud data in background
@@ -2160,27 +2268,31 @@
                     const currentStaff = document.getElementById('staffName').value.toString().trim();
                     if (isNaN(total) || !currentStaff) return;
                     const chosenDate = cleanDateStr(document.getElementById('date').value);
+                    const storeId = (currentStore === 'green_juice') ? 'green_juice' : 'anatolya';
+                    const isGJ = (storeId === 'green_juice');
 
                     const isOwner = (currentStaff.toLowerCase().trim() === 'qaiser');
                     const matchedPrevious = dataStore.find(entry => 
                         cleanDateStr(entry.date) === chosenDate && 
+                        (entry.store_id || 'anatolya') === storeId &&
                         entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()
                     );
 
                     const newEntry = {
                         date: chosenDate,
                         weekCommencing: getMondayString(chosenDate),
+                        store_id: storeId,
                         name: currentStaff,
                         from: document.getElementById('startTime').value,
                         to: document.getElementById('endTime').value,
                         cashRate: isOwner ? 0 : parseFloat(document.getElementById('payRate').value || 0),
-                        taxRate: isOwner ? 0 : parseFloat(document.getElementById('taxPayRate').value || 0),
+                        taxRate: (isOwner || isGJ) ? 0 : parseFloat(document.getElementById('taxPayRate').value || 0),
                         totalHours: total,
-                        cashHours: isOwner ? 0 : (matchedPrevious && matchedPrevious.cashHours !== undefined ? Number(matchedPrevious.cashHours) : 0),
-                        taxHours: isOwner ? 0 : (matchedPrevious && matchedPrevious.taxHours !== undefined ? Number(matchedPrevious.taxHours) : total)
+                        cashHours: isOwner ? 0 : (isGJ ? total : (matchedPrevious && matchedPrevious.cashHours !== undefined ? Number(matchedPrevious.cashHours) : 0)),
+                        taxHours: (isOwner || isGJ) ? 0 : (matchedPrevious && matchedPrevious.taxHours !== undefined ? Number(matchedPrevious.taxHours) : total)
                     };
 
-                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
+                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
                     dataStore.push(newEntry);
                     renderWeeklyTable();
                     try { await callSheetApi({ action: "save", entry: newEntry }); } catch (err) { console.error(err); }
@@ -2190,10 +2302,11 @@
                 async function deleteSelectedShift() {
                     const chosenDate = cleanDateStr(document.getElementById('date').value);
                     const currentStaff = document.getElementById('staffName').value.toString().trim();
+                    const storeId = (currentStore === 'green_juice') ? 'green_juice' : 'anatolya';
                     if (!chosenDate || !currentStaff || !confirm(`Delete record?`)) return;
-                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
+                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
                     renderWeeklyTable();
-                    try { await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff }); } catch (err) { console.error(err); }
+                    try { await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff, store_id: storeId }); } catch (err) { console.error(err); }
                     loadCloudData();
                 }
 
@@ -2229,13 +2342,30 @@
     const startMondayStr = getMondayString(filterWeekVal);
     document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(addDaysString(startMondayStr, 6))}`;
 
-    const weekLogs = dataStore.filter(e => e.weekCommencing === startMondayStr);
+    const weekLogs = dataStore.filter(e => {
+        if (e.weekCommencing !== startMondayStr) return false;
+        if (currentStore === 'anatolya') return (!e.store_id || e.store_id === 'anatolya');
+        if (currentStore === 'green_juice') return (e.store_id === 'green_juice');
+        return true;
+    });
     const today = new Date().toISOString().split('T')[0];
     const isHistoric = (startMondayStr < getMondayString(today));
 
+    let storeStaffPool = staffRegistry.filter(s => {
+        if (s.status && s.status.toLowerCase() === 'inactive') return false;
+        if (currentStore === 'anatolya') {
+            const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+            return stores.includes('anatolya');
+        } else if (currentStore === 'green_juice') {
+            const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+            return stores.includes('green_juice');
+        }
+        return true;
+    });
+
     let targetRenderList = isHistoric ? 
         [...new Set(weekLogs.map(e => e.name))] : 
-        [...new Set([...staffRegistry.map(s => s.name), ...weekLogs.map(e => e.name)])].filter(Boolean);
+        [...new Set([...storeStaffPool.map(s => s.name), ...weekLogs.map(e => e.name)])].filter(Boolean);
     
     let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
     let macroTotals = { cashH: 0, taxH: 0, cashPayout: 0, taxPayout: 0, globalHours: 0 };
@@ -3045,12 +3175,402 @@
             if (modal) modal.classList.add('hidden');
         }
 
+        // ==================== MULTI-STORE MANAGEMENT & SWITCHER ====================
+        function switchStore(storeKey) {
+            if (!['anatolya', 'green_juice', 'all'].includes(storeKey)) storeKey = 'anatolya';
+            currentStore = storeKey;
+            localStorage.setItem('alhamd_current_store', storeKey);
+
+            // 1. Update Switcher Buttons UI
+            const btnAnatolya = document.getElementById('storeBtn_anatolya');
+            const btnGJ = document.getElementById('storeBtn_green_juice');
+            const btnAll = document.getElementById('storeBtn_all');
+
+            const activeAmberCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer";
+            const activeEmeraldCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer";
+            const activePurpleCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-purple-600 text-white shadow-xs cursor-pointer";
+            const inactiveCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer";
+
+            if (btnAnatolya) btnAnatolya.className = (storeKey === 'anatolya' ? activeAmberCls : inactiveCls);
+            if (btnGJ) btnGJ.className = (storeKey === 'green_juice' ? activeEmeraldCls : inactiveCls);
+            if (btnAll) btnAll.className = (storeKey === 'all' ? activePurpleCls : inactiveCls);
+
+            // 2. Update Context Badge, Titles, Logo & Sync Button
+            const ctxText = document.getElementById('storeContextText');
+            const ctxDot = document.getElementById('storeContextDot');
+            const mainTitle = document.getElementById('mainTitle');
+            const logoImg = document.getElementById('headerLogoImg');
+            const headerLogoWrapper = document.getElementById('headerLogoWrapper');
+            const headerSyncBtn = document.getElementById('headerSyncModalBtn');
+
+            if (storeKey === 'anatolya') {
+                if (ctxText) ctxText.innerText = "Viewing Anatolya Kebabs (Epos Now)";
+                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+                if (mainTitle && !isShareModeActive) mainTitle.innerText = "Anatolya Kebabs Roster";
+                if (logoImg) {
+                    logoImg.src = "logo.png";
+                    logoImg.alt = "Anatolya Kebabs";
+                    logoImg.style.display = "block";
+                }
+                if (headerLogoWrapper) {
+                    headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-amber-500/40 bg-black flex items-center justify-center p-0.5 shrink-0 ring-2 ring-amber-500/10";
+                    headerLogoWrapper.innerHTML = '<img id="headerLogoImg" src="logo.png" alt="Anatolya Kebabs" class="w-full h-full object-contain rounded-lg">';
+                }
+                if (headerSyncBtn) {
+                    headerSyncBtn.innerHTML = "⚡ Sync Sales";
+                    headerSyncBtn.title = "Sync Epos Now Sales & Bookmarklet";
+                    headerSyncBtn.className = "hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30";
+                }
+            } else if (storeKey === 'green_juice') {
+                if (ctxText) ctxText.innerText = "Viewing Green Juice Bar (Loyverse POS)";
+                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+                if (mainTitle && !isShareModeActive) mainTitle.innerText = "Green Juice Bar Timesheet";
+                if (headerLogoWrapper) {
+                    headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20 text-lg";
+                    headerLogoWrapper.innerHTML = "🥤";
+                }
+                if (headerSyncBtn) {
+                    headerSyncBtn.innerHTML = "🥤 Sync Loyverse";
+                    headerSyncBtn.title = "Sync Green Juice Bar Sales via Loyverse API";
+                    headerSyncBtn.className = "hide-on-share bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-emerald-500/30";
+                }
+            } else { // 'all'
+                if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES Consolidated (BAS)";
+                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-purple-400 animate-pulse";
+                if (mainTitle && !isShareModeActive) mainTitle.innerText = "ALHAMD ENTERPRISES Consolidated";
+                if (headerLogoWrapper) {
+                    headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-purple-500/40 bg-slate-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-purple-500/20 text-lg";
+                    headerLogoWrapper.innerHTML = "🏢";
+                }
+                if (headerSyncBtn) {
+                    headerSyncBtn.innerHTML = "⚡ Sync Sales";
+                    headerSyncBtn.title = "Sync POS Sales";
+                    headerSyncBtn.className = "hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30";
+                }
+            }
+
+            // 3. Re-render UI components for active store
+            populateStaffDropdowns();
+            renderWeeklyTable();
+            applyStaffRateDefaults();
+            renderCurrentAnalyticsView();
+            const activeDate = document.getElementById('date').value;
+            if (activeDate) renderHourlySalesView(activeDate);
+        }
+
+        // ==================== STAFF RATES & MULTI-STORE MODAL ====================
+        function openStaffModal() {
+            const modal = document.getElementById('staffModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                renderStaffRatesList();
+            }
+        }
+
+        function closeStaffModal() {
+            const modal = document.getElementById('staffModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function renderStaffRatesList() {
+            const container = document.getElementById('staffRatesListContainer');
+            if (!container) return;
+            if (!staffRegistry || staffRegistry.length === 0) {
+                container.innerHTML = '<div class="text-center py-4 text-slate-400 italic">No staff members found. Tap Add Staff Member below to add someone.</div>';
+                return;
+            }
+
+            let html = '';
+            staffRegistry.forEach((s, idx) => {
+                const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
+                const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+                const worksAtAnatolya = stores.includes('anatolya');
+                const worksAtGJ = stores.includes('green_juice');
+                const isActive = (!s.status || s.status.toLowerCase() !== 'inactive');
+
+                html += `
+                    <div class="bg-slate-800/90 border border-slate-700 rounded-xl p-3 space-y-2.5 shadow-sm">
+                        <div class="flex items-center justify-between border-b border-slate-700/60 pb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white flex items-center gap-1.5">
+                                    <span>${isOwner ? '👑' : '👤'}</span>
+                                    <span>${s.name}</span>
+                                </span>
+                                ${isOwner ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-semibold">Owner</span>' : ''}
+                                <span class="text-[9px] px-1.5 py-0.2 rounded font-semibold ${isActive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'}">
+                                    ${isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <label class="text-[10px] text-slate-400 font-medium flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" id="staff_status_${idx}" ${isActive ? 'checked' : ''} class="rounded bg-slate-900 border-slate-700 text-emerald-500">
+                                    <span>Active</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Store Assignment Badges Checkboxes -->
+                        <div class="flex items-center gap-3 text-[11px] pt-0.5">
+                            <span class="text-[10px] uppercase font-bold text-slate-400">Stores:</span>
+                            <label class="flex items-center gap-1.5 text-amber-300 font-semibold cursor-pointer">
+                                <input type="checkbox" id="staff_store_ak_${idx}" ${worksAtAnatolya ? 'checked' : ''} class="rounded bg-slate-900 border-slate-700 text-amber-500">
+                                <span>🥙 Anatolya Kebabs</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-emerald-300 font-semibold cursor-pointer">
+                                <input type="checkbox" id="staff_store_gj_${idx}" ${worksAtGJ ? 'checked' : ''} class="rounded bg-slate-900 border-slate-700 text-emerald-500">
+                                <span>🥤 Green Juice Bar</span>
+                            </label>
+                        </div>
+
+                        <!-- Pay Rates Grid -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1">
+                                <label class="block text-[9px] font-bold text-amber-400 uppercase">Anatolya Cash ($)</label>
+                                <input type="number" step="0.5" id="staff_ak_cash_${idx}" value="${isOwner ? 0 : (s.cashRate !== undefined ? s.cashRate : 25)}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
+                            </div>
+                            <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1">
+                                <label class="block text-[9px] font-bold text-amber-400 uppercase">Anatolya Tax ($)</label>
+                                <input type="number" step="0.5" id="staff_ak_tax_${idx}" value="${isOwner ? 0 : (s.taxRate !== undefined ? s.taxRate : 30)}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
+                            </div>
+                            <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1">
+                                <label class="block text-[9px] font-bold text-emerald-400 uppercase">GJ Cash (Mon–Sat) ($)</label>
+                                <input type="number" step="0.5" id="staff_gj_cash_${idx}" value="${isOwner ? 0 : (s.gjCashRate !== undefined ? s.gjCashRate : (s.cashRate || 25))}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
+                            </div>
+                            <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1">
+                                <label class="block text-[9px] font-bold text-emerald-400 uppercase">GJ Sunday Cash ($)</label>
+                                <input type="number" step="0.5" id="staff_gj_sun_${idx}" value="${isOwner ? 0 : (s.gjSundayRate !== undefined ? s.gjSundayRate : (s.gjCashRate || s.cashRate || 25))}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1">
+                            <span id="staff_save_status_${idx}" class="text-[10px] text-slate-400 italic"></span>
+                            <button type="button" onclick="saveStaffRateItem(${idx})" class="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-md text-[11px] transition shadow flex items-center gap-1 cursor-pointer">
+                                <span>💾 Save</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        async function saveStaffRateItem(idx) {
+            const s = staffRegistry[idx];
+            if (!s) return;
+
+            const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
+            const statusBox = document.getElementById(`staff_status_${idx}`);
+            const akCash = document.getElementById(`staff_ak_cash_${idx}`);
+            const akTax = document.getElementById(`staff_ak_tax_${idx}`);
+            const gjCash = document.getElementById(`staff_gj_cash_${idx}`);
+            const gjSun = document.getElementById(`staff_gj_sun_${idx}`);
+            const chkAK = document.getElementById(`staff_store_ak_${idx}`);
+            const chkGJ = document.getElementById(`staff_store_gj_${idx}`);
+            const statusSpan = document.getElementById(`staff_save_status_${idx}`);
+
+            const stores = [];
+            if (chkAK && chkAK.checked) stores.push('anatolya');
+            if (chkGJ && chkGJ.checked) stores.push('green_juice');
+            if (stores.length === 0) stores.push('anatolya');
+
+            const updated = {
+                name: s.name,
+                cash_rate: isOwner ? 0 : (parseFloat(akCash ? akCash.value : s.cashRate) || 0),
+                tax_rate: isOwner ? 0 : (parseFloat(akTax ? akTax.value : s.taxRate) || 0),
+                gj_cash_rate: isOwner ? 0 : (parseFloat(gjCash ? gjCash.value : s.gjCashRate) || 0),
+                gj_sunday_rate: isOwner ? 0 : (parseFloat(gjSun ? gjSun.value : s.gjSundayRate) || 0),
+                stores: stores,
+                status: (statusBox && statusBox.checked) ? "Active" : "Inactive"
+            };
+
+            if (statusSpan) statusSpan.innerText = "Saving...";
+
+            try {
+                const res = await callSheetApi({ action: "save_staff", staff: updated });
+                if (res && res.status === "error") throw new Error(res.message);
+
+                s.cashRate = updated.cash_rate;
+                s.taxRate = updated.tax_rate;
+                s.gjCashRate = updated.gj_cash_rate;
+                s.gjSundayRate = updated.gj_sunday_rate;
+                s.stores = updated.stores;
+                s.status = updated.status;
+
+                if (statusSpan) {
+                    statusSpan.innerText = "✅ Saved!";
+                    statusSpan.className = "text-[10px] text-emerald-400 font-semibold";
+                    setTimeout(() => { if (statusSpan) statusSpan.innerText = ""; }, 2500);
+                }
+
+                populateStaffDropdowns();
+                applyStaffRateDefaults();
+                renderWeeklyTable();
+            } catch (err) {
+                console.error("Error saving staff rates:", err);
+                if (statusSpan) {
+                    statusSpan.innerText = `❌ ${err.message}`;
+                    statusSpan.className = "text-[10px] text-rose-400 font-semibold";
+                }
+            }
+        }
+
+        async function openAddNewStaffPrompt() {
+            const name = prompt("Enter new staff member name:");
+            if (!name || !name.trim()) return;
+            const cleanName = name.trim();
+
+            if (staffRegistry.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) {
+                alert("A staff member with this name already exists.");
+                return;
+            }
+
+            const newStaff = {
+                name: cleanName,
+                cash_rate: 25.00,
+                tax_rate: 30.00,
+                gj_cash_rate: 25.00,
+                gj_sunday_rate: 25.00,
+                stores: ['anatolya', 'green_juice'],
+                status: "Active"
+            };
+
+            try {
+                await callSheetApi({ action: "save_staff", staff: newStaff });
+                staffRegistry.push({
+                    name: cleanName,
+                    cashRate: 25.00,
+                    taxRate: 30.00,
+                    gjCashRate: 25.00,
+                    gjSundayRate: 25.00,
+                    stores: ['anatolya', 'green_juice'],
+                    status: "Active"
+                });
+                staffRegistry.sort((a, b) => a.name.localeCompare(b.name));
+                renderStaffRatesList();
+                populateStaffDropdowns();
+            } catch (e) {
+                alert("Failed to add staff member: " + e.message);
+            }
+        }
+
+        // ==================== LOYVERSE SYNC MODAL & ACTIONS ====================
+        function openLoyverseSyncModal() {
+            const modal = document.getElementById('loyverseSyncModal');
+            if (!modal) return;
+            const todayIso = new Date().toISOString().split('T')[0];
+            const sInput = document.getElementById('loyverseStartDate');
+            const eInput = document.getElementById('loyverseEndDate');
+            if (sInput && !sInput.value) sInput.value = todayIso;
+            if (eInput && !eInput.value) eInput.value = todayIso;
+            modal.classList.remove('hidden');
+        }
+
+        function closeLoyverseSyncModal() {
+            const modal = document.getElementById('loyverseSyncModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function openActiveStoreSyncModal() {
+            if (currentStore === 'green_juice') {
+                openLoyverseSyncModal();
+            } else {
+                openEposSyncModal();
+            }
+        }
+
+        function setLoyversePreset(preset) {
+            const today = new Date();
+            const todayIso = today.toISOString().split('T')[0];
+            const sInput = document.getElementById('loyverseStartDate');
+            const eInput = document.getElementById('loyverseEndDate');
+            if (!sInput || !eInput) return;
+
+            if (preset === 'today') {
+                sInput.value = todayIso;
+                eInput.value = todayIso;
+            } else if (preset === 'yesterday') {
+                const yD = new Date(today);
+                yD.setDate(yD.getDate() - 1);
+                const yIso = yD.toISOString().split('T')[0];
+                sInput.value = yIso;
+                eInput.value = yIso;
+            } else if (preset === 'week') {
+                const monIso = getMondayString(todayIso);
+                sInput.value = monIso;
+                eInput.value = todayIso;
+            } else if (preset === 'month') {
+                const y = today.getFullYear();
+                const m = String(today.getMonth() + 1).padStart(2, '0');
+                sInput.value = `${y}-${m}-01`;
+                eInput.value = todayIso;
+            }
+        }
+
+        async function executeLoyverseSync() {
+            const sInput = document.getElementById('loyverseStartDate');
+            const eInput = document.getElementById('loyverseEndDate');
+            const btn = document.getElementById('triggerLoyverseSyncBtn');
+            if (!sInput || !eInput) return;
+
+            const startDate = sInput.value;
+            const endDate = eInput.value;
+            if (!startDate || !endDate) {
+                alert("Please choose both From and To dates.");
+                return;
+            }
+
+            const user = auth.currentUser;
+            if (!user) {
+                alert("Please sign in first.");
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="inline-block animate-spin mr-1">⏳</span> Syncing Loyverse...';
+            }
+
+            try {
+                const idToken = await user.getIdToken();
+                const resp = await fetch(`${EPOS_WORKER_URL}/api/loyverse/sync`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${idToken}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ startDate, endDate })
+                });
+
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.message || `Loyverse sync failed [${resp.status}]`);
+                }
+
+                alert(`✅ Loyverse Sync Success!\n\nSynced ${data.daysCount || 0} day(s) (${data.totalReceipts || 0} receipts).\nTotal Sales: $${(data.totalSales || 0).toFixed(2)} (Card: $${(data.totalCard || 0).toFixed(2)} | Cash: $${(data.totalCash || 0).toFixed(2)})`);
+                closeLoyverseSyncModal();
+                await loadCloudData();
+            } catch (err) {
+                console.error("Loyverse sync error:", err);
+                alert(`❌ Loyverse Sync Error:\n\n${err.message}\n\nMake sure LOYVERSE_TOKEN is configured in Render environment variables.`);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🚀 Sync Loyverse Sales</span>';
+                }
+            }
+        }
+
+        // ==================== EXPENSE MANAGEMENT ====================
         async function submitExpenseForm(e) {
             e.preventDefault();
             const date = document.getElementById('expenseDate').value;
             const category = document.getElementById('expenseCategory').value;
             const amount = parseFloat(document.getElementById('expenseAmount').value);
             const notes = document.getElementById('expenseNotes').value.trim();
+            const storeEl = document.getElementById('expenseStore');
+            const store_id = storeEl ? storeEl.value : (currentStore === 'green_juice' ? 'green_juice' : 'anatolya');
 
             if (!date || isNaN(amount) || amount <= 0) {
                 alert("Please enter a valid date and amount.");
@@ -3060,7 +3580,7 @@
             const btn = document.getElementById('saveExpenseBtn');
             if (btn) { btn.disabled = true; btn.innerText = "Saving..."; }
 
-            const newExp = { date: cleanDateStr(date), category, amount, notes };
+            const newExp = { date: cleanDateStr(date), store_id, category, amount, notes };
             try {
                 const res = await callSheetApi({ action: "save_expense", expense: newExp });
                 if (res && res.item) {
@@ -3401,12 +3921,17 @@
             updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
 
-            // Filter expensesStore by ledger date range
+            // Filter expensesStore by ledger date range and store context
             const filteredExpenses = expensesStore.filter(x => {
                 if (!x.date) return false;
                 const d = cleanDateStr(x.date);
                 if (ledgerDateFrom && d < ledgerDateFrom) return false;
                 if (ledgerDateTo && d > ledgerDateTo) return false;
+                if (currentStore === 'anatolya') {
+                    return (!x.store_id || x.store_id === 'anatolya' || x.store_id === 'company_shared');
+                } else if (currentStore === 'green_juice') {
+                    return (x.store_id === 'green_juice' || x.store_id === 'company_shared');
+                }
                 return true;
             });
 
@@ -3822,6 +4347,99 @@
             }
 
             // ================= RENDER AUDIT TABLES =================
+
+            // Table 0: Multi-Store Venue Contribution (Anatolya vs Green Juice vs Shared)
+            const storeBreakdownTbody = document.getElementById('basStoreBreakdownTableBody');
+            if (storeBreakdownTbody) {
+                const venues = [
+                    { id: 'anatolya', name: '🥙 Anatolya Kebabs (Epos Now)', isStore: true },
+                    { id: 'green_juice', name: '🥤 Green Juice Bar (Loyverse)', isStore: true },
+                    { id: 'company_shared', name: '🏢 Company Shared / Overhead', isStore: false }
+                ];
+
+                let venueRowsHtml = '';
+                venues.forEach(v => {
+                    // 1. Sales for this venue
+                    let vCard = 0, vCash = 0;
+                    if (v.isStore) {
+                        const vSales = qSales.filter(s => (s.store_id || 'anatolya') === v.id);
+                        vSales.forEach(s => {
+                            const tot = Number(s.totalSales || 0);
+                            const h = s.hourly || {};
+                            const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
+                            const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+                            vCard += card;
+                            vCash += cash;
+                        });
+                    }
+                    const v1A = vCard / 11;
+
+                    // 2. Expenses for this venue
+                    let vG11 = 0, v1B = 0;
+                    const vExp = qExpenses.filter(x => (x.store_id || 'anatolya') === v.id);
+                    vExp.forEach(x => {
+                        const amt = Number(x.amount || 0);
+                        vG11 += amt;
+                        const cat = x.category || 'Others';
+                        const rule = BAS_GST_RULES[cat] || { taxable: true, rate: 1/11 };
+                        if (rule.taxable) v1B += (amt / 11);
+                    });
+
+                    // 3. Wages for this venue
+                    let vW1 = 0, vW2 = 0;
+                    if (v.id === 'anatolya') {
+                        // Anatolya has taxable wages subject to PAYG
+                        const vShifts = qShifts.filter(e => (!e.store_id || e.store_id === 'anatolya'));
+                        vShifts.forEach(shift => {
+                            const name = (shift.name || '').trim().toLowerCase();
+                            if (name === 'qaiser') return;
+                            const totH = Number(shift.totalHours) || 0;
+                            const tr = Number(shift.taxRate) || 0;
+                            const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                            const th = Math.max(0, totH - ch);
+                            const taxPay = (th * tr);
+                            vW1 += taxPay;
+                            vW2 += (taxPay * (shift.taxRate ? ESTIMATED_TAX_RATE : 0));
+                        });
+                    }
+                    // Green Juice is 100% Cash Pay -> $0 Box W1 & W2
+
+                    const vNetGst = v1A - v1B;
+
+                    venueRowsHtml += `
+                        <tr class="hover:bg-slate-800/40 transition">
+                            <td class="p-2 font-bold text-slate-200">${v.name}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">${vCard > 0 ? '$' + vCard.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-slate-400">${vCash > 0 ? '$' + vCash.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-blue-400 font-bold">${v1A > 0 ? '$' + v1A.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">${vG11 > 0 ? '$' + vG11.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-purple-400 font-bold">${v1B > 0 ? '$' + v1B.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-amber-300 font-bold">${vW1 > 0 ? '$' + vW1.toFixed(2) : '<span class="text-slate-500 font-normal">Cash Pay ($0)</span>'}</td>
+                            <td class="p-2 text-right font-mono text-amber-400 font-bold">${vW2 > 0 ? '$' + vW2.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono font-black ${vNetGst >= 0 ? 'text-emerald-400' : 'text-sky-400'}">
+                                ${vNetGst < 0 ? '-' : ''}$${Math.abs(vNetGst).toFixed(2)}
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                // Total Consolidated Row
+                venueRowsHtml += `
+                    <tr class="bg-slate-950/80 font-black border-t-2 border-slate-700 text-slate-100">
+                        <td class="p-2 uppercase text-[10px] text-amber-400">🏆 ALHAMD ENTERPRISES Total</td>
+                        <td class="p-2 text-right font-mono text-white">$${totalSalesG1.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-slate-400">$${totalCashSales.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-blue-300">$${gstOnSales1A.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-white">$${totalPurchasesG11.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-purple-300">$${totalGstCredits1B.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-amber-300">$${totalWagesW1.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-amber-400">$${totalTaxWithheldW2.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-amber-400">$${netGstBox3.toFixed(2)}</td>
+                    </tr>
+                `;
+
+                storeBreakdownTbody.innerHTML = venueRowsHtml;
+            }
 
             // Table 1: Monthly Summary
             const monthlyTbody = document.getElementById('basMonthlyTableBody');
@@ -4902,7 +5520,7 @@ function convertHourStr(hStr) {
                 }
 
                 loadCloudData();
-                renderWeeklyTable();
+                switchStore(currentStore);
             } else {
                 console.log("Logged out / Unauthenticated");
 
