@@ -1275,8 +1275,21 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
 
     // Step 5: Click Apply button
     console.log('[EposFilter] Step 5: Clicking "Apply" button...');
-    const applyBtn = page.locator('button:has-text("Apply")').last();
-    await applyBtn.click({ force: true });
+    const applyClicked = await page.evaluate(() => {
+      const btn = document.querySelector('[data-qa-id="filterApplyButton"]') ||
+                  Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').trim() === 'Apply');
+      if (btn) {
+        btn.scrollIntoView({ behavior: 'instant', block: 'center' });
+        btn.click();
+        return true;
+      }
+      return false;
+    });
+    if (!applyClicked) {
+      const applyBtn = page.locator('[data-qa-id="filterApplyButton"], button:has-text("Apply")').last();
+      await applyBtn.scrollIntoViewIfNeeded().catch(() => {});
+      await applyBtn.click({ force: true });
+    }
     console.log('[EposFilter] Clicked Apply button.');
 
     // Step 6: Wait for table reload
@@ -1297,381 +1310,272 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
   }
 }
 
-// Scrapes currently displayed transactions from table (and up to 40 pages of pagination)
+// Scrapes currently displayed transactions from table (switching to 100/page and paginating completely)
 async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = true) {
-  console.log(`Scraping transactions view (${chunkLabel})...`);
-  const scrapeResult = await page.evaluate(async () => {
-    function getAllDocs() {
-      var docs = [document];
-      var ifrs = document.querySelectorAll('iframe');
-      for (var i = 0; i < ifrs.length; i++) {
-        try {
-          var d = ifrs[i].contentDocument || ifrs[i].contentWindow.document;
-          if (d && d.body) docs.push(d);
-        } catch (e) {}
-      }
-      return docs;
-    }
+  console.log(`[EposScrape] Scraping transactions view (${chunkLabel})...`);
 
-    function scrollAllToBottom() {
-      try { window.scrollTo({ top: 9999999, behavior: 'instant' }); } catch (e) { window.scrollTo(0, 9999999); }
-      var docs = getAllDocs();
-      for (var di = 0; di < docs.length; di++) {
-        var doc = docs[di];
-        try { doc.documentElement.scrollTop = 9999999; } catch (e) {}
-        try { doc.body.scrollTop = 9999999; } catch (e) {}
-        var rows = doc.querySelectorAll('tr, [role="row"], tbody tr');
-        if (rows && rows.length > 0) {
-          try { rows[rows.length - 1].scrollIntoView({ behavior: 'instant', block: 'end' }); } catch (e) {}
-        }
-        var scrollables = doc.querySelectorAll('main, section, article, table, tbody, div');
-        for (var s = 0; s < scrollables.length; s++) {
-          var el = scrollables[s];
-          if (el.scrollHeight > el.clientHeight + 25 && el.clientHeight > 70) {
-            try {
-              el.scrollTop = el.scrollHeight;
-              el.dispatchEvent(new Event('scroll', { bubbles: true }));
-            } catch (e) {}
-          }
+  // Step 1: Switch Rows per page to 100 for fast, full extraction
+  try {
+    const combobox = page.locator('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-select').first();
+    if (await combobox.count() > 0) {
+      const curVal = (await combobox.innerText()).trim();
+      if (curVal !== '100') {
+        await combobox.scrollIntoViewIfNeeded().catch(() => {});
+        await combobox.click({ force: true });
+        await page.waitForTimeout(400);
+        const opt100 = page.locator('li[data-value="100"], [role="option"][data-value="100"]').first();
+        if (await opt100.count() > 0) {
+          await opt100.click({ force: true });
+          await page.waitForTimeout(2500);
+          console.log('[EposScrape] Set rows per page to 100.');
         }
       }
     }
+  } catch (e) {
+    console.warn('[EposScrape] Notice setting 100 rows/page:', e.message);
+  }
 
-    function countCurrentTxRows() {
-      var docs = getAllDocs();
-      var total = 0;
-      for (var di = 0; di < docs.length; di++) {
-        var rows = docs[di].querySelectorAll('tr, [role="row"], tbody tr');
-        total += rows.length;
+  // Step 2: Page traversal loop
+  const allTxList = [];
+  const seenIds = new Set();
+  let pageNum = 0;
+  const maxPages = 150; // allows up to 15,000 transactions
+
+  while (pageNum < maxPages) {
+    pageNum++;
+
+    // Extract rows from current page DOM
+    const pageRows = await page.evaluate(() => {
+      function toIso(y, m, d) {
+        return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
       }
-      return total;
-    }
 
-    function clickBtn(el) {
-      try { el.scrollIntoView({ behavior: 'instant', block: 'center' }); } catch (e) {}
-      try { el.focus(); } catch (e) {}
-      try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); } catch (e) {}
-      try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); } catch (e) {}
-      try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (e) {}
-      try { el.click(); } catch (e) {}
-    }
-
-    // Expand page size to 50 or 100 if dropdown exists
-    try {
-      var selects = document.querySelectorAll('select');
-      for (var si = 0; si < selects.length; si++) {
-        var s = selects[si];
-        var opts = Array.from(s.options).map(function(o) { return parseInt(o.value || o.text, 10); }).filter(function(n) { return !isNaN(n); });
-        if (opts.includes(10) && opts.some(function(n) { return n >= 25; })) {
-          var highest = Math.max.apply(Math, opts.filter(function(n) { return n <= 100; }));
-          s.value = String(highest);
-          s.dispatchEvent(new Event('change', { bubbles: true }));
-          await new Promise(function(r) { setTimeout(r, 2000); });
-          break;
+      function parseAnyDate(str) {
+        if (!str) return null;
+        var now = new Date();
+        var curYear = now.getFullYear();
+        if (/\btoday\b/i.test(str)) return toIso(curYear, now.getMonth() + 1, now.getDate());
+        if (/\byesterday\b/i.test(str)) {
+          var yDate = new Date(now.getTime() - 86400000);
+          return toIso(yDate.getFullYear(), yDate.getMonth() + 1, yDate.getDate());
         }
-      }
-    } catch (_) {}
-
-    function findNextBtn() {
-      var docs = getAllDocs();
-      for (var di = 0; di < docs.length; di++) {
-        var doc = docs[di];
-        var candidates = doc.querySelectorAll('button, a, [role="button"], input[type="button"], li, span');
-        for (var i = 0; i < candidates.length; i++) {
-          var el = candidates[i];
-          if (el.id === 'epos-sync-banner' || (el.closest && el.closest('#epos-sync-banner'))) continue;
-
-          var isDisabled = el.disabled ||
-            el.classList.contains('disabled') ||
-            el.getAttribute('aria-disabled') === 'true' ||
-            el.getAttribute('disabled') !== null;
-          if (isDisabled) continue;
-
-          var aria = (el.getAttribute('aria-label') || '').toLowerCase();
-          var title = (el.getAttribute('title') || '').toLowerCase();
-          var txt = (el.innerText || el.textContent || el.value || '').trim();
-          var cls = (el.className || '').toString().toLowerCase();
-
-          if (aria.includes('next') || title.includes('next') || aria.includes('forward') || title.includes('forward')) {
-            return el;
-          }
-          if (cls.includes('paginate_button next') || cls.includes('page-next') || cls.includes('next-page') || cls.includes('pagination-next') || cls.includes('btn-next')) {
-            return el;
-          }
-          if (txt === '>' || txt === '›' || txt === '»' || txt === 'Next' || txt === 'Next >' || txt === 'Next ›' || txt === 'Next Page') {
-            return el;
-          }
-          var html = el.innerHTML || '';
-          var hasRightIcon = (html.includes('chevron-right') || html.includes('arrow-right') || html.includes('angle-right') || html.includes('fa-chevron-right') || html.includes('bi-chevron-right')) &&
-            !cls.includes('prev') && !aria.includes('prev') && !title.includes('prev');
-          if (hasRightIcon) {
-            return el;
+        var mIso = str.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+        if (mIso) return mIso[0];
+        var mSlash = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+        if (mSlash) {
+          var d = parseInt(mSlash[1], 10);
+          var mo = parseInt(mSlash[2], 10);
+          if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12) {
+            var yr3 = mSlash[3].length === 2 ? '20' + mSlash[3] : mSlash[3];
+            return toIso(yr3, mo, d);
           }
         }
+        return null;
+      }
 
-        for (var j = 0; j < candidates.length; j++) {
-          var c = candidates[j];
-          var cTxt = (c.innerText || c.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-          if (cTxt.includes('more transaction') || cTxt.includes('more transactions') || cTxt.includes('load more') || cTxt.includes('show more')) {
-            return c;
+      function parseTimeStr(timeStr) {
+        var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([apAP][mM])?/i);
+        if (!tm) return null;
+        var h = parseInt(tm[1], 10);
+        var ampm = tm[4] ? tm[4].toUpperCase() : '';
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        return String(h).padStart(2, '0') + ':00';
+      }
+
+      const rows = [];
+      // Primary: MuiDataGrid rows with data-id
+      const gridRows = document.querySelectorAll('.MuiDataGrid-row, tr[data-id]');
+      for (let i = 0; i < gridRows.length; i++) {
+        const r = gridRows[i];
+        const eposId = r.getAttribute('data-id') || '';
+        const cells = Array.from(r.querySelectorAll('.MuiDataGrid-cell, td'));
+        let dateStr = '', amountVal = null, payStr = '', staffStr = '', pspStr = '';
+        cells.forEach(c => {
+          const f = c.getAttribute('data-field') || '';
+          const t = c.innerText.trim();
+          if (f === 'date') dateStr = t;
+          else if (f === 'amount') {
+            const m = t.match(/([0-9]+\.[0-9]{2})/);
+            if (m) amountVal = parseFloat(m[1]);
           }
+          else if (f === 'paymentMethod') payStr = t;
+          else if (f === 'staff') staffStr = t;
+          else if (f === 'pspReferences') pspStr = t;
+        });
+
+        const rText = r.innerText.replace(/\s+/g, ' ').trim();
+        if (!dateStr) {
+          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
+          if (dM) dateStr = dM[1];
+        }
+        if (amountVal === null) {
+          const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
+          if (aM) amountVal = parseFloat(aM[1]);
+        }
+        if (!payStr) {
+          if (/\bcash\b/i.test(rText)) payStr = 'Cash';
+          else if (/\bcard\b|\beftpos\b|\bvisa\b|\bmastercard\b/i.test(rText)) payStr = 'Card';
+        }
+
+        const isoDate = parseAnyDate(dateStr);
+        const tM = (dateStr + ' ' + rText).match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
+        const timeStr = tM ? tM[1] : '';
+        const hourStr = parseTimeStr(timeStr);
+        const isCash = payStr.toLowerCase().includes('cash') || (/\bcash\b/i.test(rText) && !/\bcard\b/i.test(rText));
+
+        if (isoDate && amountVal !== null && !isNaN(amountVal)) {
+          rows.push({
+            eposId: eposId,
+            date: isoDate,
+            time: timeStr,
+            hour: hourStr || '12:00',
+            amount: amountVal,
+            isCash: isCash,
+            raw: rText
+          });
         }
       }
-      return null;
-    }
 
-    var monthNames = ["january","february","march","april","may","june","july","august","september","october","november","december"];
-    var shortMonths = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-
-    function toIso(y, m, d) {
-      return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-    }
-
-    function parseAnyDate(str) {
-      if (!str) return null;
-      var now = new Date();
-      var curYear = now.getFullYear();
-      if (/\btoday\b/i.test(str)) return toIso(curYear, now.getMonth() + 1, now.getDate());
-      if (/\byesterday\b/i.test(str)) {
-        var yDate = new Date(now.getTime() - 86400000);
-        return toIso(yDate.getFullYear(), yDate.getMonth() + 1, yDate.getDate());
-      }
-      var mIso = str.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
-      if (mIso) return mIso[0];
-      var mWord1 = str.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]+([A-Za-z]{3,9})(?:[\s\-\/,]+(\d{2,4}))?\b/i);
-      if (mWord1) {
-        var mStr = mWord1[2].toLowerCase();
-        var mIdx = monthNames.indexOf(mStr);
-        if (mIdx === -1) mIdx = shortMonths.indexOf(mStr.slice(0, 3));
-        if (mIdx !== -1) {
-          var yr = mWord1[3] ? (mWord1[3].length === 2 ? '20' + mWord1[3] : mWord1[3]) : String(curYear);
-          return toIso(yr, mIdx + 1, mWord1[1]);
-        }
-      }
-      var mSlash = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
-      if (mSlash) {
-        var d = parseInt(mSlash[1], 10);
-        var mo = parseInt(mSlash[2], 10);
-        if (d >= 1 && d <= 31 && mo >= 1 && mo <= 12) {
-          var yr3 = mSlash[3].length === 2 ? '20' + mSlash[3] : mSlash[3];
-          return toIso(yr3, mo, d);
-        }
-      }
-      return null;
-    }
-
-    function parseTimeStr(timeStr) {
-      var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([apAP][mM])?/i);
-      if (!tm) return null;
-      var h = parseInt(tm[1], 10);
-      var ampm = tm[4] ? tm[4].toUpperCase() : '';
-      if (ampm === 'PM' && h < 12) h += 12;
-      if (ampm === 'AM' && h === 12) h = 0;
-      return String(h).padStart(2, '0') + ':00';
-    }
-
-    var datePatternRegex = /(?:\b(?:Today|Yesterday)\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}(?:st|nd|rd|th)?[\s\-\/]+(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:[\s\-\/,]+\d{2,4})?\b|\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b)/gi;
-    var eposRowRegex = /(\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b|\b\d{4}-\d{2}-\d{2}\b)[,\s]+(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)[,\s]+[\$£€]?\s*([0-9]+\.[0-9]{2})/g;
-
-    var collectedTxList = [];
-    var maxPages = 40;
-    var page = 0;
-    var consecutiveMiss = 0;
-
-    while (page < maxPages) {
-      page++;
-      scrollAllToBottom();
-      await new Promise(function(r) { setTimeout(r, 600); });
-
-      var docs = getAllDocs();
-      var pageText = '';
-      for (var di = 0; di < docs.length; di++) {
-        if (docs[di].body) pageText += docs[di].body.innerText + '\n';
-      }
-
-      var pageDateMarkers = [];
-      var dMatch;
-      datePatternRegex.lastIndex = 0;
-      while ((dMatch = datePatternRegex.exec(pageText)) !== null) {
-        var iso = parseAnyDate(dMatch[0]);
-        if (iso) pageDateMarkers.push({ index: dMatch.index, date: iso, raw: dMatch[0] });
-      }
-
-      var pageTxList = [];
-
-      // Strategy 1: Direct Table Row (tr and role=row) inspection with cell-level payment method detection
-      for (var di = 0; di < docs.length; di++) {
-        var trRows = docs[di].querySelectorAll('tr, [role="row"], .dx-data-row, .k-master-row');
-        for (var ri = 0; ri < trRows.length; ri++) {
-          var rowEl = trRows[ri];
-          var rText = (rowEl.innerText || '').replace(/\s+/g, ' ').trim();
-          if (!rText) continue;
-          // Skip header rows
-          if (rText.toLowerCase().includes('transaction report') || (rText.toLowerCase().includes('payment method') && rText.toLowerCase().includes('amount'))) continue;
-
-          // Check individual cells for Payment Method column
-          var cells = rowEl.querySelectorAll('td, th, [role="gridcell"], [role="cell"], .cell');
-          var rowHasCash = false;
-          var rowHasCard = false;
-          if (cells.length > 0) {
-            for (var ci = 0; ci < cells.length; ci++) {
-              var cText = (cells[ci].innerText || '').trim().toLowerCase();
-              if (cText === 'cash' || cText.includes('cash')) rowHasCash = true;
-              if (cText === 'card' || cText.includes('card') || cText.includes('eftpos') || cText.includes('visa') || cText.includes('mastercard')) rowHasCard = true;
-            }
-          }
-
-          var dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
-          var tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
-          var aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
+      // Fallback: If no grid rows found, try regular tr rows
+      if (rows.length === 0) {
+        const trs = document.querySelectorAll('tbody tr, table tr');
+        for (let i = 0; i < trs.length; i++) {
+          const rText = trs[i].innerText.replace(/\s+/g, ' ').trim();
+          if (!rText || rText.toLowerCase().includes('transaction report')) continue;
+          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
+          const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
+          const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
           if (dM && tM && aM) {
-            var rDate = parseAnyDate(dM[1]);
-            var rTime = tM[1];
-            var rHour = parseTimeStr(rTime);
-            var rAmt = parseFloat(aM[1]);
-            var isCash = rowHasCash || (/\bcash\b/i.test(rText) && !rowHasCard);
-            if (rDate && rHour !== null && !isNaN(rAmt)) {
-              pageTxList.push({ date: rDate, time: rTime, hour: rHour, amount: rAmt, isCash: isCash, raw: rText });
+            const iso = parseAnyDate(dM[1]);
+            const hr = parseTimeStr(tM[1]);
+            const amt = parseFloat(aM[1]);
+            const isCash = /\bcash\b/i.test(rText);
+            if (iso && !isNaN(amt)) {
+              rows.push({
+                eposId: '',
+                date: iso,
+                time: tM[1],
+                hour: hr || '12:00',
+                amount: amt,
+                isCash: isCash,
+                raw: rText
+              });
             }
           }
         }
       }
 
-      // Strategy 2: Line by line inspection of pageText
-      var ptLines = pageText.split('\n');
-      for (var li = 0; li < ptLines.length; li++) {
-        var lText = ptLines[li].replace(/\s+/g, ' ').trim();
-        if (!lText || lText.toLowerCase().includes('payment method')) continue;
-        var dMl = lText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
-        var tMl = lText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
-        var aMl = lText.match(/[\$£€]\s*([0-9]+\.[0-9]{2})/);
-        if (dMl && tMl && aMl) {
-          var rlDate = parseAnyDate(dMl[1]);
-          var rlTime = tMl[1];
-          var rlHour = parseTimeStr(rlTime);
-          var rlAmt = parseFloat(aMl[1]);
-          var islCash = /\bcash\b/i.test(lText);
-          if (rlDate && rlHour !== null && !isNaN(rlAmt)) {
-            pageTxList.push({ date: rlDate, time: rlTime, hour: rlHour, amount: rlAmt, isCash: islCash, raw: lText });
-          }
-        }
-      }
-
-      // Strategy 3: Global Regex pattern match
-      var tMatch;
-      eposRowRegex.lastIndex = 0;
-      while ((tMatch = eposRowRegex.exec(pageText)) !== null) {
-        var rowDate = parseAnyDate(tMatch[1]);
-        var rowTime = tMatch[2];
-        var rowHour = parseTimeStr(rowTime);
-        var rowAmt = parseFloat(tMatch[3]);
-        if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
-          var afterMatch = pageText.slice(tMatch.index, tMatch.index + 220);
-          var isCash = /\bcash\b/i.test(afterMatch);
-          pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, isCash: isCash, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
-        }
-      }
-
-      var addedThisRound = 0;
-      for (var ti = 0; ti < pageTxList.length; ti++) {
-        var tx = pageTxList[ti];
-        var key = tx.date + '|' + tx.time + '|' + tx.amount.toFixed(2);
-        var exists = false;
-        for (var cti = 0; cti < collectedTxList.length; cti++) {
-          var ctx = collectedTxList[cti];
-          if (ctx.date === tx.date && ctx.time === tx.time && Math.abs(ctx.amount - tx.amount) < 0.001) {
-            exists = true;
-            break;
-          }
-        }
-        if (!exists) {
-          collectedTxList.push(tx);
-          addedThisRound++;
-        }
-      }
-
-      if (addedThisRound === 0) {
-        if (page === 1 && collectedTxList.length === 0) {
-          console.log('No transactions found on page 1. Breaking pagination.');
-          break;
-        }
-        consecutiveMiss++;
-        if (consecutiveMiss >= 2) break;
-      } else {
-        consecutiveMiss = 0;
-      }
-
-      var nextBtn = findNextBtn();
-      if (!nextBtn) break;
-
-      var rowCountBefore = countCurrentTxRows();
-      var firstRowBefore = (document.querySelector('tbody tr') || {}).innerText;
-      clickBtn(nextBtn);
-
-      for (var w = 0; w < 10; w++) {
-        await new Promise(function(r) { setTimeout(r, 400); });
-        var firstRowAfter = (document.querySelector('tbody tr') || {}).innerText;
-        if (firstRowAfter && firstRowAfter !== firstRowBefore) break;
-        if (countCurrentTxRows() > rowCountBefore) break;
-      }
-      await new Promise(function(r) { setTimeout(r, 500); });
-    }
-
-    var txList = collectedTxList;
-    var daysGroup = {};
-    for (var i = 0; i < txList.length; i++) {
-      var tx = txList[i];
-      var dKey = tx.date;
-      if (!daysGroup[dKey]) {
-        daysGroup[dKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
-      }
-      daysGroup[dKey].count++;
-      daysGroup[dKey].totalSales += tx.amount;
-      if (tx.isCash) {
-        daysGroup[dKey].cashSales += tx.amount;
-      } else {
-        daysGroup[dKey].cardSales += tx.amount;
-      }
-      daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
-    }
-
-    var daysBatch = [];
-    var sortedDays = Object.keys(daysGroup).sort().reverse();
-    for (var d = 0; d < sortedDays.length; d++) {
-      var dayDate = sortedDays[d];
-      daysGroup[dayDate].totalSales = Math.round(daysGroup[dayDate].totalSales * 100) / 100;
-      daysGroup[dayDate].cardSales = Math.round(daysGroup[dayDate].cardSales * 100) / 100;
-      daysGroup[dayDate].cashSales = Math.round(daysGroup[dayDate].cashSales * 100) / 100;
-      for (var hk in daysGroup[dayDate].hourly) {
-        daysGroup[dayDate].hourly[hk] = Math.round(daysGroup[dayDate].hourly[hk] * 100) / 100;
-      }
-      daysGroup[dayDate].hourly._cardSales = daysGroup[dayDate].cardSales;
-      daysGroup[dayDate].hourly._cashSales = daysGroup[dayDate].cashSales;
-      daysBatch.push({
-        date: dayDate,
-        totalSales: daysGroup[dayDate].totalSales,
-        cardSales: daysGroup[dayDate].cardSales,
-        cashSales: daysGroup[dayDate].cashSales,
-        count: daysGroup[dayDate].count,
-        hourly: daysGroup[dayDate].hourly
-      });
-    }
-
-    var txRows = txList.map(function(t, idx) {
-      var rawC = (t.raw || '').replace(/\s+/g, ' ').trim();
-      var uid = (t.date + '_' + (t.time || '').replace(/[^a-zA-Z0-9]/g, '') + '_' + t.amount.toFixed(2) + '_' + idx + '_' + rawC).slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
-      return { 
-        id: uid, 
-        date: t.date, 
-        time: t.time || '', 
-        amount: t.amount, 
-        payment_method: t.isCash ? 'Cash' : 'Card',
-        raw_line: rawC 
-      };
+      return rows;
     });
 
-    return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page };
+    if (pageRows.length === 0) {
+      console.log(`[EposScrape] Page ${pageNum}: 0 rows found. Finishing pagination.`);
+      break;
+    }
+
+    let addedThisPage = 0;
+    for (const r of pageRows) {
+      const uniqueKey = r.eposId ? `epos_${r.eposId}` : `${r.date}_${r.time}_${r.amount.toFixed(2)}_${r.raw}`;
+      if (!seenIds.has(uniqueKey)) {
+        seenIds.add(uniqueKey);
+        allTxList.push(r);
+        addedThisPage++;
+      }
+    }
+
+    console.log(`[EposScrape] Page ${pageNum}: found ${pageRows.length} rows, added ${addedThisPage} new (total: ${allTxList.length})`);
+
+    // Check Next Page button
+    const nextBtn = page.locator('button[aria-label="Go to next page"], button[title="Go to next page"]').first();
+    if (await nextBtn.count() === 0) {
+      console.log('[EposScrape] No next page button found.');
+      break;
+    }
+
+    const isDisabled = await nextBtn.isDisabled().catch(() => true);
+    if (isDisabled) {
+      console.log('[EposScrape] Next page button is disabled. Reached final page.');
+      break;
+    }
+
+    const firstRowBefore = pageRows[0] ? (pageRows[0].eposId || pageRows[0].raw) : '';
+    await nextBtn.scrollIntoViewIfNeeded().catch(() => {});
+    await nextBtn.click({ force: true });
+
+    // Wait for next page to load
+    let changed = false;
+    for (let w = 0; w < 15; w++) {
+      await page.waitForTimeout(300);
+      const newFirstRow = await page.evaluate(() => {
+        const first = document.querySelector('.MuiDataGrid-row, tr[data-id]');
+        if (!first) return '';
+        return first.getAttribute('data-id') || first.innerText.slice(0, 50);
+      });
+      if (newFirstRow && newFirstRow !== firstRowBefore) {
+        changed = true;
+        break;
+      }
+    }
+    await page.waitForTimeout(200);
+  }
+
+  // Step 3: Group transactions by date
+  const daysGroup = {};
+  for (let i = 0; i < allTxList.length; i++) {
+    const tx = allTxList[i];
+    const dKey = tx.date;
+    if (!daysGroup[dKey]) {
+      daysGroup[dKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
+    }
+    daysGroup[dKey].count++;
+    daysGroup[dKey].totalSales += tx.amount;
+    if (tx.isCash) {
+      daysGroup[dKey].cashSales += tx.amount;
+    } else {
+      daysGroup[dKey].cardSales += tx.amount;
+    }
+    daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
+  }
+
+  const daysBatch = [];
+  const sortedDays = Object.keys(daysGroup).sort().reverse();
+  for (let d = 0; d < sortedDays.length; d++) {
+    const dayDate = sortedDays[d];
+    daysGroup[dayDate].totalSales = Math.round(daysGroup[dayDate].totalSales * 100) / 100;
+    daysGroup[dayDate].cardSales = Math.round(daysGroup[dayDate].cardSales * 100) / 100;
+    daysGroup[dayDate].cashSales = Math.round(daysGroup[dayDate].cashSales * 100) / 100;
+    for (const hk in daysGroup[dayDate].hourly) {
+      daysGroup[dayDate].hourly[hk] = Math.round(daysGroup[dayDate].hourly[hk] * 100) / 100;
+    }
+    daysGroup[dayDate].hourly._cardSales = daysGroup[dayDate].cardSales;
+    daysGroup[dayDate].hourly._cashSales = daysGroup[dayDate].cashSales;
+    daysBatch.push({
+      date: dayDate,
+      totalSales: daysGroup[dayDate].totalSales,
+      cardSales: daysGroup[dayDate].cardSales,
+      cashSales: daysGroup[dayDate].cashSales,
+      count: daysGroup[dayDate].count,
+      hourly: daysGroup[dayDate].hourly
+    });
+  }
+
+  const txRows = allTxList.map((t, idx) => {
+    const rawC = (t.raw || '').replace(/\s+/g, ' ').trim();
+    const uid = t.eposId
+      ? `epos_${t.eposId}`
+      : `${t.date}_${(t.time || '').replace(/[^a-zA-Z0-9]/g, '')}_${t.amount.toFixed(2)}_${idx}`.slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
+    return {
+      id: uid,
+      date: t.date,
+      time: t.time || '',
+      amount: t.amount,
+      payment_method: t.isCash ? 'Cash' : 'Card',
+      raw_line: rawC
+    };
   });
+
+  const scrapeResult = { daysBatch, txRows, totalTx: allTxList.length, pagesLoaded: pageNum };
 
   console.log(`Scraped ${scrapeResult.totalTx} transactions across ${scrapeResult.pagesLoaded} batches for ${scrapeResult.daysBatch.length} day(s) (${chunkLabel}).`);
 
