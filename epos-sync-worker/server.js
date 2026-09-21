@@ -52,7 +52,8 @@ const appState = {
 
 // Express App
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // CORS Middleware for web browser calls from Timesheet dashboard
 app.use((req, res, next) => {
@@ -662,24 +663,30 @@ app.post('/api/bookmarklet-sync', async (req, res) => {
       body: JSON.stringify(hsRows)
     });
 
-    // 2. Upsert raw_transactions if provided
+    // 2. Upsert raw_transactions if provided (in concurrent chunks for speed)
     let txCount = 0;
     if (transactions && Array.isArray(transactions) && transactions.length > 0) {
-      for (let i = 0; i < transactions.length; i += 100) {
-        const batch = transactions.slice(i, i + 100).map(t => ({
-          id: t.id || `${t.date}_${(t.time || '').replace(/[^a-zA-Z0-9]/g, '')}_${Number(t.amount).toFixed(2)}_${(t.raw || '').slice(0, 40)}`.replace(/[^a-z0-9_]/gi, '-').slice(0, 120),
-          date: t.date,
-          time: t.time || '',
-          amount: Number(t.amount) || 0,
-          payment_method: t.payment_method || (t.isCash ? 'Cash' : 'Card'),
-          raw_line: (t.raw || '').slice(0, 500)
+      const chunks = [];
+      for (let i = 0; i < transactions.length; i += 200) {
+        chunks.push(transactions.slice(i, i + 200));
+      }
+      for (let c = 0; c < chunks.length; c += 4) {
+        const group = chunks.slice(c, c + 4);
+        await Promise.all(group.map(async batch => {
+          const formatted = batch.map(t => ({
+            id: t.id || `${t.date}_${(t.time || '').replace(/[^a-zA-Z0-9]/g, '')}_${Number(t.amount).toFixed(2)}_${(t.raw || '').slice(0, 30)}`.replace(/[^a-z0-9_]/gi, '-').slice(0, 120),
+            date: t.date,
+            time: t.time || '',
+            amount: Number(t.amount) || 0,
+            payment_method: t.payment_method || (t.isCash ? 'Cash' : 'Card'),
+            raw_line: (t.raw || '').slice(0, 200)
+          }));
+          return supabaseServerFetch('raw_transactions?on_conflict=id', {
+            method: 'POST',
+            headers: { 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify(formatted)
+          }).catch(err => console.warn('[BookmarkletSync] Warning saving raw tx chunk:', err.message));
         }));
-
-        await supabaseServerFetch('raw_transactions?on_conflict=id', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(batch)
-        }).catch(err => console.warn('[BookmarkletSync] Warning saving raw tx chunk:', err.message));
       }
       txCount = transactions.length;
     }
