@@ -1315,17 +1315,22 @@
                         console.warn("Could not retrieve ID token:", tokErr);
                     }
 
-                    // 2. Primary Route: High-security Render Worker API
+                    // 2. Primary Route: High-security Render Worker API (with 3.5s timeout guard)
                     if (idToken) {
                         try {
+                            const beController = new AbortController();
+                            const beTimeout = setTimeout(() => beController.abort(), 3500);
+
                             if (payload.action === "get") {
                                 const beResp = await fetch(`${EPOS_WORKER_URL}/api/data`, {
                                     method: "POST",
                                     headers: {
                                         "Authorization": `Bearer ${idToken}`,
                                         "Content-Type": "application/json"
-                                    }
+                                    },
+                                    signal: beController.signal
                                 });
+                                clearTimeout(beTimeout);
                                 if (beResp.ok) {
                                     return await beResp.json();
                                 } else if (beResp.status === 401 || beResp.status === 403) {
@@ -1339,8 +1344,10 @@
                                         "Authorization": `Bearer ${idToken}`,
                                         "Content-Type": "application/json"
                                     },
-                                    body: JSON.stringify(payload)
+                                    body: JSON.stringify(payload),
+                                    signal: beController.signal
                                 });
+                                clearTimeout(beTimeout);
                                 if (beResp.ok) {
                                     return await beResp.json();
                                 } else if (beResp.status === 401 || beResp.status === 403) {
