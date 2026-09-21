@@ -654,20 +654,11 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         hourly: h,
         updated_at: new Date().toISOString()
       };
-      try {
-        await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(row)
-        });
-      } catch (err) {
-        delete row.store_id;
-        await supabaseServerFetch('hourly_sales?on_conflict=date', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(row)
-        });
-      }
+      await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(row)
+      });
       return res.json({ status: 'success' });
     }
 
@@ -743,6 +734,7 @@ app.post('/api/bookmarklet-sync', async (req, res) => {
 
       return {
         date: d.date,
+        store_id: 'anatolya',
         total_sales: Number(d.totalSales) || 0,
         card_sales: h._cardSales,
         cash_sales: h._cashSales,
@@ -751,7 +743,7 @@ app.post('/api/bookmarklet-sync', async (req, res) => {
       };
     });
 
-    await supabaseServerFetch('hourly_sales?on_conflict=date', {
+    await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
       method: 'POST',
       headers: { 'Prefer': 'resolution=merge-duplicates' },
       body: JSON.stringify(hsRows)
@@ -973,19 +965,11 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
     }
 
     if (rows.length > 0) {
-      try {
-        await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(rows)
-        });
-      } catch (err) {
-        await supabaseServerFetch('hourly_sales', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(rows)
-        });
-      }
+      await supabaseServerFetch('hourly_sales?on_conflict=date,store_id', {
+        method: 'POST',
+        headers: { 'Prefer': 'resolution=merge-duplicates' },
+        body: JSON.stringify(rows)
+      });
       console.log(`[LoyverseSync] Successfully upserted ${rows.length} day(s) for Green Juice Bar.`);
     }
 
@@ -1927,6 +1911,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   // Upsert hourly_sales to Supabase (attempting dedicated card_sales & cash_sales columns with automatic fallback)
   const hsPayloadWithColumns = scrapeResult.daysBatch.map(d => ({
     date: d.date,
+    store_id: 'anatolya',
     total_sales: d.totalSales,
     card_sales: d.cardSales,
     cash_sales: d.cashSales,
@@ -1934,7 +1919,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     updated_at: new Date().toISOString()
   }));
 
-  let hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
+  let hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date,store_id`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -1951,11 +1936,12 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       console.warn('Supabase hourly_sales table lacks card_sales/cash_sales columns; retrying with standard hourly JSON payload.');
       const fallbackPayload = scrapeResult.daysBatch.map(d => ({
         date: d.date,
+        store_id: 'anatolya',
         total_sales: d.totalSales,
         hourly: d.hourly,
         updated_at: new Date().toISOString()
       }));
-      hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
+      hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date,store_id`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_KEY,

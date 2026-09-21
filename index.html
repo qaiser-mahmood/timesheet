@@ -4331,7 +4331,7 @@
             // 1. Calculate Card Sales (G1), Cash Sales (excluded), & GST on Sales (1A)
             const qSales = hourlySalesStore.filter(s => {
                 const d = cleanDateStr(s.date);
-                return d >= startIso && d <= endIso;
+                return d >= startIso && d <= endIso && isStoreMatch(s.store_id, currentStore);
             });
             let totalCardSales = 0;
             let totalCashSales = 0;
@@ -4368,7 +4368,7 @@
             const qExpenses = expensesStore.filter(x => {
                 if (!x.date) return false;
                 const d = cleanDateStr(x.date);
-                return d >= startIso && d <= endIso;
+                return d >= startIso && d <= endIso && isExpenseMatch(x.store_id, currentStore);
             });
 
             const expBadge = document.getElementById('basExpenseRecordsCount');
@@ -4444,7 +4444,7 @@
             const qShifts = dataStore.filter(entry => {
                 if (!entry.date || !entry.from || !entry.to) return false;
                 const d = cleanDateStr(entry.date);
-                return d >= startIso && d <= endIso;
+                return d >= startIso && d <= endIso && isStoreMatch(entry.store_id, currentStore);
             });
 
             let totalWagesW1 = 0;
@@ -4605,7 +4605,7 @@
                 qInfo.months.forEach(m => {
                     const mSalesList = hourlySalesStore.filter(s => {
                         const d = cleanDateStr(s.date);
-                        return d >= m.start && d <= m.end;
+                        return d >= m.start && d <= m.end && isStoreMatch(s.store_id, currentStore);
                     });
                     let mCardG1 = 0;
                     let mCash = 0;
@@ -4623,7 +4623,7 @@
                     const mExpList = expensesStore.filter(x => {
                         if (!x.date) return false;
                         const d = cleanDateStr(x.date);
-                        return d >= m.start && d <= m.end;
+                        return d >= m.start && d <= m.end && isExpenseMatch(x.store_id, currentStore);
                     });
                     let mG11 = 0;
                     let m1B = 0;
@@ -4794,7 +4794,7 @@
             EXPENSE_CATEGORIES.forEach(c => categoryRangeTotals[c.key] = 0);
 
             // Filter expenses in range
-            const rangeExpensesList = expensesStore.filter(x => x.date >= startIso && x.date <= endIso);
+            const rangeExpensesList = expensesStore.filter(x => x.date >= startIso && x.date <= endIso && isExpenseMatch(x.store_id, currentStore));
             rangeExpensesList.forEach(x => {
                 const amt = Number(x.amount) || 0;
                 rangeExpenses += amt;
@@ -4805,7 +4805,7 @@
             const dayStatsList = [];
 
             dates.forEach(dIso => {
-                const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
+                const sRec = getStoreSalesForDate(dIso, currentStore);
                 const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
                 let cAmt = 0;
                 let cashAmt = 0;
@@ -4819,7 +4819,7 @@
                         : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, sAmt - cAmt));
                 }
 
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
                 let dWages = 0;
                 let dHours = 0;
 
@@ -4837,7 +4837,7 @@
                 });
 
                 // Day expenses
-                const dayExpList = expensesStore.filter(x => x.date === dIso);
+                const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, currentStore));
                 const dayExp = dayExpList.reduce((sum, x) => sum + Number(x.amount || 0), 0);
 
                 rangeSales += sAmt;
@@ -5039,10 +5039,10 @@
             let expenses = 0;
 
             dates.forEach(dIso => {
-                const sRec = hourlySalesStore.find(s => cleanDateStr(s.date) === dIso);
+                const sRec = getStoreSalesForDate(dIso, currentStore);
                 if (sRec) sales += Number(sRec.totalSales || 0);
 
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to);
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
                 dayShifts.forEach(shift => {
                     const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
                     const totH = Number(shift.totalHours) || 0;
@@ -5056,7 +5056,7 @@
                     }
                 });
 
-                const dayExpList = expensesStore.filter(x => x.date === dIso);
+                const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, currentStore));
                 dayExpList.forEach(x => {
                     expenses += Number(x.amount || 0);
                 });
@@ -5247,7 +5247,7 @@
             if (currentHeatmapMode === 'historical') {
                 const dayBuckets = { 0:{ count: 0, hours: {}, total: 0 }, 1:{ count: 0, hours: {}, total: 0 }, 2:{ count: 0, hours: {}, total: 0 }, 3:{ count: 0, hours: {}, total: 0 }, 4:{ count: 0, hours: {}, total: 0 }, 5:{ count: 0, hours: {}, total: 0 }, 6:{ count: 0, hours: {}, total: 0 } };
                 
-                hourlySalesStore.forEach(rec => {
+                hourlySalesStore.filter(s => isStoreMatch(s.store_id, currentStore)).forEach(rec => {
                     const [y, m, d] = rec.date.split('-').map(Number);
                     const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
                     const bucket = dayBuckets[dow];
@@ -5284,10 +5284,10 @@
                 const dayName = dayNames[dIdx];
                 const dayIso = addDaysString(startMondayStr, dIdx);
 
-                const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === dayIso);
+                const salesRecord = getStoreSalesForDate(dayIso, currentStore);
                 const actualHourly = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
 
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dayIso && entry.from && entry.to);
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dayIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
 
                 let rowCellsHtml = '';
                 let rowDisplayTotal = 0;
@@ -5390,16 +5390,17 @@ function convertHourStr(hStr) {
             }
             targetDate = cleanDateStr(targetDate);
             
+            const storePill = currentStore === "green_juice" ? "🥤 Green Juice Bar" : (currentStore === "anatolya" ? "🥙 Anatolya Kebabs" : "🏢 Combined (All Stores)");
             const badgeEl = document.getElementById('salesSelectedDayBadge');
             if (badgeEl) {
-                badgeEl.innerText = formatDisplayDateStr(targetDate);
+                badgeEl.innerText = `${formatDisplayDateStr(targetDate)} • ${storePill}`;
             }
 
-            const salesRecord = hourlySalesStore.find(s => cleanDateStr(s.date) === targetDate);
+            const salesRecord = getStoreSalesForDate(targetDate, currentStore);
             const hourlyData = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
             const totalDaySales = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
 
-            const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to);
+            const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
 
             let totalDayLaborCost = 0;
             dayShifts.forEach(shift => {
@@ -5459,6 +5460,18 @@ function convertHourStr(hStr) {
 
             const container = document.getElementById('hourlyChartContainer');
             if (!container) return;
+
+            if (totalDaySales === 0) {
+                const storeNotice = currentStore === "green_juice"
+                    ? `No Loyverse sales recorded for Green Juice Bar on this day yet.<br><button type="button" onclick="openLoyverseSyncModal()" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer">🥤 Sync Loyverse Sales</button>`
+                    : `No sales recorded for ${currentStore === "anatolya" ? "Anatolya Kebabs" : "this date"} yet.`;
+                container.innerHTML = `
+                    <div class="py-8 text-center text-slate-400 text-xs">
+                        ${storeNotice}
+                    </div>
+                `;
+                return;
+            }
 
             let startHour = 9;  // 9:00 AM
             let endHour = 19;   // 7:00 PM (9am - 7pm trading hours)
