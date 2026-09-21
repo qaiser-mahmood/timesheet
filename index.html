@@ -1731,7 +1731,7 @@
                             if (btnText) btnText.innerText = 'Syncing...';
                             setSyncStatus(`⚡ Initiating sync ${customStartDate} to ${customEndDate}...`, 'bg-purple-600 text-white');
 
-                            const triggerUrl = `${EPOS_WORKER_URL}/sync?wait=false&notify=false&startDate=${encodeURIComponent(customStartDate)}&endDate=${encodeURIComponent(customEndDate)}`;
+                            const triggerUrl = `${EPOS_WORKER_URL}/sync?wait=false&notify=true&startDate=${encodeURIComponent(customStartDate)}&endDate=${encodeURIComponent(customEndDate)}`;
                             const triggerResp = await fetch(triggerUrl, { headers: authHeaders, cache: 'no-cache' });
                             
                             if (!triggerResp.ok) {
@@ -1805,7 +1805,7 @@
 
                         let workerResult = null;
                         try {
-                            const resp = await fetch(`${EPOS_WORKER_URL}/sync?wait=true&notify=false`, {
+                            const resp = await fetch(`${EPOS_WORKER_URL}/sync?wait=true&notify=true`, {
                                 signal: controller.signal,
                                 cache: 'no-cache',
                                 headers: authHeaders

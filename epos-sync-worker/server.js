@@ -727,6 +727,17 @@ async function sendTelegramPhoto(photoBuffer, caption = '') {
   }
 }
 
+// Captures and sends step-by-step progress screenshot to Telegram
+async function sendStepScreenshot(page, caption = '') {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID || !page) return;
+  try {
+    const buf = await page.screenshot({ fullPage: false });
+    await sendTelegramPhoto(buf, caption);
+  } catch (err) {
+    console.warn('[TelegramPhoto] Warning capturing step screenshot:', err.message);
+  }
+}
+
 // Telegram polling loop
 async function pollTelegram() {
   if (!TELEGRAM_BOT_TOKEN) return;
@@ -1147,19 +1158,30 @@ function splitDateRangeIntoChunks(startDateStr, endDateStr, maxDays = 31) {
   return chunks;
 }
 
-// Interacts with Epos Now Filters: Time Period -> Yesterday / Custom -> Start & End Date -> Apply
-async function applyEposDateFilter(page, fromIso, toIso) {
+// Interacts with Epos Now Filters: Time Period -> Today / Yesterday / Custom -> Start & End Date -> Apply
+async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) {
   console.log('[EposFilter] ==========================================');
   console.log(`[EposFilter] Setting Epos Now Filter: ${fromIso} to ${toIso}...`);
 
-  // Calculate if this request targets Yesterday
   const now = new Date();
+  const todayIso = now.toISOString().split('T')[0];
   const yDate = new Date(now);
   yDate.setDate(yDate.getDate() - 1);
   const yesterdayIso = yDate.toISOString().split('T')[0];
-  
-  // Cleanly identify yesterday requests (matching either UTC yesterday or the user's selected date)
-  const isYesterday = (fromIso === toIso && (fromIso === yesterdayIso || fromIso === '2026-09-20'));
+
+  // Distinguish Today vs Yesterday vs Custom
+  const isToday = (fromIso === toIso && (fromIso === todayIso || fromIso === '2026-09-21'));
+  const isYesterday = !isToday && (fromIso === toIso && (fromIso === yesterdayIso || fromIso === '2026-09-20'));
+
+  let targetPeriod = 'custom';
+  let targetPeriodLabel = 'Custom';
+  if (isToday) {
+    targetPeriod = 'today';
+    targetPeriodLabel = 'Today';
+  } else if (isYesterday) {
+    targetPeriod = 'yesterday';
+    targetPeriodLabel = 'Yesterday';
+  }
 
   const [fYear, fMonth, fDay] = fromIso.split('-');
   const [tYear, tMonth, tDay] = toIso.split('-');
@@ -1180,17 +1202,19 @@ async function applyEposDateFilter(page, fromIso, toIso) {
       console.log('[EposFilter] Filters drawer is already open.');
     }
 
+    if (notifyTelegram) {
+      await sendStepScreenshot(page, `📂 Step 2: Filters Drawer Opened\nSetting period to "${targetPeriodLabel}" (${fromIso} to ${toIso})`);
+    }
+
     // Step 2: Open "Time period" dropdown in MUI drawer
     console.log('[EposFilter] Step 2: Opening Time Period dropdown...');
     const periodCombobox = page.locator('#period, div[role="combobox"]').first();
     await periodCombobox.click({ force: true });
     await page.waitForTimeout(600);
 
-    // Step 3: Select target period ('yesterday' or 'custom')
-    const targetPeriod = isYesterday ? 'yesterday' : 'custom';
+    // Step 3: Select target period ('today', 'yesterday' or 'custom')
     console.log(`[EposFilter] Step 3: Selecting period option "${targetPeriod}"...`);
-
-    const optLocator = page.locator(`li[data-value="${targetPeriod}"], [role="option"][data-value="${targetPeriod}"], li:has-text("${isYesterday ? 'Yesterday' : 'Custom'}")`).first();
+    const optLocator = page.locator(`li[data-value="${targetPeriod}"], [role="option"][data-value="${targetPeriod}"], li:has-text("${targetPeriodLabel}")`).first();
     if (await optLocator.count() > 0) {
       await optLocator.click({ force: true });
       console.log(`[EposFilter] Clicked dropdown option "${targetPeriod}".`);
@@ -1209,27 +1233,36 @@ async function applyEposDateFilter(page, fromIso, toIso) {
     }
 
     // Step 4: If "Custom", set Start Date & End Date
-    if (!isYesterday) {
+    if (targetPeriod === 'custom') {
       console.log(`[EposFilter] Step 4: Setting Custom dates: ${fromFormatted} to ${toFormatted}...`);
-      await page.evaluate(({ fromFormatted, toFormatted }) => {
-        const drawer = document.querySelector('.MuiDrawer-paper, [role="presentation"]') || document.body;
-        const inps = Array.from(drawer.querySelectorAll('input:not([type="hidden"])'));
-        function setInputVal(el, textVal) {
-          if (!el) return;
-          el.focus();
-          el.value = textVal;
-          el.dispatchEvent(new Event('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          el.dispatchEvent(new Event('blur', { bubbles: true }));
-        }
-        if (inps.length >= 2) {
-          setInputVal(inps[0], `${fromFormatted} 12:00 AM`);
-          setInputVal(inps[1], `${toFormatted} 12:00 AM`);
-        }
-      }, { fromFormatted, toFormatted });
+      const dateInputs = page.locator('input[placeholder*="DD / MM / YYYY"]');
+      if (await dateInputs.count() >= 2) {
+        await dateInputs.nth(0).fill(`${fDay} / ${fMonth} / ${fYear} 12:00 AM`);
+        await dateInputs.nth(1).fill(`${tDay} / ${tMonth} / ${tYear} 11:59 PM`);
+      } else {
+        await page.evaluate(({ fDay, fMonth, fYear, tDay, tMonth, tYear }) => {
+          const inps = Array.from(document.querySelectorAll('input')).filter(i => (i.placeholder || '').includes('DD / MM / YYYY'));
+          function setVal(el, val) {
+            if (!el) return;
+            el.focus();
+            el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('blur', { bubbles: true }));
+          }
+          if (inps.length >= 2) {
+            setVal(inps[0], `${fDay} / ${fMonth} / ${fYear} 12:00 AM`);
+            setVal(inps[1], `${tDay} / ${tMonth} / ${tYear} 11:59 PM`);
+          }
+        }, { fDay, fMonth, fYear, tDay, tMonth, tYear });
+      }
       await page.waitForTimeout(600);
     } else {
-      console.log('[EposFilter] Step 4: Selected native "Yesterday" period; Epos Now auto-populated yesterday\'s date range.');
+      console.log(`[EposFilter] Step 4: Selected native "${targetPeriodLabel}" period; Epos Now auto-populated date range.`);
+    }
+
+    if (notifyTelegram) {
+      await sendStepScreenshot(page, `📅 Step 3: Selected Period "${targetPeriodLabel}"\nRange: ${fromFormatted} to ${toFormatted}\nReady to apply...`);
     }
 
     // Step 5: Click Apply button
@@ -1244,8 +1277,15 @@ async function applyEposDateFilter(page, fromIso, toIso) {
     await page.waitForTimeout(3000);
     console.log('[EposFilter] Filter setup complete.');
 
+    if (notifyTelegram) {
+      await sendStepScreenshot(page, `📊 Step 4: Applied "${targetPeriodLabel}" Filter\nTable reloaded for ${fromIso} to ${toIso}.`);
+    }
+
   } catch (err) {
     console.warn(`[EposFilter] Warning applying date filter (${fromIso} to ${toIso}):`, err.message);
+    if (notifyTelegram) {
+      await sendStepScreenshot(page, `⚠️ Warning in Step: ${err.message}`);
+    }
   }
 }
 
@@ -1714,6 +1754,23 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
   }
   console.log(`Successfully upserted ${insertedTx} raw transactions (${chunkLabel}).`);
 
+  if (notifyTelegram) {
+    if (scrapeResult.totalTx > 0) {
+      const cardTotal = scrapeResult.daysBatch.reduce((sum, d) => sum + (d.cardSales || 0), 0);
+      const cashTotal = scrapeResult.daysBatch.reduce((sum, d) => sum + (d.cashSales || 0), 0);
+      const salesTotal = scrapeResult.daysBatch.reduce((sum, d) => sum + (d.totalSales || 0), 0);
+      await sendStepScreenshot(page,
+        `📸 Step 5: Finished Scraping (${chunkLabel})!\n` +
+        `• Synced: ${scrapeResult.totalTx} txs across ${scrapeResult.pagesLoaded} page(s)\n` +
+        `• 💳 Card: $${cardTotal.toFixed(2)}\n` +
+        `• 💵 Cash: $${cashTotal.toFixed(2)}\n` +
+        `• 💰 Total: $${salesTotal.toFixed(2)}`
+      );
+    } else {
+      await sendStepScreenshot(page, `📸 Step 5: Finished Scraping (${chunkLabel})\n⚠️ 0 transactions found on this page.`);
+    }
+  }
+
   return scrapeResult;
 }
 
@@ -1773,11 +1830,15 @@ async function runSync(isManual = false, notifyTelegram = true, startDate = null
         await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
         await page.waitForTimeout(2000);
 
+        if (notifyTelegram) {
+          await sendStepScreenshot(page, `🌐 Step 1: Navigated to Epos Now Transactions\nChunk ${i + 1}/${chunks.length} (${chunk.from} to ${chunk.to})`);
+        }
+
         // Apply Epos Now filter for this chunk
-        await applyEposDateFilter(page, chunk.from, chunk.to);
+        await applyEposDateFilter(page, chunk.from, chunk.to, notifyTelegram);
 
         // Scrape and save transactions for this chunk
-        const chunkResult = await scrapeAndSaveCurrentPage(page, `${chunk.from} to ${chunk.to}`);
+        const chunkResult = await scrapeAndSaveCurrentPage(page, `${chunk.from} to ${chunk.to}`, notifyTelegram);
         if (chunkResult) {
           totalTxCount += chunkResult.totalTx;
           totalDaysCount += chunkResult.daysBatch.length;
@@ -1814,16 +1875,23 @@ async function runSync(isManual = false, notifyTelegram = true, startDate = null
 
     // Default: Single Fast Scrape (Today's live transactions)
     console.log('Loading fresh transactions report page for Today...');
-    if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now...');
+    if (isManual && notifyTelegram) await sendTelegramMessage('⚡ Auto-loading all transactions from Epos Now for Today...');
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(2500);
 
-    const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today');
+    if (notifyTelegram) {
+      await sendStepScreenshot(page, '🌐 Step 1: Navigated to Epos Now Transactions (Today Live Sales)');
+    }
+
+    const todayIso = new Date().toISOString().split('T')[0];
+    await applyEposDateFilter(page, todayIso, todayIso, notifyTelegram);
+
+    const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today', notifyTelegram);
     if (!scrapeResult || scrapeResult.totalTx === 0) {
       console.warn('No transactions parsed on page.');
       if (isManual && notifyTelegram) {
-        await sendTelegramMessage('⚠️ Scrape completed, but 0 transactions were found on the current Epos Now report page.');
+        await sendTelegramMessage('⚠️ Scrape completed: 0 transactions found for Today yet.');
       }
       return;
     }
