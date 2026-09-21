@@ -275,7 +275,7 @@ app.get('/debug/dom-inspect', async (req, res) => {
   }
 });
 
-// Live debug eval endpoint
+// Live debug eval endpoint (evaluates in browser context)
 app.all('/debug/eval', async (req, res) => {
   try {
     const page = await getActivePage();
@@ -291,6 +291,47 @@ app.all('/debug/eval', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Live debug node eval endpoint (evaluates in Node.js server context with Playwright page)
+app.all('/debug/eval-node', async (req, res) => {
+  try {
+    const script = req.query.script || (req.body && req.body.script);
+    if (!script) return res.status(400).send('Missing script parameter');
+    const page = await getActivePage();
+    const fn = new Function('ctx', `return (async () => {
+      const { appState, page, ensureLoggedIn, applyEposDateFilter, scrapeAndSaveCurrentPage, sendTelegramMessage } = ctx;
+      ${script}
+    })();`);
+    const result = await fn({ appState, page, ensureLoggedIn, applyEposDateFilter, scrapeAndSaveCurrentPage, sendTelegramMessage });
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message, stack: err.stack });
+  }
+});
+
+// Live debug trigger login endpoint
+app.get('/debug/login', async (req, res) => {
+  try {
+    const page = await ensureLoggedIn(false, false);
+    res.json({ success: true, url: page.url(), authenticated: appState.isAuthenticated });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Live debug apply-filter endpoint
+app.get('/debug/apply-filter', async (req, res) => {
+  try {
+    const page = await getActivePage();
+    const from = req.query.from || '2026-09-20';
+    const to = req.query.to || '2026-09-20';
+    await applyEposDateFilter(page, from, to);
+    const text = await page.innerText('body');
+    res.json({ success: true, from, to, url: page.url(), preview: text.slice(0, 1500) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
