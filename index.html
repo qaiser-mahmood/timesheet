@@ -1387,12 +1387,41 @@
                             };
                         });
 
-                        const sales = (salesRows || []).map(s => ({
-                            date: s.date,
-                            totalSales: Number(s.total_sales) || 0,
-                            hourly: s.hourly || {},
-                            updatedAt: s.updated_at || ""
-                        }));
+                        const sales = (salesRows || []).map(s => {
+                            const tot = Number(s.total_sales) || 0;
+                            let h = s.hourly || {};
+                            if (typeof h === 'string') {
+                                try { h = JSON.parse(h); } catch(_) { h = {}; }
+                            }
+                            let card = null;
+                            let cash = null;
+                            if (s.card_sales !== undefined && s.card_sales !== null && Number(s.card_sales) > 0) {
+                                card = Number(s.card_sales);
+                            } else if (h._cardSales !== undefined && h._cardSales !== null) {
+                                card = Number(h._cardSales);
+                            }
+                            if (s.cash_sales !== undefined && s.cash_sales !== null && Number(s.cash_sales) > 0) {
+                                cash = Number(s.cash_sales);
+                            } else if (h._cashSales !== undefined && h._cashSales !== null) {
+                                cash = Number(h._cashSales);
+                            }
+                            if (card === null && cash === null) {
+                                card = tot;
+                                cash = 0;
+                            } else if (card === null) {
+                                card = Math.max(0, tot - (cash || 0));
+                            } else if (cash === null) {
+                                cash = Math.max(0, tot - (card || 0));
+                            }
+                            return {
+                                date: s.date,
+                                totalSales: tot,
+                                cardSales: Math.round(card * 100) / 100,
+                                cashSales: Math.round(cash * 100) / 100,
+                                hourly: h,
+                                updatedAt: s.updated_at || ""
+                            };
+                        });
 
                         const expenses = (expenseRows || []).map(x => ({
                             id: x.id,
@@ -1704,20 +1733,24 @@
                                 throw new Error(`Worker sync request failed: ${errTxt}`);
                             }
 
-                            // Poll /sync-status every 3 seconds until finished or max 4 minutes
+                            // Poll /sync-status with active-sync guard
                             let isComplete = false;
                             let pollAttempts = 0;
-                            const maxPolls = 80;
+                            const maxPolls = 100;
                             let lastResult = null;
+                            let hasSeenActiveSync = false;
+
+                            // Allow worker 1.5s initial startup time
+                            await new Promise(r => setTimeout(r, 1500));
 
                             while (!isComplete && pollAttempts < maxPolls) {
                                 pollAttempts++;
-                                await new Promise(r => setTimeout(r, 3000));
                                 try {
                                     const statusRes = await fetch(`${EPOS_WORKER_URL}/sync-status`, { cache: 'no-cache' });
                                     if (statusRes.ok) {
                                         const statusData = await statusRes.json();
                                         if (statusData.isSyncing) {
+                                            hasSeenActiveSync = true;
                                             const p = statusData.progress || {};
                                             if (p.totalChunks > 1) {
                                                 setSyncStatus(`🔄 Batch ${p.currentChunk}/${p.totalChunks} (${p.currentRange}) [${p.totalTx || 0} txs]`, 'bg-indigo-600 text-white');
@@ -1725,14 +1758,18 @@
                                                 setSyncStatus(`🔄 Scraping Epos Now (${p.currentRange || customStartDate})... [${p.totalTx || 0} txs]`, 'bg-indigo-600 text-white');
                                             }
                                         } else {
-                                            isComplete = true;
-                                            lastResult = statusData.lastSyncResult;
-                                            break;
+                                            // Only finish if we previously saw active syncing or after initial poll buffer
+                                            if (hasSeenActiveSync || pollAttempts >= 2) {
+                                                isComplete = true;
+                                                lastResult = statusData.lastSyncResult;
+                                                break;
+                                            }
                                         }
                                     }
                                 } catch (pollErr) {
                                     console.warn("Poll status check issue:", pollErr);
                                 }
+                                await new Promise(r => setTimeout(r, 2500));
                             }
 
                             if (btnText) btnText.innerText = 'Updating DB...';
@@ -1872,12 +1909,28 @@
                                     try { s.hourly = JSON.parse(s.hourly); } catch(e) { s.hourly = {}; }
                                 }
                                 const h = s.hourly || {};
-                                s.cardSales = s.cardSales !== undefined && s.cardSales !== null 
-                                    ? Number(s.cardSales) 
-                                    : (h._cardSales !== undefined ? Number(h._cardSales) : s.totalSales);
-                                s.cashSales = s.cashSales !== undefined && s.cashSales !== null 
-                                    ? Number(s.cashSales) 
-                                    : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, s.totalSales - s.cardSales));
+                                let card = null;
+                                let cash = null;
+                                if (s.cardSales !== undefined && s.cardSales !== null && Number(s.cardSales) > 0) {
+                                    card = Number(s.cardSales);
+                                } else if (h._cardSales !== undefined && h._cardSales !== null) {
+                                    card = Number(h._cardSales);
+                                }
+                                if (s.cashSales !== undefined && s.cashSales !== null && Number(s.cashSales) > 0) {
+                                    cash = Number(s.cashSales);
+                                } else if (h._cashSales !== undefined && h._cashSales !== null) {
+                                    cash = Number(h._cashSales);
+                                }
+                                if (card === null && cash === null) {
+                                    card = s.totalSales;
+                                    cash = 0;
+                                } else if (card === null) {
+                                    card = Math.max(0, s.totalSales - (cash || 0));
+                                } else if (cash === null) {
+                                    cash = Math.max(0, s.totalSales - (card || 0));
+                                }
+                                s.cardSales = Math.round(card * 100) / 100;
+                                s.cashSales = Math.round(cash * 100) / 100;
                                 return s;
                             });
                         }

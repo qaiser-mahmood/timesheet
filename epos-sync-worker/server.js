@@ -270,17 +270,35 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       if (typeof h === 'string') {
         try { h = JSON.parse(h); } catch (_) { h = {}; }
       }
-      const card = s.card_sales !== undefined && s.card_sales !== null 
-        ? Number(s.card_sales) 
-        : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
-      const cash = s.cash_sales !== undefined && s.cash_sales !== null 
-        ? Number(s.cash_sales) 
-        : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+      let card = null;
+      let cash = null;
+
+      if (s.card_sales !== undefined && s.card_sales !== null && Number(s.card_sales) > 0) {
+        card = Number(s.card_sales);
+      } else if (h._cardSales !== undefined && h._cardSales !== null) {
+        card = Number(h._cardSales);
+      }
+
+      if (s.cash_sales !== undefined && s.cash_sales !== null && Number(s.cash_sales) > 0) {
+        cash = Number(s.cash_sales);
+      } else if (h._cashSales !== undefined && h._cashSales !== null) {
+        cash = Number(h._cashSales);
+      }
+
+      if (card === null && cash === null) {
+        card = tot;
+        cash = 0;
+      } else if (card === null) {
+        card = Math.max(0, tot - (cash || 0));
+      } else if (cash === null) {
+        cash = Math.max(0, tot - (card || 0));
+      }
+
       return {
         date: s.date,
         totalSales: tot,
-        cardSales: card,
-        cashSales: cash,
+        cardSales: Math.round(card * 100) / 100,
+        cashSales: Math.round(cash * 100) / 100,
         hourly: h,
         updatedAt: s.updated_at || ''
       };
@@ -488,6 +506,15 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
       return res.status(500).json({ status: 'error', message: err.message });
     }
   } else {
+    appState.isSyncing = true;
+    appState.activeSyncProgress = {
+      isSyncing: true,
+      currentChunk: 1,
+      totalChunks: 1,
+      currentRange: `${startDate || 'Today'} to ${endDate || 'Today'}`,
+      totalTx: 0,
+      status: 'starting'
+    };
     runSync(true, notifyTelegram, startDate, endDate).catch(console.error);
     return res.json({ 
       status: 'triggered', 
@@ -1356,21 +1383,37 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
 
       var pageTxList = [];
 
-      // Strategy 1: Direct Table Row (tr) inspection across frames
+      // Strategy 1: Direct Table Row (tr and role=row) inspection with cell-level payment method detection
       for (var di = 0; di < docs.length; di++) {
-        var trRows = docs[di].querySelectorAll('tr');
+        var trRows = docs[di].querySelectorAll('tr, [role="row"], .dx-data-row, .k-master-row');
         for (var ri = 0; ri < trRows.length; ri++) {
-          var rText = (trRows[ri].innerText || '').replace(/\s+/g, ' ').trim();
-          if (!rText || rText.toLowerCase().includes('payment method') || rText.toLowerCase().includes('transaction report')) continue;
+          var rowEl = trRows[ri];
+          var rText = (rowEl.innerText || '').replace(/\s+/g, ' ').trim();
+          if (!rText) continue;
+          // Skip header rows
+          if (rText.toLowerCase().includes('transaction report') || (rText.toLowerCase().includes('payment method') && rText.toLowerCase().includes('amount'))) continue;
+
+          // Check individual cells for Payment Method column
+          var cells = rowEl.querySelectorAll('td, th, [role="gridcell"], [role="cell"], .cell');
+          var rowHasCash = false;
+          var rowHasCard = false;
+          if (cells.length > 0) {
+            for (var ci = 0; ci < cells.length; ci++) {
+              var cText = (cells[ci].innerText || '').trim().toLowerCase();
+              if (cText === 'cash' || cText.includes('cash')) rowHasCash = true;
+              if (cText === 'card' || cText.includes('card') || cText.includes('eftpos') || cText.includes('visa') || cText.includes('mastercard')) rowHasCard = true;
+            }
+          }
+
           var dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
           var tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
-          var aM = rText.match(/[\$£€]\s*([0-9]+\.[0-9]{2})/);
+          var aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
           if (dM && tM && aM) {
             var rDate = parseAnyDate(dM[1]);
             var rTime = tM[1];
             var rHour = parseTimeStr(rTime);
             var rAmt = parseFloat(aM[1]);
-            var isCash = /\bcash\b/i.test(rText);
+            var isCash = rowHasCash || (/\bcash\b/i.test(rText) && !rowHasCard);
             if (rDate && rHour !== null && !isNaN(rAmt)) {
               pageTxList.push({ date: rDate, time: rTime, hour: rHour, amount: rAmt, isCash: isCash, raw: rText });
             }
@@ -1407,7 +1450,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
         var rowHour = parseTimeStr(rowTime);
         var rowAmt = parseFloat(tMatch[3]);
         if (rowDate && rowHour !== null && !isNaN(rowAmt)) {
-          var afterMatch = pageText.slice(tMatch.index, tMatch.index + 120);
+          var afterMatch = pageText.slice(tMatch.index, tMatch.index + 220);
           var isCash = /\bcash\b/i.test(afterMatch);
           pageTxList.push({ date: rowDate, time: rowTime, hour: rowHour, amount: rowAmt, isCash: isCash, raw: tMatch[0].replace(/\s+/g, ' ').trim() });
         }
@@ -1497,7 +1540,14 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
     var txRows = txList.map(function(t, idx) {
       var rawC = (t.raw || '').replace(/\s+/g, ' ').trim();
       var uid = (t.date + '_' + (t.time || '').replace(/[^a-zA-Z0-9]/g, '') + '_' + t.amount.toFixed(2) + '_' + idx + '_' + rawC).slice(0, 120).toLowerCase().replace(/[^a-z0-9_]/g, '-');
-      return { id: uid, date: t.date, time: t.time || '', amount: t.amount, raw_line: rawC };
+      return { 
+        id: uid, 
+        date: t.date, 
+        time: t.time || '', 
+        amount: t.amount, 
+        payment_method: t.isCash ? 'Cash' : 'Card',
+        raw_line: rawC 
+      };
     });
 
     return { daysBatch, txRows, totalTx: txList.length, pagesLoaded: page };
@@ -1509,15 +1559,17 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
     return scrapeResult;
   }
 
-  // Upsert hourly_sales to Supabase
-  const hsPayload = scrapeResult.daysBatch.map(d => ({
+  // Upsert hourly_sales to Supabase (attempting dedicated card_sales & cash_sales columns with automatic fallback)
+  const hsPayloadWithColumns = scrapeResult.daysBatch.map(d => ({
     date: d.date,
     total_sales: d.totalSales,
+    card_sales: d.cardSales,
+    cash_sales: d.cashSales,
     hourly: d.hourly,
     updated_at: new Date().toISOString()
   }));
 
-  const hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
+  let hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -1525,21 +1577,42 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
       'Content-Type': 'application/json',
       'Prefer': 'resolution=merge-duplicates'
     },
-    body: JSON.stringify(hsPayload)
+    body: JSON.stringify(hsPayloadWithColumns)
   });
 
   if (!hsRes.ok) {
     const txt = await hsRes.text();
-    console.error('Supabase hourly_sales upsert failed:', txt);
-  } else {
-    console.log(`Successfully upserted ${hsPayload.length} day(s) to hourly_sales.`);
+    if (txt.includes('card_sales') || txt.includes('cash_sales')) {
+      console.warn('Supabase hourly_sales table lacks card_sales/cash_sales columns; retrying with standard hourly JSON payload.');
+      const fallbackPayload = scrapeResult.daysBatch.map(d => ({
+        date: d.date,
+        total_sales: d.totalSales,
+        hourly: d.hourly,
+        updated_at: new Date().toISOString()
+      }));
+      hsRes = await fetch(`${SUPABASE_URL}/rest/v1/hourly_sales?on_conflict=date`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(fallbackPayload)
+      });
+    } else {
+      console.error('Supabase hourly_sales upsert failed:', txt);
+    }
+  }
+  if (hsRes.ok) {
+    console.log(`Successfully upserted ${scrapeResult.daysBatch.length} day(s) to hourly_sales.`);
   }
 
-  // Upsert raw_transactions in chunks of 100
+  // Upsert raw_transactions in chunks of 100 (with automatic fallback if payment_method column does not exist)
   let insertedTx = 0;
   for (let i = 0; i < scrapeResult.txRows.length; i += 100) {
     const chunk = scrapeResult.txRows.slice(i, i + 100);
-    const txRes = await fetch(`${SUPABASE_URL}/rest/v1/raw_transactions?on_conflict=id`, {
+    let txRes = await fetch(`${SUPABASE_URL}/rest/v1/raw_transactions?on_conflict=id`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
@@ -1549,6 +1622,22 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
       },
       body: JSON.stringify(chunk)
     });
+    if (!txRes.ok) {
+      const errTxt = await txRes.text();
+      if (errTxt.includes('payment_method')) {
+        const strippedChunk = chunk.map(c => ({ id: c.id, date: c.date, time: c.time, amount: c.amount, raw_line: c.raw_line }));
+        txRes = await fetch(`${SUPABASE_URL}/rest/v1/raw_transactions?on_conflict=id`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(strippedChunk)
+        });
+      }
+    }
     if (txRes.ok) insertedTx += chunk.length;
   }
   console.log(`Successfully upserted ${insertedTx} raw transactions (${chunkLabel}).`);
