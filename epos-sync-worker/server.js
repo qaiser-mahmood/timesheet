@@ -1164,14 +1164,9 @@ async function applyEposDateFilter(page, fromIso, toIso) {
   try {
     // Step 1: Ensure Filters drawer is open
     console.log('[EposFilter] Step 1: Checking if Filters drawer is open...');
-    const isDrawerOpen = await page.evaluate(() => {
-      const drawer = document.querySelector('.MuiDrawer-paper, [role="presentation"]');
-      if (!drawer) return false;
-      const r = drawer.getBoundingClientRect();
-      return r.width > 0 && r.height > 0 && r.right > 0 && r.left < window.innerWidth;
-    });
+    let isFilterOpen = (await page.locator('#period, button:has-text("Apply")').count()) > 0;
 
-    if (!isDrawerOpen) {
+    if (!isFilterOpen) {
       console.log('[EposFilter] Filters drawer is closed. Clicking "Filters" button...');
       const filterBtn = page.locator('button[aria-label="Filters"], button:has-text("Filters")').first();
       await filterBtn.click({ force: true });
