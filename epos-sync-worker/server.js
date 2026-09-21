@@ -15,6 +15,8 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ckyutsdgpdamnhsqoail.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY || '';
 const TIMEZONE = process.env.TIMEZONE || process.env.TZ || 'Australia/Perth';
+const OPERATING_START_HOUR = parseInt(process.env.OPERATING_START_HOUR || '9', 10); // 9 AM
+const OPERATING_END_HOUR = parseInt(process.env.OPERATING_END_HOUR || '20', 10);    // 8 PM (20:00)
 const PEAK_START_HOUR = parseInt(process.env.PEAK_START_HOUR || '11', 10); // 11 AM
 const PEAK_END_HOUR = parseInt(process.env.PEAK_END_HOUR || '15', 10);     // 3 PM
 const PEAK_INTERVAL_MINUTES = parseInt(process.env.PEAK_INTERVAL_MINUTES || '5', 10);
@@ -863,11 +865,16 @@ async function pollTelegram() {
             `When 2FA SMS is requested, reply directly here with your 6-digit code.`
           );
         } else if (cmd === '/status') {
-          const { formatted } = getLocalTimeParts();
+          const { hour, minute, formatted } = getLocalTimeParts();
+          const isOperating = (hour >= OPERATING_START_HOUR && hour < OPERATING_END_HOUR) || (hour === OPERATING_END_HOUR && minute === 0);
+          const isPeak = (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR);
+          const mode = !isOperating ? '🌙 Sleep Mode (8pm–9am, keep-alive only)' : (isPeak ? '⚡ Peak (5-min sync)' : '🔄 Standard (15-min sync)');
           await sendTelegramMessage(
             `📊 *Worker Status*\n\n` +
             `• Local Time: ${formatted} (${TIMEZONE})\n` +
-            `• Schedule: Every ${PEAK_INTERVAL_MINUTES} min (Peak 11am–3pm), every ${OFFPEAK_INTERVAL_MINUTES} min (Off-Peak)\n` +
+            `• Current Mode: ${mode}\n` +
+            `• Operating Hours: 9:00 AM – 8:00 PM\n` +
+            `• Peak Hours: 11:00 AM – 3:00 PM (every 5 min)\n` +
             `• Authenticated: ${appState.isAuthenticated ? '✅ Yes' : '⚠️ No'}\n` +
             `• Login in progress: ${appState.isLoggingIn ? '⏳ Yes' : 'No'}\n` +
             `• Sync in progress: ${appState.isSyncing ? '⏳ Yes' : 'No'}\n` +
@@ -1834,18 +1841,33 @@ async function runSync(isManual = false, notifyTelegram = false) {
 }
 
 // ----------------------------------------------------
-// Keep-Alive Heartbeat (Pings session every 4 minutes)
+// Keep-Alive Heartbeat (Maintains active Epos Now session 24/7)
 // ----------------------------------------------------
 async function sessionHeartbeat() {
   if (appState.isSyncing || appState.isLoggingIn) return;
   try {
-    if (appState.context) {
-      const pages = appState.context.pages();
-      if (pages.length > 0) {
-        await pages[0].evaluate(() => document.title).catch(() => {});
+    const page = await getActivePage();
+    if (page) {
+      const currentUrl = page.url();
+      if (!currentUrl.includes('eposnowhq.com')) {
+        console.log('[Heartbeat] Navigating to Epos Now to prime session...');
+        await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 35000 });
+      } else {
+        // Light touch on DOM to keep cookie session active
+        await page.evaluate(() => document.title).catch(() => {});
+      }
+
+      const isLoginPage = page.url().toLowerCase().includes('login');
+      if (!isLoginPage) {
+        appState.isAuthenticated = true;
+      } else {
+        console.log('[Heartbeat] Session appears expired. Refreshing login...');
+        ensureLoggedIn(false, false).catch(e => console.warn('[Heartbeat] Login check:', e.message));
       }
     }
-  } catch (_) {}
+  } catch (err) {
+    console.warn('[Heartbeat] Notice during session heartbeat:', err.message);
+  }
 }
 
 // Helper to get local time in configured timezone (default Australia/Perth)
@@ -1869,10 +1891,19 @@ function getLocalTimeParts() {
   }
 }
 
-// Smart Cron: Evaluates every 5 minutes whether to sync based on Peak (11am-3pm) vs Off-Peak
+// Smart Cron: Evaluates every 5 minutes whether to sync based on Operating Hours (9am-8pm) & Peak (11am-3pm)
 cron.schedule('*/5 * * * *', () => {
   const { hour, minute, formatted } = getLocalTimeParts();
-  // Peak sale hours: 11:00 AM to 3:00 PM (hours 11, 12, 13, 14, and 15:00)
+
+  // Operating window: 9:00 AM to 8:00 PM (hour 9 through 19, plus final sync at 20:00)
+  const isOperatingHours = (hour >= OPERATING_START_HOUR && hour < OPERATING_END_HOUR) || (hour === OPERATING_END_HOUR && minute === 0);
+
+  if (!isOperatingHours) {
+    console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Outside operating hours (8:00 PM - 9:00 AM). Scraping paused; keeping session alive.`);
+    return;
+  }
+
+  // Peak sale hours: 11:00 AM to 3:00 PM (hours 11, 12, 13, 14)
   const isPeak = (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR);
 
   if (isPeak) {
@@ -1881,16 +1912,16 @@ cron.schedule('*/5 * * * *', () => {
   } else {
     // Outside peak hours: run every 15 minutes (at :00, :15, :30, :45)
     if (minute % OFFPEAK_INTERVAL_MINUTES === 0) {
-      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Off-peak hours. Running ${OFFPEAK_INTERVAL_MINUTES}-min sync.`);
+      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Running ${OFFPEAK_INTERVAL_MINUTES}-min sync.`);
       runSync(false, false).catch(console.error);
     } else {
-      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Off-peak hours. Skipping (next sync at :${String(Math.ceil((minute + 1) / OFFPEAK_INTERVAL_MINUTES) * OFFPEAK_INTERVAL_MINUTES % 60).padStart(2, '0')}).`);
+      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Skipping (next sync at :${String(Math.ceil((minute + 1) / OFFPEAK_INTERVAL_MINUTES) * OFFPEAK_INTERVAL_MINUTES % 60).padStart(2, '0')}).`);
     }
   }
 });
 
-// Schedule Heartbeat every 4 minutes
-cron.schedule('*/4 * * * *', () => {
+// Schedule Heartbeat every 10 minutes to keep session alive 24/7
+cron.schedule('*/10 * * * *', () => {
   sessionHeartbeat().catch(() => {});
 });
 
@@ -1902,7 +1933,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`Epos Now Sync Worker listening on port ${PORT}`);
   console.log(`Supabase Target: ${SUPABASE_URL}`);
   console.log(`Epos Username: ${EPOS_USERNAME}`);
-  console.log(`Schedule: Every ${PEAK_INTERVAL_MINUTES} min during peak (${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00 ${TIMEZONE}), every ${OFFPEAK_INTERVAL_MINUTES} min off-peak`);
+  console.log(`Operating Hours: ${OPERATING_START_HOUR}:00 to ${OPERATING_END_HOUR}:00 (${TIMEZONE})`);
+  console.log(`Schedule: Every ${PEAK_INTERVAL_MINUTES} min (Peak ${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00), every ${OFFPEAK_INTERVAL_MINUTES} min (Off-Peak)`);
+  console.log(`Keep-Alive: 24/7 session heartbeat active`);
   console.log(`=============================================`);
 
   // Start Telegram polling
@@ -1911,8 +1944,10 @@ app.listen(PORT, '0.0.0.0', () => {
   // Send boot notification
   sendTelegramMessage(
     `🚀 *Epos Now Sync Worker Online*\n\n` +
-    `• Schedule: 5-min sync during peak (11am–3pm), 15-min off-peak\n` +
-    `• Step notifications disabled for clean background operation.\n\n` +
+    `• Operating Hours: 9:00 AM – 8:00 PM\n` +
+    `• Peak Hours: 11:00 AM – 3:00 PM (every 5 min)\n` +
+    `• Off-Peak: every 15 min\n` +
+    `• Overnight (8:00 PM – 9:00 AM): Scraping paused, keep-alive active.\n\n` +
     `Type /status to check worker status.`
   ).catch(console.error);
 });
