@@ -324,6 +324,7 @@ app.get('/debug/login', async (req, res) => {
 // Live debug apply-filter endpoint
 app.get('/debug/apply-filter', async (req, res) => {
   try {
+    const notify = req.query.notify === 'true' || req.query.notify === '1';
     const page = await ensureLoggedIn(false, false);
     if (!page.url().includes('/transactions')) {
       await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
@@ -332,9 +333,16 @@ app.get('/debug/apply-filter', async (req, res) => {
     }
     const from = req.query.from || '2026-09-20';
     const to = req.query.to || '2026-09-20';
-    await applyEposDateFilter(page, from, to);
+    if (notify) {
+      await sendStepScreenshot(page, `🌐 Step 1: Navigated to Epos Now Transactions\nTesting filter: ${from} to ${to}`);
+    }
+    await applyEposDateFilter(page, from, to, notify);
+    let scrapeResult = null;
+    if (req.query.scrape === 'true') {
+      scrapeResult = await scrapeAndSaveCurrentPage(page, `${from} to ${to}`, notify);
+    }
     const text = await page.innerText('body');
-    res.json({ success: true, from, to, url: page.url(), preview: text.slice(0, 1500) });
+    res.json({ success: true, from, to, url: page.url(), scrapeResult, preview: text.slice(0, 1500) });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -611,7 +619,7 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
 // Manual HTTP trigger (Protected by manager whitelist)
 app.all('/sync', requireAuthorizedManager, async (req, res) => {
   const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
-  const notifyTelegram = req.query.notify === 'true' || req.query.notify === '1';
+  const notifyTelegram = req.query.notify !== 'false';
   const startDate = req.query.startDate || req.body.startDate || null;
   const endDate = req.query.endDate || req.body.endDate || null;
 
@@ -1290,7 +1298,7 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
 }
 
 // Scrapes currently displayed transactions from table (and up to 40 pages of pagination)
-async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
+async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = true) {
   console.log(`Scraping transactions view (${chunkLabel})...`);
   const scrapeResult = await page.evaluate(async () => {
     function getAllDocs() {
