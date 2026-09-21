@@ -40,17 +40,44 @@
     <!-- Dedicated Professional Login Screen (Visible when logged out) -->
     <div id="loginContainer" class="min-h-[85vh] flex items-center justify-center p-3">
         <div class="w-full max-w-md bg-slate-900 text-white rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-800 space-y-5">
-            <!-- Brand Icon / Avatar -->
+            <!-- Brand Icon / Avatar (ALHAMD ENTERPRISES Corporate Crest) -->
             <div class="flex justify-center">
-                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-black flex items-center justify-center shadow-2xl shadow-amber-500/20 border border-amber-500/40 ring-4 ring-amber-500/10 overflow-hidden p-1.5 transition-transform hover:scale-105 duration-300">
-                    <img src="logo.png" alt="Anatolya Turkish Kebabs Logo" class="w-full h-full object-contain rounded-xl">
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center shadow-2xl shadow-emerald-500/10 border border-emerald-500/30 ring-4 ring-emerald-500/10 overflow-hidden p-2 transition-transform hover:scale-105 duration-300 relative group">
+                    <div class="absolute inset-0 bg-gradient-to-tr from-amber-500/10 via-transparent to-emerald-500/20 opacity-70 group-hover:opacity-100 transition-opacity"></div>
+                    <!-- Executive Vector Monogram for ALHAMD ENTERPRISES -->
+                    <svg class="w-full h-full text-white drop-shadow-md relative z-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="aeGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#f59e0b" />
+                                <stop offset="50%" stop-color="#fbbf24" />
+                                <stop offset="100%" stop-color="#d97706" />
+                            </linearGradient>
+                            <linearGradient id="aeEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#10b981" />
+                                <stop offset="50%" stop-color="#34d399" />
+                                <stop offset="100%" stop-color="#059669" />
+                            </linearGradient>
+                        </defs>
+                        <!-- Outer Hexagon Badge -->
+                        <polygon points="50,6 90,28 90,72 50,94 10,72 10,28" stroke="url(#aeGold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="#0f172a" fill-opacity="0.8" />
+                        <!-- Inner Hexagon Accent -->
+                        <polygon points="50,13 83,31 83,69 50,87 17,69 17,31" stroke="url(#aeEmerald)" stroke-width="1.2" stroke-opacity="0.5" stroke-dasharray="3 3" fill="none" />
+                        <!-- Monogram Letter A -->
+                        <path d="M33 70 L48 27 L54 27 L69 70 L60 70 L56 58 L44 58 L40 70 Z M46 51 L54 51 L50 37 Z" fill="url(#aeGold)" />
+                        <!-- Stylized Enterprise Arch -->
+                        <path d="M26 73 Q50 63 74 73" stroke="url(#aeEmerald)" stroke-width="2.5" stroke-linecap="round" />
+                        <circle cx="50" cy="20" r="2" fill="#fbbf24" />
+                    </svg>
                 </div>
             </div>
 
             <!-- Header Titles -->
             <div class="text-center space-y-1">
-                <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Anatolya Turkish Kebabs</h1>
-                <p class="text-xs text-slate-400 font-medium">Staff Timesheet & Operations Intelligence Portal</p>
+                <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] text-amber-400 font-bold tracking-wider uppercase mb-0.5">
+                    <span>🏢</span> <span>ALHAMD ENTERPRISES</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">Management Portal</h1>
+                <p class="text-xs text-slate-400 font-medium">Multi-Store Operations, Timesheet & BAS Portal (v2.2)</p>
             </div>
 
             <!-- Logout Success Banner (shown upon logout) -->
@@ -65,18 +92,18 @@
             <div class="grid grid-cols-3 gap-2 text-center py-1">
                 <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-0.5">
                     <div class="text-base">⚡</div>
-                    <div class="text-[10px] font-bold text-slate-200">Live Epos</div>
-                    <div class="text-[9px] text-slate-400">Auto Sync</div>
+                    <div class="text-[10px] font-bold text-slate-200">Multi-Store POS</div>
+                    <div class="text-[9px] text-slate-400">Epos & Loyverse</div>
                 </div>
                 <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-0.5">
-                    <div class="text-base">📊</div>
-                    <div class="text-[10px] font-bold text-slate-200">Analytics</div>
-                    <div class="text-[9px] text-slate-400">Sales & Wages</div>
+                    <div class="text-base">👥</div>
+                    <div class="text-[10px] font-bold text-slate-200">Timesheet</div>
+                    <div class="text-[9px] text-slate-400">Multi-Venue Rates</div>
                 </div>
                 <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-0.5">
-                    <div class="text-base">💸</div>
-                    <div class="text-[10px] font-bold text-slate-200">Ledger</div>
-                    <div class="text-[9px] text-slate-400">P&L Expenses</div>
+                    <div class="text-base">🏢</div>
+                    <div class="text-[10px] font-bold text-slate-200">Company BAS</div>
+                    <div class="text-[9px] text-slate-400">Consolidated Tax</div>
                 </div>
             </div>
 
@@ -103,19 +130,21 @@
                     <span>🔒</span> <span>Restricted Access • Authorized Staff & Management Only</span>
                 </div>
                 <div class="text-[10px] text-slate-500 flex items-center justify-center gap-1.5 font-medium">
-                    <img src="logo.png" alt="" class="w-3.5 h-3.5 rounded object-contain opacity-60">
-                    <span>© 2026 Anatolya Turkish Kebabs</span>
+                    <span>© 2026 ALHAMD ENTERPRISES • Anatolya Kebabs & Green Juice Bar</span>
+                    <span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-mono">v2.2</span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Authenticated App Container (Hidden when logged out) -->
-    <div id="appContainer" class="hidden max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-5 overflow-hidden">
+    <div id="appContainer" class="hidden max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-4 overflow-hidden">
         
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
             <div id="mainHeaderLogoContainer" class="flex items-center gap-2.5 shrink-0">
-                <img src="logo.png" alt="Anatolya Kebabs" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-amber-500/40 bg-black object-contain p-0.5 shrink-0 ring-2 ring-amber-500/10">
+                <div id="headerLogoWrapper" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-amber-500/40 bg-black flex items-center justify-center p-0.5 shrink-0 ring-2 ring-amber-500/10">
+                    <img id="headerLogoImg" src="logo.png" alt="Anatolya Kebabs" class="w-full h-full object-contain rounded-lg">
+                </div>
                 <div class="flex flex-col">
                     <h1 id="mainTitle" class="text-sm sm:text-lg font-bold text-gray-900 tracking-tight whitespace-nowrap leading-tight">Anatolya Kebabs Roster</h1>
                     <span id="userEmailBadge" class="hidden text-[9px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 truncate max-w-[150px] font-mono mt-0.5"></span>
@@ -126,15 +155,40 @@
                 <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     👁️ View Roster
                 </button>
+                <button type="button" onclick="openStaffModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700" title="Manage Staff & Multi-Store Pay Rates">
+                    👥 Staff Rates
+                </button>
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Last Week
                 </button>
-                <button type="button" onclick="openEposModal()" class="hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30" title="Epos Bookmarklet for past months & live sales">
-                    ⚡ Bookmarklet
+                <button type="button" id="headerSyncModalBtn" onclick="openActiveStoreSyncModal()" class="hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30" title="Sync Sales & Bookmarklet">
+                    ⚡ Sync Sales
                 </button>
                 <button id="authButton" type="button" class="hide-on-share bg-red-600 hover:bg-red-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer">
                     🚪 Logout
                 </button>
+            </div>
+        </div>
+
+        <!-- Store Switcher & Venue Context -->
+        <div class="hide-on-share flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Store:</span>
+                <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold">
+                    <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer">
+                        <span>🥙</span> <span>Anatolya Kebabs</span>
+                    </button>
+                    <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer">
+                        <span>🥤</span> <span>Green Juice Bar</span>
+                    </button>
+                    <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer">
+                        <span>🏢</span> <span>ALHAMD Combined (BAS)</span>
+                    </button>
+                </div>
+            </div>
+            <div id="storeContextBadge" class="text-[11px] text-slate-300 font-medium flex items-center gap-1.5 pr-1">
+                <span id="storeContextDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="storeContextText">Viewing Anatolya Kebabs (Epos Now)</span>
             </div>
         </div>
         
@@ -1078,20 +1132,123 @@
         </div>
     </div>
 
+    <!-- Staff Management & Store Pay Rates Modal -->
+    <div id="staffModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden backdrop-blur-xs">
+        <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-slate-700 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">👥</span>
+                    <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
+                        Manage Staff & Multi-Store Pay Rates
+                    </h3>
+                </div>
+                <button type="button" onclick="closeStaffModal()" class="text-slate-400 hover:text-white text-lg font-bold cursor-pointer">✕</button>
+            </div>
+
+            <div class="overflow-y-auto space-y-3 pr-1 flex-1 text-xs">
+                <div class="bg-slate-800/80 p-2.5 rounded-lg border border-slate-700/60 space-y-1">
+                    <div class="font-bold text-amber-400 text-xs flex items-center gap-1.5">
+                        <span>💡</span> Multi-Store Pay Rules:
+                    </div>
+                    <ul class="list-disc list-inside text-[11px] text-slate-300 space-y-0.5">
+                        <li><b>Anatolya Kebabs</b>: Cash Rate ($) + Tax Rate ($) split.</li>
+                        <li><b>Green Juice Bar</b>: 100% Cash (no tax pay). Supports standard Mon–Sat cash rate and optional Sunday cash rate.</li>
+                    </ul>
+                </div>
+
+                <div class="space-y-2.5" id="staffRatesListContainer">
+                    <div class="text-center py-4 text-slate-400">Loading staff registry...</div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex items-center justify-between shrink-0">
+                <button type="button" onclick="openAddNewStaffPrompt()" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-lg text-xs transition flex items-center gap-1 cursor-pointer">
+                    ➕ Add Staff Member
+                </button>
+                <button type="button" onclick="closeStaffModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-lg text-xs transition cursor-pointer">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Green Juice Bar Loyverse Direct Sync Modal -->
+    <div id="loyverseSyncModal" class="fixed inset-0 bg-black/65 z-50 flex items-center justify-center p-3 hidden backdrop-blur-xs">
+        <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-emerald-500/40">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🥤</span>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
+                            Green Juice Bar • Loyverse POS Sync
+                        </h3>
+                        <div class="text-[10px] text-emerald-400 font-mono font-medium">Direct Cloud REST API</div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeLoyverseSyncModal()" class="text-slate-400 hover:text-white text-lg font-bold cursor-pointer">✕</button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div class="p-3 bg-emerald-950/40 border border-emerald-800/60 rounded-xl space-y-1 text-[11px] text-emerald-200">
+                    <div class="font-bold flex items-center gap-1 text-emerald-300">
+                        <span>⚡</span> Instant REST API Sync
+                    </div>
+                    <p class="text-[10px] leading-relaxed text-slate-300">
+                        Fetches receipts, cash payments, card transactions, and hourly breakdown directly from your Loyverse account without any browser scraping or 2FA.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="setLoyversePreset('today')" class="py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition">Today</button>
+                    <button type="button" onclick="setLoyversePreset('yesterday')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">Yesterday</button>
+                    <button type="button" onclick="setLoyversePreset('week')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Week</button>
+                    <button type="button" onclick="setLoyversePreset('month')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Month</button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase">From Date</label>
+                        <input type="date" id="loyverseStartDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase">To Date</label>
+                        <input type="date" id="loyverseEndDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeLoyverseSyncModal()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition">Cancel</button>
+                    <button type="button" id="triggerLoyverseSyncBtn" onclick="executeLoyverseSync()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition shadow flex items-center gap-1.5">
+                        <span>🚀 Sync Loyverse Sales</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Log Expense Modal -->
     <div id="expenseModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden">
         <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-slate-700">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
-                    <img src="logo.png" alt="Anatolya Logo" class="w-6 h-6 rounded bg-black p-0.5 border border-amber-500/40 object-contain shadow-xs">
+                    <span class="text-xl">💸</span>
                     <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
-                        Log Business Expense
+                        Log Business Expense / Invoice
                     </h3>
                 </div>
                 <button type="button" onclick="closeExpenseModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
             </div>
 
             <form id="expenseForm" onsubmit="submitExpenseForm(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Store / Venue</label>
+                    <select id="expenseStore" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
+                        <option value="anatolya">🥙 Anatolya Turkish Kebabs</option>
+                        <option value="green_juice">🥤 Green Juice Bar</option>
+                        <option value="company_shared">🏢 ALHAMD ENTERPRISES (Company Shared / Overhead)</option>
+                    </select>
+                </div>
+
                 <div>
                     <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Date</label>
                     <input type="date" id="expenseDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
