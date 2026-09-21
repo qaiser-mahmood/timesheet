@@ -260,17 +260,17 @@
                     </span>
                     <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
-                <div class="flex items-center gap-2 text-xs">
-                    <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-md border border-purple-500/30" title="Sync today's live sales from Epos Now">
-                        <span id="liveEposSyncSpinner" class="inline-block">⚡</span> <span id="liveEposSyncText">Sync</span>
+                <div class="flex items-center gap-1.5 sm:gap-2 text-xs">
+                    <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30" title="Sync today's live sales from Epos Now">
+                        <span id="liveEposSyncSpinner" class="w-3.5 h-3.5 flex items-center justify-center shrink-0">⚡</span> <span id="liveEposSyncText" class="truncate">Sync</span>
                     </button>
-                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="Quick reload from Supabase database">
+                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="Quick reload from Supabase database">
                         <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>Refresh</span>
                     </button>
-                    <button type="button" onclick="openExpenseModal()" class="text-[11px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Log a new business expense">
+                    <button type="button" onclick="openExpenseModal()" class="text-[11px] shrink-0 bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Log a new business expense">
                         💸 Log Exp
                     </button>
-                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700" title="View business expenses ledger">
+                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="View business expenses ledger">
                         📋 Ledger
                     </button>
                 </div>
@@ -369,41 +369,60 @@
                 </div>
 
                 <!-- Range KPI Summary Cards -->
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
-                        <div>
-                            <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between">
-                                <span>Revenue</span>
-                                <span class="text-[9px] text-emerald-400 font-semibold">Total</span>
+                <div class="grid grid-cols-2 md:grid-cols-12 gap-2.5">
+                    <!-- Revenue Palette (Enlarged: 4 Cols on Desktop, Full 2-Cols on Mobile) -->
+                    <div class="col-span-2 md:col-span-4 bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 border border-emerald-500/40 p-3 rounded-xl shadow-md flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <div class="text-[10px] uppercase tracking-wider text-emerald-300 font-extrabold flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                                Total Revenue
                             </div>
-                            <div id="kpiRangeSales" class="text-base sm:text-lg font-black text-emerald-400 leading-tight mt-0.5">$0.00</div>
+                            <div id="kpiRangeSales" class="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight leading-none">$0.00</div>
                         </div>
-                        <div class="mt-1.5 flex items-center justify-between text-[10px] font-bold border-t border-slate-700/60 pt-1 text-slate-300">
-                            <span class="flex items-center gap-1 text-emerald-300" title="Card Revenue (Included in BAS)">
-                                💳 Card: <strong id="kpiRangeCardSales" class="text-emerald-400 font-black">$0.00</strong>
-                            </span>
-                            <span class="flex items-center gap-1 text-amber-300" title="Cash Revenue">
-                                💵 Cash: <strong id="kpiRangeCashSales" class="text-amber-400 font-black">$0.00</strong>
-                            </span>
+                        <div class="mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-2 gap-2">
+                            <div class="bg-slate-950/70 rounded-lg px-2.5 py-1.5 border border-emerald-500/20 flex flex-col justify-center">
+                                <span class="text-[9px] uppercase tracking-wider font-bold text-emerald-300/80 flex items-center gap-1" title="Card Revenue (Included in BAS)">
+                                    💳 Card (BAS)
+                                </span>
+                                <span id="kpiRangeCardSales" class="text-sm sm:text-base font-black text-emerald-300 mt-0.5 leading-tight">$0.00</span>
+                            </div>
+                            <div class="bg-slate-950/70 rounded-lg px-2.5 py-1.5 border border-amber-500/20 flex flex-col justify-center">
+                                <span class="text-[9px] uppercase tracking-wider font-bold text-amber-300/80 flex items-center gap-1" title="Cash Revenue">
+                                    💵 Cash Sales
+                                </span>
+                                <span id="kpiRangeCashSales" class="text-sm sm:text-base font-black text-amber-300 mt-0.5 leading-tight">$0.00</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Wages</div>
-                        <div id="kpiRangeWages" class="text-base sm:text-lg font-black text-sky-400">$0.00</div>
+
+                    <!-- Staff Wages (Decreased to 2 Cols on Desktop, 1 Col on Mobile) -->
+                    <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold truncate">Staff Wages</div>
+                        <div id="kpiRangeWages" class="text-base sm:text-lg font-black text-sky-400 mt-1 leading-tight">$0.00</div>
+                        <div class="text-[9px] text-slate-500 font-medium mt-1">Payroll total</div>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm cursor-pointer hover:border-amber-500 transition" onclick="switchAnalyticsTab('expenses')" title="Click to view expense ledger">
+
+                    <!-- Expenses (2 Cols on Desktop, 1 Col on Mobile) -->
+                    <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm cursor-pointer hover:border-amber-500 transition flex flex-col justify-between" onclick="switchAnalyticsTab('expenses')" title="Click to view expense ledger">
                         <div class="text-[9px] uppercase tracking-wider text-amber-400 font-bold flex items-center justify-between">
-                            <span>Expenses</span> <span class="text-[8px] underline">Details ➔</span>
+                            <span class="truncate">Expenses</span> <span class="text-[8px] underline shrink-0">➔</span>
                         </div>
-                        <div id="kpiRangeExpenses" class="text-base sm:text-lg font-black text-amber-300">$0.00</div>
+                        <div id="kpiRangeExpenses" class="text-base sm:text-lg font-black text-amber-300 mt-1 leading-tight">$0.00</div>
+                        <div class="text-[9px] text-slate-500 font-medium mt-1">Operating exp</div>
                     </div>
-                    <div class="bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Hours & SPLH</div>
-                        <div id="kpiRangeHoursSplh" class="text-base sm:text-lg font-black text-slate-300">0 hrs</div>
+
+                    <!-- Hours & SPLH (2 Cols on Desktop, 1 Col on Mobile) -->
+                    <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold truncate">Hours & SPLH</div>
+                        <div id="kpiRangeHoursSplh" class="text-sm sm:text-base font-black text-slate-300 mt-1 leading-tight">0 hrs</div>
+                        <div class="text-[9px] text-slate-500 font-medium mt-1">Labor efficiency</div>
                     </div>
-                    <div class="col-span-2 sm:col-span-1 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-purple-300 font-bold">🏆 True Net Profit</div>
-                        <div id="kpiRangeNet" class="text-base sm:text-lg font-black text-purple-300">$0.00</div>
+
+                    <!-- True Net Profit (2 Cols on Desktop, 1 Col on Mobile) -->
+                    <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-purple-500/30 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div class="text-[9px] uppercase tracking-wider text-purple-300 font-bold truncate">🏆 Net Profit</div>
+                        <div id="kpiRangeNet" class="text-base sm:text-lg font-black text-purple-300 mt-1 leading-tight">$0.00</div>
+                        <div class="text-[9px] text-slate-500 font-medium mt-1">Rev - Wage - Exp</div>
                     </div>
                 </div>
 
@@ -1738,11 +1757,10 @@
                         }
                         const authHeaders = idToken ? { 'Authorization': `Bearer ${idToken}` } : {};
 
-                        if (btnText) btnText.innerText = 'Connecting...';
+                        if (btnText) btnText.innerText = 'Syncing';
                         setSyncStatus('⚡ Connecting to Epos Worker...', 'bg-purple-600 text-white');
 
                         const progressTimer = setTimeout(() => {
-                            if (btnText) btnText.innerText = 'Scraping Epos...';
                             setSyncStatus('🔄 Scraping Epos Now live...', 'bg-indigo-600 text-white');
                         }, 2500);
 
@@ -1769,7 +1787,7 @@
                             console.warn("Direct Epos scrape request encountered issue:", netErr);
                         }
 
-                        if (btnText) btnText.innerText = 'Updating DB...';
+                        setSyncStatus('⚡ Updating database...', 'bg-purple-600 text-white');
                         isCloudLoading = false;
                         await loadCloudData({ silent: true });
 
@@ -1778,7 +1796,7 @@
                         } else {
                             setSyncStatus('✅ Database Updated', 'bg-emerald-600 text-white');
                         }
-                        if (btnText) btnText.innerText = 'Synced!';
+                        if (btnText) btnText.innerText = 'Done!';
                         clearSyncStatus(6000);
                     } catch (err) {
                         console.error("Direct Epos sync error:", err);
@@ -1791,7 +1809,7 @@
                         if (btnIcon) btnIcon.classList.remove('animate-spin');
                         setTimeout(() => {
                             if (btnText) btnText.innerText = 'Sync';
-                        }, 3000);
+                        }, 2000);
                         isCloudLoading = false;
                         setRefreshSpinners(false);
                     }
