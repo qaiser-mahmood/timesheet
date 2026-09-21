@@ -978,88 +978,121 @@ function splitDateRangeIntoChunks(startDateStr, endDateStr, maxDays = 31) {
   return chunks;
 }
 
-// Interacts with Epos Now Filters to set From and To date range
+// Interacts with Epos Now Filters: Time Period -> Custom -> Start & End Date -> Apply
 async function applyEposDateFilter(page, fromIso, toIso) {
-  console.log(`[EposFilter] Applying date filter: ${fromIso} to ${toIso}...`);
+  console.log('[EposFilter] ==========================================');
+  console.log(`[EposFilter] Setting Epos Now Filter: ${fromIso} to ${toIso}...`);
   const [fYear, fMonth, fDay] = fromIso.split('-');
   const [tYear, tMonth, tDay] = toIso.split('-');
   const fromFormatted = `${fDay}/${fMonth}/${fYear}`;
   const toFormatted = `${tDay}/${tMonth}/${tYear}`;
 
   try {
-    // Look for a "Filter" / "Filters" toggle button if filter section is collapsed
-    const filterToggle = page.locator('button:has-text("Filter"), a:has-text("Filter"), button:has-text("Filters"), a:has-text("Filters"), [aria-label*="Filter" i], #filter-toggle, .filter-toggle, [data-testid*="filter" i]').first();
-    if (await filterToggle.count() > 0 && await filterToggle.isVisible()) {
-      const inputsVisible = await page.locator('input[placeholder*="from" i], input[name*="from" i], input#StartDate, input#DateFrom').first().isVisible().catch(() => false);
-      if (!inputsVisible) {
-        console.log('[EposFilter] Opening filters drawer...');
-        await filterToggle.click().catch(() => {});
+    // Step 1: Check if "Filters" panel needs to be opened
+    console.log('[EposFilter] Step 1: Opening Filters panel if collapsed...');
+    const panelAlreadyOpen = await page.evaluate(() => {
+      var txt = document.body ? document.body.innerText.toLowerCase() : '';
+      return txt.includes('time period') || (document.querySelector('select, [role="combobox"]') && (txt.includes('custom') || txt.includes('yesterday') || txt.includes('this week')));
+    });
+
+    if (!panelAlreadyOpen) {
+      const filterBtn = page.locator('button:has-text("Filter"), a:has-text("Filter"), [aria-label*="Filter" i], #filter-toggle, .filter-toggle, button:has-text("Filters"), a:has-text("Filters")').first();
+      if (await filterBtn.count() > 0) {
+        await filterBtn.click().catch(() => {});
+        console.log('[EposFilter] Clicked Filters button.');
         await page.waitForTimeout(1000);
       }
+    } else {
+      console.log('[EposFilter] Filters panel is already visible.');
     }
 
-    // Locate and fill From & To inputs inside DOM
-    const filterRes = await page.evaluate(({ fromIso, toIso, fromFormatted, toFormatted }) => {
-      function getAllDocs() {
-        var docs = [document];
-        var ifrs = document.querySelectorAll('iframe');
-        for (var i = 0; i < ifrs.length; i++) {
-          try {
-            var d = ifrs[i].contentDocument || ifrs[i].contentWindow.document;
-            if (d && d.body) docs.push(d);
-          } catch (e) {}
-        }
-        return docs;
-      }
-
-      var docs = getAllDocs();
-      var fromInput = null;
-      var toInput = null;
-
-      var fromSelectors = [
-        'input#StartDate', 'input#DateFrom', 'input#from', 'input[name="StartDate" i]',
-        'input[name="DateFrom" i]', 'input[name="from" i]', 'input[name*="start" i]',
-        'input[placeholder*="from" i]', 'input[placeholder*="start" i]', 'input[aria-label*="from" i]',
-        'input[aria-label*="start" i]'
-      ];
-      var toSelectors = [
-        'input#EndDate', 'input#DateTo', 'input#to', 'input[name="EndDate" i]',
-        'input[name="DateTo" i]', 'input[name="to" i]', 'input[name*="end" i]',
-        'input[placeholder*="to" i]', 'input[placeholder*="end" i]', 'input[aria-label*="to" i]',
-        'input[aria-label*="end" i]'
-      ];
-
-      for (var di = 0; di < docs.length; di++) {
-        var doc = docs[di];
-        if (!fromInput) {
-          for (var fi = 0; fi < fromSelectors.length; fi++) {
-            var el = doc.querySelector(fromSelectors[fi]);
-            if (el) { fromInput = el; break; }
-          }
-        }
-        if (!toInput) {
-          for (var ti = 0; ti < toSelectors.length; ti++) {
-            var el = doc.querySelector(toSelectors[ti]);
-            if (el) { toInput = el; break; }
+    // Step 2: In "Time Period" field, select "Custom"
+    console.log('[EposFilter] Step 2: Selecting "Custom" in Time Period...');
+    const selectRes = await page.evaluate(() => {
+      // A: Native <select> element
+      var selects = document.querySelectorAll('select');
+      for (var i = 0; i < selects.length; i++) {
+        var s = selects[i];
+        for (var j = 0; j < s.options.length; j++) {
+          var optTxt = (s.options[j].text || s.options[j].value || '').trim().toLowerCase();
+          if (optTxt === 'custom') {
+            s.selectedIndex = j;
+            s.value = s.options[j].value;
+            s.dispatchEvent(new Event('input', { bubbles: true }));
+            s.dispatchEvent(new Event('change', { bubbles: true }));
+            return { success: true, type: 'native_select', value: s.value };
           }
         }
       }
+      return { success: false };
+    });
 
-      // If inputs not found by ID/name, check generic date inputs in order
-      if (!fromInput || !toInput) {
-        for (var di = 0; di < docs.length; di++) {
-          var dateInputs = docs[di].querySelectorAll('input[type="date"], input.datepicker, input[placeholder*="dd" i], input[placeholder*="yyyy" i]');
-          if (dateInputs.length >= 2) {
-            if (!fromInput) fromInput = dateInputs[0];
-            if (!toInput) toInput = dateInputs[1];
-            break;
-          }
+    console.log('[EposFilter] Native select result:', selectRes);
+
+    // B: Custom dropdown button (showing current period e.g. "Today", "Yesterday", "This Week", etc.)
+    if (!selectRes.success) {
+      const periodDropdown = page.locator('button:has-text("Today"), button:has-text("Yesterday"), button:has-text("This Week"), button:has-text("This Month"), button:has-text("Last Month"), button:has-text("Time Period"), [role="combobox"], div.dropdown-toggle, .select2-selection').first();
+      if (await periodDropdown.count() > 0) {
+        console.log('[EposFilter] Clicking custom dropdown trigger for Time Period...');
+        await periodDropdown.click().catch(() => {});
+        await page.waitForTimeout(600);
+
+        const customItem = page.locator('li:has-text("Custom"), div[role="option"]:has-text("Custom"), a:has-text("Custom"), span:has-text("Custom")').first();
+        if (await customItem.count() > 0) {
+          await customItem.click().catch(() => {});
+          console.log('[EposFilter] Clicked "Custom" in dropdown options list.');
+          await page.waitForTimeout(1000);
+        }
+      }
+    } else {
+      await page.waitForTimeout(1000);
+    }
+
+    // Step 3: Fill Start Date & End Date calendar pickers
+    console.log(`[EposFilter] Step 3: Filling Start Date (${fromFormatted}) and End Date (${toFormatted})...`);
+    const dateInputResult = await page.evaluate(({ fromIso, toIso, fromFormatted, toFormatted }) => {
+      var inps = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="checkbox"]):not([type="radio"])'));
+      var startInput = null;
+      var endInput = null;
+
+      // Match by label, placeholder, name, id
+      for (var i = 0; i < inps.length; i++) {
+        var inp = inps[i];
+        var id = (inp.id || '').toLowerCase();
+        var name = (inp.name || '').toLowerCase();
+        var ph = (inp.placeholder || '').toLowerCase();
+        var aria = (inp.getAttribute('aria-label') || '').toLowerCase();
+        var labelTxt = '';
+        if (inp.labels && inp.labels.length > 0) {
+          labelTxt = inp.labels[0].innerText.toLowerCase();
+        } else if (inp.closest && inp.closest('div, form, label')) {
+          labelTxt = inp.closest('div, form, label').innerText.toLowerCase();
+        }
+
+        var isStart = id.includes('start') || id.includes('from') || name.includes('start') || name.includes('from') || ph.includes('start') || ph.includes('from') || aria.includes('start') || aria.includes('from') || labelTxt.includes('start date') || labelTxt.includes('from');
+        var isEnd = id.includes('end') || id.includes('to') || name.includes('end') || name.includes('to') || ph.includes('end') || ph.includes('to') || aria.includes('end') || aria.includes('to') || labelTxt.includes('end date') || labelTxt.includes('to');
+
+        if (isStart && !startInput) startInput = inp;
+        if (isEnd && !endInput) endInput = inp;
+      }
+
+      // If not named, use visible inputs
+      if (!startInput || !endInput) {
+        var visibleInps = inps.filter(function(el) {
+          var rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+        if (visibleInps.length >= 2) {
+          if (!startInput) startInput = visibleInps[0];
+          if (!endInput) endInput = visibleInps[1];
         }
       }
 
-      function fillDate(el, isoVal, formattedVal) {
+      function setDateVal(el, iso, formatted) {
         if (!el) return false;
-        var val = (el.type === 'date') ? isoVal : formattedVal;
+        var val = (el.type === 'date') ? iso : formatted;
+        el.focus();
+        el.value = '';
         el.value = val;
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1067,36 +1100,55 @@ async function applyEposDateFilter(page, fromIso, toIso) {
         return true;
       }
 
-      var setFrom = fillDate(fromInput, fromIso, fromFormatted);
-      var setTo = fillDate(toInput, toIso, toFormatted);
+      var setStart = setDateVal(startInput, fromIso, fromFormatted);
+      var setEnd = setDateVal(endInput, toIso, toFormatted);
 
-      // Find apply button
-      var applyBtn = null;
-      for (var di = 0; di < docs.length; di++) {
-        var btns = docs[di].querySelectorAll('button, input[type="submit"], a');
-        for (var bi = 0; bi < btns.length; bi++) {
-          var b = btns[bi];
-          var t = (b.innerText || b.value || b.textContent || '').trim().toLowerCase();
-          if (t === 'apply' || t === 'filter' || t === 'run report' || t === 'update' || t === 'apply filter' || t === 'search') {
-            applyBtn = b;
+      return {
+        setStart: setStart,
+        setEnd: setEnd,
+        startInfo: startInput ? (startInput.id || startInput.name || startInput.placeholder || 'input[0]') : null,
+        endInfo: endInput ? (endInput.id || endInput.name || endInput.placeholder || 'input[1]') : null
+      };
+    }, { fromIso, toIso, fromFormatted, toFormatted });
+
+    console.log('[EposFilter] Date inputs result:', dateInputResult);
+    await page.waitForTimeout(500);
+
+    // Playwright locator fill guarantee
+    try {
+      const allDateLocators = page.locator('input[placeholder*="from" i], input[placeholder*="start" i], input[name*="start" i], input[name*="from" i], input[id*="start" i], input[id*="from" i], input.datepicker, input[type="date"]');
+      if (await allDateLocators.count() >= 2) {
+        await allDateLocators.nth(0).fill(fromFormatted).catch(() => {});
+        await allDateLocators.nth(1).fill(toFormatted).catch(() => {});
+      }
+    } catch (_) {}
+
+    // Step 4: Click Apply button
+    console.log('[EposFilter] Step 4: Clicking "Apply" button...');
+    const applyBtn = page.locator('button:has-text("Apply"), input[value*="Apply" i], button[type="submit"]:has-text("Apply"), button:has-text("Run Report")').first();
+    if (await applyBtn.count() > 0) {
+      await applyBtn.click();
+      console.log('[EposFilter] Clicked Apply button.');
+    } else {
+      await page.evaluate(() => {
+        var btns = document.querySelectorAll('button, input[type="submit"], a.btn');
+        for (var i = 0; i < btns.length; i++) {
+          var t = (btns[i].innerText || btns[i].value || '').trim().toLowerCase();
+          if (t === 'apply' || t === 'filter' || t === 'search' || t === 'run report') {
+            btns[i].click();
             break;
           }
         }
-        if (applyBtn) break;
-      }
+      });
+      console.log('[EposFilter] Evaluated Apply button click.');
+    }
 
-      if (applyBtn) {
-        applyBtn.click();
-        return { success: true, setFrom, setTo, clickedApply: true };
-      }
-
-      return { success: (setFrom && setTo), setFrom, setTo, clickedApply: false };
-    }, { fromIso, toIso, fromFormatted, toFormatted });
-
-    console.log('[EposFilter] DOM filter result:', filterRes);
-
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    // Step 5: Wait for table reload
+    console.log('[EposFilter] Step 5: Waiting for filtered report table reload...');
+    await page.waitForLoadState('networkidle', { timeout: 25000 }).catch(() => {});
     await page.waitForTimeout(3000);
+    console.log('[EposFilter] Filter setup complete.');
+
   } catch (err) {
     console.warn(`[EposFilter] Warning applying date filter (${fromIso} to ${toIso}):`, err.message);
   }
@@ -1303,6 +1355,50 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '') {
       }
 
       var pageTxList = [];
+
+      // Strategy 1: Direct Table Row (tr) inspection across frames
+      for (var di = 0; di < docs.length; di++) {
+        var trRows = docs[di].querySelectorAll('tr');
+        for (var ri = 0; ri < trRows.length; ri++) {
+          var rText = (trRows[ri].innerText || '').replace(/\s+/g, ' ').trim();
+          if (!rText || rText.toLowerCase().includes('payment method') || rText.toLowerCase().includes('transaction report')) continue;
+          var dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
+          var tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
+          var aM = rText.match(/[\$£€]\s*([0-9]+\.[0-9]{2})/);
+          if (dM && tM && aM) {
+            var rDate = parseAnyDate(dM[1]);
+            var rTime = tM[1];
+            var rHour = parseTimeStr(rTime);
+            var rAmt = parseFloat(aM[1]);
+            var isCash = /\bcash\b/i.test(rText);
+            if (rDate && rHour !== null && !isNaN(rAmt)) {
+              pageTxList.push({ date: rDate, time: rTime, hour: rHour, amount: rAmt, isCash: isCash, raw: rText });
+            }
+          }
+        }
+      }
+
+      // Strategy 2: Line by line inspection of pageText
+      var ptLines = pageText.split('\n');
+      for (var li = 0; li < ptLines.length; li++) {
+        var lText = ptLines[li].replace(/\s+/g, ' ').trim();
+        if (!lText || lText.toLowerCase().includes('payment method')) continue;
+        var dMl = lText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
+        var tMl = lText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
+        var aMl = lText.match(/[\$£€]\s*([0-9]+\.[0-9]{2})/);
+        if (dMl && tMl && aMl) {
+          var rlDate = parseAnyDate(dMl[1]);
+          var rlTime = tMl[1];
+          var rlHour = parseTimeStr(rlTime);
+          var rlAmt = parseFloat(aMl[1]);
+          var islCash = /\bcash\b/i.test(lText);
+          if (rlDate && rlHour !== null && !isNaN(rlAmt)) {
+            pageTxList.push({ date: rlDate, time: rlTime, hour: rlHour, amount: rlAmt, isCash: islCash, raw: lText });
+          }
+        }
+      }
+
+      // Strategy 3: Global Regex pattern match
       var tMatch;
       eposRowRegex.lastIndex = 0;
       while ((tMatch = eposRowRegex.exec(pageText)) !== null) {
