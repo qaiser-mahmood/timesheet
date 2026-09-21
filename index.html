@@ -1199,10 +1199,10 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="setLoyversePreset('today')" class="py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition">Today</button>
-                    <button type="button" onclick="setLoyversePreset('yesterday')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">Yesterday</button>
-                    <button type="button" onclick="setLoyversePreset('week')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Week</button>
-                    <button type="button" onclick="setLoyversePreset('month')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Month</button>
+                    <button type="button" id="lvPreset_today" onclick="setLoyversePreset('today')" class="py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs transition shadow-sm">Today</button>
+                    <button type="button" id="lvPreset_yesterday" onclick="setLoyversePreset('yesterday')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">Yesterday</button>
+                    <button type="button" id="lvPreset_week" onclick="setLoyversePreset('week')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Week</button>
+                    <button type="button" id="lvPreset_month" onclick="setLoyversePreset('month')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Month</button>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 text-xs pt-1">
@@ -3715,6 +3715,18 @@
                 sInput.value = `${y}-${m}-01`;
                 eInput.value = todayIso;
             }
+
+            // Highlight active preset button
+            ['today', 'yesterday', 'week', 'month'].forEach(p => {
+                const b = document.getElementById(`lvPreset_${p}`);
+                if (b) {
+                    if (p === preset) {
+                        b.className = "py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs transition shadow-sm";
+                    } else {
+                        b.className = "py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition";
+                    }
+                }
+            });
         }
 
         async function executeLoyverseSync() {
@@ -3749,7 +3761,12 @@
                         "Authorization": `Bearer ${idToken}`,
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ startDate, endDate })
+                    body: JSON.stringify({
+                        from: startDate,
+                        to: endDate,
+                        startDate: startDate,
+                        endDate: endDate
+                    })
                 });
 
                 const data = await resp.json();
@@ -3757,7 +3774,11 @@
                     throw new Error(data.message || `Loyverse sync failed [${resp.status}]`);
                 }
 
-                alert(`✅ Loyverse Sync Success!\n\nSynced ${data.daysCount || 0} day(s) (${data.totalReceipts || 0} receipts).\nTotal Sales: $${(data.totalSales || 0).toFixed(2)} (Card: $${(data.totalCard || 0).toFixed(2)} | Cash: $${(data.totalCash || 0).toFixed(2)})`);
+                if (data.daysCount > 0) {
+                    alert(`✅ Loyverse Sync Success!\n\nSynced ${data.daysCount} day(s) (${data.totalReceipts || data.receiptsCount || 0} receipts) between ${startDate} and ${endDate}.\n\n• Total Sales: $${(data.totalSales || 0).toFixed(2)}\n• Card Sales: $${(data.totalCard || 0).toFixed(2)}\n• Cash Sales: $${(data.totalCash || 0).toFixed(2)}`);
+                } else {
+                    alert(`ℹ️ Loyverse Sync Complete:\n\n0 receipts found in Loyverse between ${startDate} and ${endDate}.`);
+                }
                 closeLoyverseSyncModal();
                 await loadCloudData();
             } catch (err) {

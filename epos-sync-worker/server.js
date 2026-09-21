@@ -973,11 +973,19 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       console.log(`[LoyverseSync] Successfully upserted ${rows.length} day(s) for Green Juice Bar.`);
     }
 
+    const totalSales = rows.reduce((s, r) => s + (r.total_sales || 0), 0);
+    const totalCard = rows.reduce((s, r) => s + (r.card_sales || 0), 0);
+    const totalCash = rows.reduce((s, r) => s + (r.cash_sales || 0), 0);
+
     return {
       status: 'success',
       store: 'green_juice',
       receiptsCount: allReceipts.length,
+      totalReceipts: allReceipts.length,
       daysCount: rows.length,
+      totalSales: Math.round(totalSales * 100) / 100,
+      totalCard: Math.round(totalCard * 100) / 100,
+      totalCash: Math.round(totalCash * 100) / 100,
       days: rows.map(r => ({ date: r.date, total: r.total_sales, card: r.card_sales, cash: r.cash_sales }))
     };
   } catch (err) {
@@ -989,11 +997,13 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
 // Endpoint to trigger Loyverse sync (Protected by manager whitelist)
 app.all('/api/loyverse/sync', requireAuthorizedManager, async (req, res) => {
   try {
-    const from = req.query.from || (req.body && req.body.from);
-    const to = req.query.to || (req.body && req.body.to);
+    const from = req.query.from || req.query.startDate || (req.body && (req.body.from || req.body.startDate));
+    const to = req.query.to || req.query.endDate || (req.body && (req.body.to || req.body.endDate));
+    console.log(`[LoyverseSync Endpoint] Received request with from=${from}, to=${to}`);
     const result = await syncLoyverseSales(from, to);
     res.json(result);
   } catch (err) {
+    console.error('[LoyverseSync Endpoint] Error:', err);
     res.status(500).json({ status: 'error', message: err.message });
   }
 });
