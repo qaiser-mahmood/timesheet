@@ -324,7 +324,12 @@ app.get('/debug/login', async (req, res) => {
 // Live debug apply-filter endpoint
 app.get('/debug/apply-filter', async (req, res) => {
   try {
-    const page = await getActivePage();
+    const page = await ensureLoggedIn(false, false);
+    if (!page.url().includes('/transactions')) {
+      await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+      await page.waitForTimeout(2000);
+    }
     const from = req.query.from || '2026-09-20';
     const to = req.query.to || '2026-09-20';
     await applyEposDateFilter(page, from, to);
@@ -920,7 +925,7 @@ function waitFor2FACode(timeoutMs = 300000) {
 
 // Ensure user is logged in
 async function ensureLoggedIn(force = false, isManual = false) {
-  if (appState.isLoggingIn) return;
+  if (appState.isLoggingIn) return await getActivePage();
   appState.isLoggingIn = true;
 
   try {
