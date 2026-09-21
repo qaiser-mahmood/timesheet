@@ -987,13 +987,14 @@
                 </div>
 
                 <!-- Presets buttons -->
-                <div class="grid grid-cols-3 gap-1.5 text-[10px]">
-                    <button type="button" onclick="setEposSyncPreset('week')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Week</button>
-                    <button type="button" onclick="setEposSyncPreset('lastWeek')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Week</button>
-                    <button type="button" onclick="setEposSyncPreset('month')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Month</button>
-                    <button type="button" onclick="setEposSyncPreset('lastMonth')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Month</button>
-                    <button type="button" onclick="setEposSyncPreset('curQuarter')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Current Qtr (BAS)</button>
-                    <button type="button" onclick="setEposSyncPreset('prevQuarter')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Prev Qtr (BAS)</button>
+                <div class="grid grid-cols-4 gap-1.5 text-[10px]">
+                    <button type="button" onclick="setEposSyncPreset('yesterday')" class="py-1 px-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 hover:text-white rounded border border-purple-600/60 font-bold transition text-center cursor-pointer">Yesterday</button>
+                    <button type="button" onclick="setEposSyncPreset('week')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Week</button>
+                    <button type="button" onclick="setEposSyncPreset('lastWeek')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Week</button>
+                    <button type="button" onclick="setEposSyncPreset('month')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Month</button>
+                    <button type="button" onclick="setEposSyncPreset('lastMonth')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Month</button>
+                    <button type="button" onclick="setEposSyncPreset('curQuarter')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer col-span-1">Cur Qtr</button>
+                    <button type="button" onclick="setEposSyncPreset('prevQuarter')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer col-span-2">Prev Qtr (BAS)</button>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 text-xs">
@@ -1592,7 +1593,12 @@
                     const now = new Date();
                     const toIso = (dt) => dt.toISOString().split('T')[0];
 
-                    if (preset === 'week') {
+                    if (preset === 'yesterday') {
+                        const y = new Date(now);
+                        y.setDate(y.getDate() - 1);
+                        sInput.value = toIso(y);
+                        eInput.value = toIso(y);
+                    } else if (preset === 'week') {
                         const d = new Date(now);
                         const day = d.getDay();
                         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
