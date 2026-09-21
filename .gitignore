@@ -10,6 +10,8 @@ storageState.json
 *.tmp
 *.bak
 scratch/
+tyro/
+*.csv
 
 # Environments & dependencies
 node_modules/

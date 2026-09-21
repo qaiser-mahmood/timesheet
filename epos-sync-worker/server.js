@@ -209,6 +209,23 @@ async function supabaseServerFetch(path, options = {}) {
   return null;
 }
 
+// Automatically paginate through PostgREST 1000-row cap to retrieve complete datasets
+async function supabaseServerFetchAll(path, options = {}) {
+  let allRows = [];
+  let offset = 0;
+  const pageSize = 1000;
+  while (true) {
+    const sep = path.includes('?') ? '&' : '?';
+    const pagePath = `${path}${sep}limit=${pageSize}&offset=${offset}`;
+    const rows = await supabaseServerFetch(pagePath, options);
+    if (!Array.isArray(rows) || rows.length === 0) break;
+    allRows = allRows.concat(rows);
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+  return allRows;
+}
+
 // Instant reset endpoint if sync ever gets stuck
 app.get('/sync-reset', async (req, res) => {
   appState.isSyncing = false;
@@ -399,9 +416,9 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
   try {
     const [staffRows, rosterRows, salesRows, expenseRows] = await Promise.all([
       supabaseServerFetch('staff?select=*&order=name.asc'),
-      supabaseServerFetch('roster?select=*&order=date.asc'),
-      supabaseServerFetch('hourly_sales?select=*&order=date.asc'),
-      supabaseServerFetch('expenses?select=*&order=date.desc')
+      supabaseServerFetchAll('roster?select=*&order=date.asc'),
+      supabaseServerFetchAll('hourly_sales?select=*&order=date.asc'),
+      supabaseServerFetchAll('expenses?select=*&order=date.desc')
     ]);
 
     const cleanDateStr = (d) => {

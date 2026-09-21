@@ -679,6 +679,8 @@
                                 <option value="2026">2026 / 2027</option>
                                 <option value="2025">2025 / 2026</option>
                                 <option value="2024">2024 / 2025</option>
+                                <option value="2023">2023 / 2024</option>
+                                <option value="2022">2022 / 2023</option>
                             </select>
                         </div>
 
@@ -1594,6 +1596,22 @@
                     return null;
                 }
 
+                async function supabaseFetchAll(path, options = {}) {
+                    let allRows = [];
+                    let offset = 0;
+                    const pageSize = 1000;
+                    while (true) {
+                        const sep = path.includes('?') ? '&' : '?';
+                        const pagePath = `${path}${sep}limit=${pageSize}&offset=${offset}`;
+                        const rows = await supabaseFetch(pagePath, options);
+                        if (!Array.isArray(rows) || rows.length === 0) break;
+                        allRows = allRows.concat(rows);
+                        if (rows.length < pageSize) break;
+                        offset += pageSize;
+                    }
+                    return allRows;
+                }
+
                 async function callSheetApi(payload) {
                     const user = auth.currentUser;
                     if (!user || !isAuthorizedEmail(user.email)) {
@@ -1661,9 +1679,9 @@
                     if (payload.action === "get") {
                         const [staffRows, rosterRows, salesRows, expenseRows] = await Promise.all([
                             supabaseFetch("staff?select=*&order=name.asc"),
-                            supabaseFetch("roster?select=*&order=date.asc"),
-                            supabaseFetch("hourly_sales?select=*&order=date.asc"),
-                            supabaseFetch("expenses?select=*&order=date.desc")
+                            supabaseFetchAll("roster?select=*&order=date.asc"),
+                            supabaseFetchAll("hourly_sales?select=*&order=date.asc"),
+                            supabaseFetchAll("expenses?select=*&order=date.desc")
                         ]);
 
                         const logs = (rosterRows || []).map(r => ({
