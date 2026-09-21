@@ -247,8 +247,9 @@ app.get(['/', '/health'], (req, res) => {
 
 // Real-time sync progress status for Timesheet Dashboard
 app.get('/sync-status', (req, res) => {
+  const isSyncActive = appState.isSyncing || !!(appState.activeSyncProgress && appState.activeSyncProgress.isSyncing);
   res.json({
-    isSyncing: appState.isSyncing,
+    isSyncing: isSyncActive,
     progress: appState.activeSyncProgress,
     lastSyncTime: appState.lastSyncTime,
     lastSyncResult: appState.lastSyncResult
@@ -538,7 +539,6 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
       return res.status(500).json({ status: 'error', message: err.message });
     }
   } else {
-    appState.isSyncing = true;
     appState.activeSyncProgress = {
       isSyncing: true,
       currentChunk: 1,
@@ -1833,6 +1833,10 @@ async function runSync(isManual = false, notifyTelegram = true, startDate = null
   } finally {
     clearTimeout(syncWatchdog);
     appState.isSyncing = false;
+    if (appState.activeSyncProgress) {
+      appState.activeSyncProgress.isSyncing = false;
+      appState.activeSyncProgress.status = 'idle';
+    }
   }
 }
 
