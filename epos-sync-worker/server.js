@@ -1077,6 +1077,21 @@ app.all('/api/loyverse/sync', requireAuthorizedManager, async (req, res) => {
   }
 });
 
+// Webhook for instant real-time POS transaction updates from Loyverse
+app.post('/api/loyverse/webhook', async (req, res) => {
+  try {
+    const eventType = req.body && req.body.event ? req.body.event : 'pos_event';
+    console.log(`[LoyverseWebhook] Received webhook event from Loyverse POS: ${eventType}`);
+    // Respond immediately with 200 OK so Loyverse POS doesn't retry or timeout
+    res.status(200).json({ status: 'ok', received: true });
+    // Trigger background sync for today's transactions
+    syncLoyverseSales().catch(err => console.error('[LoyverseWebhook] Error syncing on webhook event:', err.message));
+  } catch (err) {
+    console.error('[LoyverseWebhook] Webhook handling error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ----------------------------------------------------
 // Telegram Bot Helpers (Resilient with auto plain-text fallback)
 // ----------------------------------------------------
@@ -2231,11 +2246,13 @@ cron.schedule('*/5 * * * *', () => {
   if (isPeak) {
     console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Peak hours (${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00). Running 5-min sync.`);
     runSync(false, false).catch(console.error);
+    syncLoyverseSales().catch(err => console.error('[Cron] Loyverse sync error:', err.message));
   } else {
     // Outside peak hours: run every 15 minutes (at :00, :15, :30, :45)
     if (minute % OFFPEAK_INTERVAL_MINUTES === 0) {
       console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Running ${OFFPEAK_INTERVAL_MINUTES}-min sync.`);
       runSync(false, false).catch(console.error);
+      syncLoyverseSales().catch(err => console.error('[Cron] Loyverse sync error:', err.message));
     } else {
       console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Skipping (next sync at :${String(Math.ceil((minute + 1) / OFFPEAK_INTERVAL_MINUTES) * OFFPEAK_INTERVAL_MINUTES % 60).padStart(2, '0')}).`);
     }

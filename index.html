@@ -161,9 +161,6 @@
                 <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     📋 Copy Last Week
                 </button>
-                <button type="button" id="headerSyncModalBtn" onclick="openActiveStoreSyncModal()" class="hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30" title="Sync Sales & Bookmarklet">
-                    ⚡ Sync Sales
-                </button>
                 <button id="authButton" type="button" class="hide-on-share bg-red-600 hover:bg-red-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer">
                     🚪 Logout
                 </button>
@@ -315,7 +312,7 @@
                     <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
                 <div class="flex items-center gap-1.5 sm:gap-2 text-xs">
-                    <button type="button" id="liveEposSyncBtn" onclick="syncDirectFromEpos()" class="text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30" title="Sync today's live sales from Epos Now">
+                    <button type="button" id="liveEposSyncBtn" onclick="handlePanelSyncClick()" class="text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer" title="Sync today's live sales from Epos Now">
                         <span id="liveEposSyncSpinner" class="w-3.5 h-3.5 flex items-center justify-center shrink-0">⚡</span> <span id="liveEposSyncText" class="truncate">Sync</span>
                     </button>
                     <button type="button" onclick="refreshCloudData(true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="Quick reload from Supabase database">
@@ -1201,21 +1198,16 @@
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
-                    <button type="button" id="lvPreset_today" onclick="setLoyversePreset('today')" class="py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs transition shadow-sm">Today</button>
-                    <button type="button" id="lvPreset_yesterday" onclick="setLoyversePreset('yesterday')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">Yesterday</button>
-                    <button type="button" id="lvPreset_week" onclick="setLoyversePreset('week')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Week</button>
-                    <button type="button" id="lvPreset_month" onclick="setLoyversePreset('month')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition">This Month</button>
+                    <button type="button" id="lvPreset_today" onclick="setLoyversePreset('today')" class="py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs transition shadow-sm cursor-pointer">Today</button>
+                    <button type="button" id="lvPreset_week" onclick="setLoyversePreset('week')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition cursor-pointer">This Week</button>
+                    <button type="button" id="lvPreset_month" onclick="setLoyversePreset('month')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition cursor-pointer">This Month</button>
+                    <button type="button" id="lvPreset_last30" onclick="setLoyversePreset('last30')" class="py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition cursor-pointer">Last 30 Days</button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 text-xs pt-1">
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-300 uppercase">From Date</label>
-                        <input type="date" id="loyverseStartDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-300 uppercase">To Date</label>
-                        <input type="date" id="loyverseEndDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">
-                    </div>
+                <input type="hidden" id="loyverseStartDate">
+                <input type="hidden" id="loyverseEndDate">
+                <div id="loyverseSelectedRangeDisplay" class="text-[11px] text-center font-bold text-emerald-300 bg-slate-900/80 p-2 rounded-lg border border-slate-800">
+                    Selected: Today
                 </div>
 
                 <!-- CSV Import Section for Unlimited History -->
@@ -2158,6 +2150,55 @@
                     }
                 }
 
+                function parseStoresList(storesVal) {
+                    if (!storesVal) return ['anatolya', 'green_juice'];
+                    if (Array.isArray(storesVal)) return storesVal;
+                    if (typeof storesVal === 'string') {
+                        try {
+                            const parsed = JSON.parse(storesVal);
+                            if (Array.isArray(parsed)) return parsed;
+                        } catch(_) {}
+                        return storesVal.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+                    }
+                    return ['anatolya', 'green_juice'];
+                }
+
+                function handlePanelSyncClick() {
+                    if (currentStore === 'green_juice') {
+                        openLoyverseSyncModal();
+                    } else if (currentStore === 'anatolya') {
+                        syncDirectFromEpos();
+                    } else {
+                        openActiveStoreSyncModal();
+                    }
+                }
+
+                function updateSyncButtonUI() {
+                    const btn = document.getElementById('liveEposSyncBtn');
+                    const spinner = document.getElementById('liveEposSyncSpinner');
+                    const text = document.getElementById('liveEposSyncText');
+                    if (!btn) return;
+                    if (currentStore === 'green_juice') {
+                        btn.className = "text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-emerald-500/30 cursor-pointer";
+                        btn.title = "Sync Green Juice Bar Sales via Loyverse POS";
+                        if (spinner) spinner.innerText = "🥤";
+                        if (text) text.innerText = "Sync";
+                    } else if (currentStore === 'anatolya') {
+                        btn.className = "text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
+                        btn.title = "Sync today's live sales from Epos Now";
+                        if (spinner) spinner.innerText = "⚡";
+                        if (text) text.innerText = "Sync";
+                    } else {
+                        btn.className = "text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
+                        btn.title = "Sync Sales";
+                        if (spinner) spinner.innerText = "⚡";
+                        if (text) text.innerText = "Sync";
+                    }
+                }
+
+                window.handlePanelSyncClick = handlePanelSyncClick;
+                window.updateSyncButtonUI = updateSyncButtonUI;
+
                 async function refreshCloudData(force = false) {
                     if (isCloudLoading) return;
                     const now = Date.now();
@@ -2194,7 +2235,7 @@
                                     (s.gjCashRate !== undefined && s.gjCashRate !== null && !isNaN(s.gjCashRate) ? Number(s.gjCashRate) : s.cashRate);
                                 s.gjSundayRate = (isOwner || s.gjSundayRate === 0 || s.gjSundayRate === '0') ? 0 :
                                     (s.gjSundayRate !== undefined && s.gjSundayRate !== null && !isNaN(s.gjSundayRate) ? Number(s.gjSundayRate) : s.gjCashRate);
-                                s.stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+                                s.stores = parseStoresList(s.stores);
                                 return s;
                             });
                             populateStaffDropdowns();
@@ -2365,11 +2406,10 @@
 
                     const activeStaff = staffRegistry.filter(s => {
                         if (s.status && s.status.toString().toLowerCase() === 'inactive') return false;
+                        const stores = parseStoresList(s.stores);
                         if (currentStore === 'green_juice') {
-                            const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
                             return stores.includes('green_juice');
                         } else if (currentStore === 'anatolya') {
-                            const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
                             return stores.includes('anatolya');
                         }
                         return true;
@@ -3210,7 +3250,13 @@
                 const m = presetRefDate.getMonth();
                 const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
                 const lastDay = new Date(y, m + 1, 0).getDate();
-                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                let lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                const now = new Date();
+                const isCurMonth = (y === now.getFullYear() && m === now.getMonth());
+                const todayIso = now.toISOString().split('T')[0];
+                if (isCurMonth && lastIso > todayIso) {
+                    lastIso = todayIso;
+                }
                 setDateRange(firstIso, lastIso, 'month');
             }
         }
@@ -3426,15 +3472,42 @@
 
         
         const EXPENSE_CATEGORIES = [
-            { key: 'Meat', label: 'Meat (Meat, Cheese, Oil, Bags)', icon: '🥩', color: 'text-rose-400 bg-rose-950/70 border-rose-800' },
+            { key: 'Meat', label: 'Meat (Meat, Cheese, Oil, Bags)', icon: '🥩', color: 'text-rose-400 bg-rose-950/70 border-rose-800', stores: ['anatolya'] },
             { key: 'Vegies', label: 'Vegies', icon: '🥗', color: 'text-emerald-400 bg-emerald-950/70 border-emerald-800' },
-            { key: 'Bread', label: 'Bread', icon: '🍞', color: 'text-amber-400 bg-amber-950/70 border-amber-800' },
+            { key: 'Bread', label: 'Bread', icon: '🍞', color: 'text-amber-400 bg-amber-950/70 border-amber-800', stores: ['anatolya'] },
             { key: 'Packaging', label: 'Packaging', icon: '📦', color: 'text-orange-400 bg-orange-950/70 border-orange-800' },
             { key: 'Campbels', label: 'Campbels (Chips, Sauces, Consumables)', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
             { key: 'Drinks', label: 'Drinks', icon: '🥤', color: 'text-sky-400 bg-sky-950/70 border-sky-800' },
+            { key: 'Ice Cream', label: 'Ice Cream (Royal Foods, Gelato)', icon: '🍦', color: 'text-pink-400 bg-pink-950/70 border-pink-800', stores: ['green_juice'] },
             { key: 'Rent', label: 'Rent (Rent, Utilities, Outgoings)', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
             { key: 'Others', label: 'Others (Repairs, Pest, Misc)', icon: '🔧', color: 'text-purple-400 bg-purple-950/70 border-purple-800' }
         ];
+
+        function isCategoryForStore(catKey, storeKey = currentStore) {
+            const c = EXPENSE_CATEGORIES.find(x => x.key.toLowerCase() === (catKey || '').toLowerCase());
+            if (!c || !c.stores) return true;
+            if (!storeKey || storeKey === 'all') return true;
+            return c.stores.includes(storeKey);
+        }
+
+        function updateExpenseModalCategoryOptions(selectedStore = currentStore) {
+            const catSelect = document.getElementById('expenseCategory');
+            if (!catSelect) return;
+            const curVal = catSelect.value;
+            const validCats = EXPENSE_CATEGORIES.filter(c => !c.stores || !selectedStore || selectedStore === 'all' || c.stores.includes(selectedStore));
+            catSelect.innerHTML = '';
+            validCats.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.key;
+                opt.textContent = `${c.icon} ${c.label}`;
+                catSelect.appendChild(opt);
+            });
+            if (validCats.some(c => c.key === curVal)) {
+                catSelect.value = curVal;
+            } else if (validCats.length > 0) {
+                catSelect.value = validCats[0].key;
+            }
+        }
 
         function getCategoryMeta(cat) {
             const found = EXPENSE_CATEGORIES.find(c => c.key.toLowerCase() === (cat || '').toLowerCase());
@@ -3445,6 +3518,12 @@
             const modal = document.getElementById('expenseModal');
             if (modal) {
                 modal.classList.remove('hidden');
+                updateExpenseModalCategoryOptions(currentStore);
+                const storeSelect = document.getElementById('expenseStore');
+                if (storeSelect) {
+                    storeSelect.value = (currentStore === 'green_juice' ? 'green_juice' : 'anatolya');
+                    storeSelect.onchange = () => updateExpenseModalCategoryOptions(storeSelect.value);
+                }
                 const dInput = document.getElementById('expenseDate');
                 if (dInput) dInput.value = prefillDate || new Date().toISOString().split('T')[0];
                 const amtInput = document.getElementById('expenseAmount');
@@ -3500,11 +3579,6 @@
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-amber-500/40 bg-black flex items-center justify-center p-0.5 shrink-0 ring-2 ring-amber-500/10";
                     headerLogoWrapper.innerHTML = '<img id="headerLogoImg" src="logo.png" alt="Anatolya Kebabs" class="w-full h-full object-contain rounded-lg">';
                 }
-                if (headerSyncBtn) {
-                    headerSyncBtn.innerHTML = "⚡ Sync Sales";
-                    headerSyncBtn.title = "Sync Epos Now Sales & Bookmarklet";
-                    headerSyncBtn.className = "hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30";
-                }
             } else if (storeKey === 'green_juice') {
                 if (ctxText) ctxText.innerText = "Viewing Green Juice Bar (Loyverse POS)";
                 if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
@@ -3512,11 +3586,6 @@
                 if (headerLogoWrapper) {
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20 text-lg";
                     headerLogoWrapper.innerHTML = "🥤";
-                }
-                if (headerSyncBtn) {
-                    headerSyncBtn.innerHTML = "🥤 Sync Loyverse";
-                    headerSyncBtn.title = "Sync Green Juice Bar Sales via Loyverse API";
-                    headerSyncBtn.className = "hide-on-share bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-emerald-500/30";
                 }
             } else { // 'all'
                 if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES Consolidated (BAS)";
@@ -3526,12 +3595,10 @@
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-purple-500/40 bg-slate-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-purple-500/20 text-lg";
                     headerLogoWrapper.innerHTML = "🏢";
                 }
-                if (headerSyncBtn) {
-                    headerSyncBtn.innerHTML = "⚡ Sync Sales";
-                    headerSyncBtn.title = "Sync POS Sales";
-                    headerSyncBtn.className = "hide-on-share bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-purple-500/30";
-                }
             }
+
+            // Update Panel Sync Button UI
+            updateSyncButtonUI();
 
             // 3. Re-render UI components for active store
             populateStaffDropdowns();
@@ -3567,7 +3634,7 @@
             let html = '';
             staffRegistry.forEach((s, idx) => {
                 const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
-                const stores = Array.isArray(s.stores) ? s.stores : (s.stores ? [s.stores] : ['anatolya', 'green_juice']);
+                const stores = parseStoresList(s.stores);
                 const worksAtAnatolya = stores.includes('anatolya');
                 const worksAtGJ = stores.includes('green_juice');
                 const isActive = (!s.status || s.status.toLowerCase() !== 'inactive');
@@ -3777,36 +3844,44 @@
             const todayIso = today.toISOString().split('T')[0];
             const sInput = document.getElementById('loyverseStartDate');
             const eInput = document.getElementById('loyverseEndDate');
+            const disp = document.getElementById('loyverseSelectedRangeDisplay');
             if (!sInput || !eInput) return;
 
+            let label = "Today";
             if (preset === 'today') {
                 sInput.value = todayIso;
                 eInput.value = todayIso;
-            } else if (preset === 'yesterday') {
-                const yD = new Date(today);
-                yD.setDate(yD.getDate() - 1);
-                const yIso = yD.toISOString().split('T')[0];
-                sInput.value = yIso;
-                eInput.value = yIso;
+                label = `Today (${formatDisplayDateStr(todayIso)})`;
             } else if (preset === 'week') {
                 const monIso = getMondayString(todayIso);
                 sInput.value = monIso;
                 eInput.value = todayIso;
+                label = `This Week (${formatDisplayDateStr(monIso)} – ${formatDisplayDateStr(todayIso)})`;
             } else if (preset === 'month') {
                 const y = today.getFullYear();
                 const m = String(today.getMonth() + 1).padStart(2, '0');
-                sInput.value = `${y}-${m}-01`;
+                const firstIso = `${y}-${m}-01`;
+                sInput.value = firstIso;
                 eInput.value = todayIso;
+                label = `This Month (${formatDisplayDateStr(firstIso)} – ${formatDisplayDateStr(todayIso)})`;
+            } else if (preset === 'last30') {
+                const d30 = new Date(today.getTime() - 29 * 86400000);
+                const d30Iso = d30.toISOString().split('T')[0];
+                sInput.value = d30Iso;
+                eInput.value = todayIso;
+                label = `Last 30 Days (${formatDisplayDateStr(d30Iso)} – ${formatDisplayDateStr(todayIso)})`;
             }
 
+            if (disp) disp.innerText = `Selected: ${label}`;
+
             // Highlight active preset button
-            ['today', 'yesterday', 'week', 'month'].forEach(p => {
+            ['today', 'week', 'month', 'last30'].forEach(p => {
                 const b = document.getElementById(`lvPreset_${p}`);
                 if (b) {
                     if (p === preset) {
-                        b.className = "py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs transition shadow-sm";
+                        b.className = "py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs transition shadow-sm cursor-pointer";
                     } else {
-                        b.className = "py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition";
+                        b.className = "py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold text-xs transition cursor-pointer";
                     }
                 }
             });
@@ -4214,7 +4289,13 @@
                 const m = ledgerPresetRefDate.getMonth();
                 const firstIso = `${y}-${String(m + 1).padStart(2, '0')}-01`;
                 const lastDay = new Date(y, m + 1, 0).getDate();
-                const lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                let lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+                const now = new Date();
+                const isCurMonth = (y === now.getFullYear() && m === now.getMonth());
+                const todayIso = now.toISOString().split('T')[0];
+                if (isCurMonth && lastIso > todayIso) {
+                    lastIso = todayIso;
+                }
                 setLedgerDateRange(firstIso, lastIso, 'month');
             }
         }
@@ -4454,6 +4535,7 @@
             if (grid) {
                 let cards = '';
                 EXPENSE_CATEGORIES.forEach(c => {
+                    if (!isCategoryForStore(c.key, currentStore)) return;
                     const amt = catTotals[c.key] || 0;
                     cards += `
                         <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-1">
@@ -5230,6 +5312,7 @@
                 let pillsHtml = '<span class="text-slate-400 font-bold shrink-0">Expenses:</span>';
                 let hasExp = false;
                 EXPENSE_CATEGORIES.forEach(c => {
+                    if (!isCategoryForStore(c.key, currentStore)) return;
                     const amt = categoryRangeTotals[c.key] || 0;
                     if (amt > 0) {
                         hasExp = true;
