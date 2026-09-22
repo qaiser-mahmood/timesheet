@@ -189,7 +189,7 @@
             </div>
         </div>
         
-        <div class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 sm:p-4 space-y-2.5">
+        <div id="weeklyTaxLimitSection" class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 sm:p-4 space-y-2.5">
             <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1.5">
                 <span>⚡</span> Weekly Tax-Limit Auto Splitter
             </h3>
@@ -255,9 +255,9 @@
             </div>
         </form>
 
-        <div class="space-y-3">
+        <div id="rosterSection" class="space-y-3">
             <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
-                <h2 class="hide-on-share text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
+                <h2 id="rosterStoreSummaryTitle" class="hide-on-share text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
                 <div class="flex items-center gap-1.5">
                     <label class="hide-on-share text-[10px] font-bold text-gray-500 uppercase">Week:</label>
                     <input type="date" id="filterWeek" onchange="syncDashboardWeekFilter()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
@@ -1498,14 +1498,15 @@
                     const btn = document.getElementById('shareModeBtn');
                     isShareModeActive = !isShareModeActive;
                     
+                    if (currentStore === 'all') return;
                     if (isShareModeActive) {
                         app.classList.add('roster-share-active');
-                        title.innerText = "Anatolya Kebabs Weekly Roster";
+                        title.innerText = (currentStore === 'green_juice') ? "Green Juice Bar Weekly Roster" : "Anatolya Kebabs Weekly Roster";
                         btn.innerText = "🛠️ Back to Dashboard";
                         btn.className = "bg-gray-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-gray-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
                     } else {
                         app.classList.remove('roster-share-active');
-                        title.innerText = "Anatolya Kebabs Roster";
+                        title.innerText = (currentStore === 'green_juice') ? "Green Juice Bar Timesheet" : "Anatolya Kebabs Roster";
                         btn.innerText = "👁️ View Roster";
                         btn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
                     }
@@ -2343,6 +2344,7 @@
 
 
                 async function copyPreviousWeekRoster() {
+                    if (currentStore === 'all') return;
                     const user = auth.currentUser;
                     if (!user) {
                         alert("Please login first to use this feature.");
@@ -2560,6 +2562,7 @@
                 }
 
                 async function distributeWeeklyTaxHours() {
+                    if (currentStore === 'green_juice' || currentStore === 'all') return;
                     const staffTarget = document.getElementById('bulkStaffName').value;
                     let targetTaxAllocation = parseFloat(document.getElementById('bulkTaxHours').value);
                     const activeWeekStart = getMondayString(document.getElementById('filterWeek').value);
@@ -2688,6 +2691,11 @@
                 }
 
                 function renderWeeklyTable() {
+    if (currentStore === 'all') {
+        const tbody = document.getElementById('weeklyTableBody');
+        if (tbody) tbody.innerHTML = '';
+        return;
+    }
     const filterWeekVal = document.getElementById('filterWeek').value;
     if (!filterWeekVal) return;
     const startMondayStr = getMondayString(filterWeekVal);
@@ -3631,7 +3639,48 @@
             // Update Panel Sync Button UI
             updateSyncButtonUI();
 
-            // 3. Re-render UI components for active store
+            // 3. Tab-specific Visibility Controls: Weekly Tax Limit, Timers, and Roster
+            const weeklyTaxLimitSection = document.getElementById('weeklyTaxLimitSection');
+            const payForm = document.getElementById('payForm');
+            const rosterSection = document.getElementById('rosterSection');
+            const shareModeBtn = document.getElementById('shareModeBtn');
+            const copyPrevWeekBtn = document.getElementById('copyPrevWeekBtn');
+            const rosterStoreSummaryTitle = document.getElementById('rosterStoreSummaryTitle');
+
+            if (storeKey === 'anatolya') {
+                if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = '';
+                if (payForm) payForm.style.display = '';
+                if (rosterSection) rosterSection.style.display = '';
+                if (shareModeBtn) shareModeBtn.style.display = '';
+                if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = '';
+                if (rosterStoreSummaryTitle) rosterStoreSummaryTitle.innerText = "Anatolya Kebabs Summary";
+            } else if (storeKey === 'green_juice') {
+                // User requirement: remove weekly tax limit from green juice tab
+                if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = 'none';
+                if (payForm) payForm.style.display = '';
+                if (rosterSection) rosterSection.style.display = '';
+                if (shareModeBtn) shareModeBtn.style.display = '';
+                if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = '';
+                if (rosterStoreSummaryTitle) rosterStoreSummaryTitle.innerText = "Green Juice Bar Summary";
+            } else { // 'all' (Company's tab)
+                // User requirement: remove tax limit and timers and roaster from company's tab
+                if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = 'none';
+                if (payForm) payForm.style.display = 'none';
+                if (rosterSection) rosterSection.style.display = 'none';
+                if (shareModeBtn) shareModeBtn.style.display = 'none';
+                if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = 'none';
+                if (isShareModeActive) {
+                    const app = document.getElementById('appContainer');
+                    if (app) app.classList.remove('roster-share-active');
+                    isShareModeActive = false;
+                    if (shareModeBtn) {
+                        shareModeBtn.innerText = "👁️ View Roster";
+                        shareModeBtn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
+                    }
+                }
+            }
+
+            // 4. Re-render UI components for active store
             populateStaffDropdowns();
             renderWeeklyTable();
             applyStaffRateDefaults();
