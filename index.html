@@ -12,16 +12,21 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         input[type="time"] { -webkit-appearance: none; -moz-appearance: none; appearance: none; min-height: 40px; }
-        .roster-share-active #mainHeaderLogoContainer { justify-content: center !important; margin: 0 auto; }
-        .roster-share-active #mainTitle { text-align: center; font-size: 1.25rem; }
+        .roster-share-active #mainHeaderLogoContainer { display: none !important; }
+        .roster-share-active #mainTopHeader { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 0 !important; }
+        .roster-share-active #mainHeaderButtons { width: 100% !important; justify-content: flex-start !important; }
+        .roster-share-active #rosterShareHeader { display: block !important; }
         .roster-share-active .hide-on-share { display: none !important; }
-        .roster-share-active #weekRangeContainer { justify-content: center !important; text-align: center !important; margin-left: auto; margin-right: auto; background-color: transparent !important; border: none !important; font-size: 13px !important; }
+        .roster-share-active #weekRangeContainer { justify-content: center !important; text-align: center !important; margin-left: auto; margin-right: auto; background-color: transparent !important; border: none !important; font-size: 13px !important; padding-top: 0 !important; margin-top: -0.25rem !important; }
+        .roster-share-active #weekRangeDisplay { font-size: 0.95rem !important; color: #334155 !important; font-weight: 700 !important; }
         .roster-share-active th { background-color: #4b5563 !important; color: #ffffff !important; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; display: inline-block; }
         @media print {
             body { background: #ffffff !important; color: #000000 !important; padding: 0 !important; }
-            #loginContainer, #mainHeader, #navTabs, #analyticsRangeControls, #analyticsDateRangeContainer, #analyticsCompareContainer, #analyticsExpensesContainer, #analyticsHeatmapContainer, #analyticsDailyContainer, #rosterSection, #tabBasBtn, #basToolbar, .no-print, nav, header { display: none !important; }
+            #loginContainer, #mainHeader, #navTabs, #analyticsRangeControls, #analyticsDateRangeContainer, #analyticsCompareContainer, #analyticsExpensesContainer, #analyticsHeatmapContainer, #analyticsDailyContainer, #tabBasBtn, #basToolbar, .no-print, nav, header { display: none !important; }
+            body:not(.roster-share-active) #rosterSection { display: none !important; }
+            .roster-share-active #mainTopHeader, .roster-share-active #shareModeBtn { display: none !important; }
             #appContainer { max-width: 100% !important; box-shadow: none !important; padding: 10px !important; margin: 0 !important; width: 100% !important; }
             #analyticsBasContainer { display: block !important; }
             .bg-slate-900, .bg-slate-800, .bg-slate-950, .bg-gradient-to-br, .bg-gradient-to-r { background: #ffffff !important; color: #000000 !important; border: 1px solid #cbd5e1 !important; }
@@ -140,7 +145,7 @@
     <!-- Authenticated App Container (Hidden when logged out) -->
     <div id="appContainer" class="hidden max-w-4xl mx-auto bg-white rounded-xl shadow-md p-3 sm:p-5 space-y-4 overflow-hidden">
         
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
+        <div id="mainTopHeader" class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-3 gap-3">
             <div id="mainHeaderLogoContainer" class="flex items-center gap-2.5 shrink-0">
                 <div id="headerLogoWrapper" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-amber-500/40 bg-black flex items-center justify-center p-0.5 shrink-0 ring-2 ring-amber-500/10">
                     <img id="headerLogoImg" src="logo.png" alt="Anatolya Kebabs" class="w-full h-full object-contain rounded-lg">
@@ -151,7 +156,7 @@
                 </div>
             </div>
 
-            <div class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
+            <div id="mainHeaderButtons" class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
                 <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
                     👁️ View Roster
                 </button>
@@ -173,10 +178,10 @@
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Store:</span>
                 <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold">
                     <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer">
-                        <span>🥙</span> <span>Anatolya Kebabs</span>
+                        <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya Kebabs</span>
                     </button>
                     <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer">
-                        <span>🥤</span> <span>Green Juice Bar</span>
+                        <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice Bar</span>
                     </button>
                     <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer">
                         <span>🏢</span> <span>ALHAMD Combined (BAS)</span>
@@ -256,10 +261,21 @@
         </form>
 
         <div id="rosterSection" class="space-y-3">
-            <div class="flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
-                <h2 id="rosterStoreSummaryTitle" class="hide-on-share text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
+            <!-- Share Mode Heading: Displayed only in View Roster Mode just above the dates -->
+            <div id="rosterShareHeader" class="hidden text-center space-y-1.5 pt-1 pb-1">
+                <div class="flex items-center justify-center gap-2.5">
+                    <div id="rosterShareLogoWrapper" class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl shadow-sm border border-amber-500/40 bg-black flex items-center justify-center p-0.5 shrink-0 ring-2 ring-amber-500/10">
+                        <img id="rosterShareLogoImg" src="logo.png" alt="Store Logo" class="w-full h-full object-contain rounded-lg">
+                    </div>
+                    <h1 id="rosterShareTitle" class="text-base sm:text-xl font-black text-gray-900 tracking-tight leading-tight">Anatolya Kebabs Weekly Roster</h1>
+                </div>
+            </div>
+
+            <!-- Normal mode store summary & week selector (hidden in View Roster mode) -->
+            <div class="hide-on-share flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
+                <h2 id="rosterStoreSummaryTitle" class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
                 <div class="flex items-center gap-1.5">
-                    <label class="hide-on-share text-[10px] font-bold text-gray-500 uppercase">Week:</label>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase">Week:</label>
                     <input type="date" id="filterWeek" onchange="syncDashboardWeekFilter()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
                 </div>
             </div>
@@ -1181,8 +1197,8 @@
     <div id="loyverseSyncModal" class="fixed inset-0 bg-black/65 z-50 flex items-center justify-center p-3 hidden backdrop-blur-xs">
         <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-emerald-500/40">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">🥤</span>
+                <div class="flex items-center gap-2.5">
+                    <img src="freshJuiceLogo.png" alt="Green Juice Bar" class="w-8 h-8 rounded-lg bg-emerald-950 p-0.5 border border-emerald-500/40 object-contain shadow-xs">
                     <div>
                         <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
                             Green Juice Bar • Loyverse POS Sync
@@ -1510,7 +1526,35 @@
                         btn.innerText = "👁️ View Roster";
                         btn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
                     }
+                    updateRosterShareHeader();
                     renderWeeklyTable();
+                }
+
+                function updateRosterShareHeader() {
+                    const shareTitle = document.getElementById('rosterShareTitle');
+                    const shareImg = document.getElementById('rosterShareLogoImg');
+                    const shareWrapper = document.getElementById('rosterShareLogoWrapper');
+                    if (!shareTitle) return;
+
+                    if (currentStore === 'green_juice') {
+                        shareTitle.innerText = "Green Juice Bar Weekly Roster";
+                        if (shareImg) {
+                            shareImg.src = "freshJuiceLogo.png";
+                            shareImg.alt = "Green Juice Bar";
+                        }
+                        if (shareWrapper) {
+                            shareWrapper.className = "w-10 h-10 sm:w-11 sm:h-11 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20";
+                        }
+                    } else {
+                        shareTitle.innerText = "Anatolya Kebabs Weekly Roster";
+                        if (shareImg) {
+                            shareImg.src = "logo.png";
+                            shareImg.alt = "Anatolya Kebabs";
+                        }
+                        if (shareWrapper) {
+                            shareWrapper.className = "w-10 h-10 sm:w-11 sm:h-11 rounded-xl shadow-sm border border-amber-500/40 bg-black flex items-center justify-center p-0.5 shrink-0 ring-2 ring-amber-500/10";
+                        }
+                    }
                 }
 
                 function cleanDateStr(d) {
@@ -3623,8 +3667,8 @@
                 if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
                 if (mainTitle && !isShareModeActive) mainTitle.innerText = "Green Juice Bar Timesheet";
                 if (headerLogoWrapper) {
-                    headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20 text-lg";
-                    headerLogoWrapper.innerHTML = "🥤";
+                    headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20";
+                    headerLogoWrapper.innerHTML = '<img id="headerLogoImg" src="freshJuiceLogo.png" alt="Green Juice Bar" class="w-full h-full object-contain rounded-lg">';
                 }
             } else { // 'all'
                 if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES Consolidated (BAS)";
@@ -3635,6 +3679,9 @@
                     headerLogoWrapper.innerHTML = "🏢";
                 }
             }
+
+            // Sync share header logo/title for active venue
+            updateRosterShareHeader();
 
             // Update Panel Sync Button UI
             updateSyncButtonUI();
@@ -3746,11 +3793,11 @@
                             <span class="text-[10px] uppercase font-bold text-slate-400">Stores:</span>
                             <label class="flex items-center gap-1.5 text-amber-300 font-semibold cursor-pointer">
                                 <input type="checkbox" id="staff_store_ak_${idx}" ${worksAtAnatolya ? 'checked' : ''} class="rounded bg-slate-900 border-slate-700 text-amber-500">
-                                <span>🥙 Anatolya Kebabs</span>
+                                <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya Kebabs</span>
                             </label>
                             <label class="flex items-center gap-1.5 text-emerald-300 font-semibold cursor-pointer">
                                 <input type="checkbox" id="staff_store_gj_${idx}" ${worksAtGJ ? 'checked' : ''} class="rounded bg-slate-900 border-slate-700 text-emerald-500">
-                                <span>🥤 Green Juice Bar</span>
+                                <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice Bar</span>
                             </label>
                         </div>
 
