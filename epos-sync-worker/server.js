@@ -464,6 +464,7 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       }
       let card = null;
       let cash = null;
+      let uber = null;
 
       if (s.card_sales !== undefined && s.card_sales !== null && Number(s.card_sales) > 0) {
         card = Number(s.card_sales);
@@ -477,13 +478,20 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
         cash = Number(h._cashSales);
       }
 
-      if (card === null && cash === null) {
+      if (s.uber_sales !== undefined && s.uber_sales !== null && Number(s.uber_sales) > 0) {
+        uber = Number(s.uber_sales);
+      } else if (h._uberSales !== undefined && h._uberSales !== null) {
+        uber = Number(h._uberSales);
+      }
+
+      if (card === null && cash === null && uber === null) {
         card = tot;
         cash = 0;
-      } else if (card === null) {
-        card = Math.max(0, tot - (cash || 0));
-      } else if (cash === null) {
-        cash = Math.max(0, tot - (card || 0));
+        uber = 0;
+      } else {
+        if (cash === null) cash = 0;
+        if (uber === null) uber = 0;
+        if (card === null) card = Math.max(0, tot - cash - uber);
       }
 
       return {
@@ -491,6 +499,7 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
         totalSales: tot,
         cardSales: Math.round(card * 100) / 100,
         cashSales: Math.round(cash * 100) / 100,
+        uberSales: Math.round((uber || 0) * 100) / 100,
         hourly: h,
         store_id: s.store_id || 'anatolya',
         updatedAt: s.updated_at || ''
@@ -673,6 +682,7 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       }
       if (payload.cardSales !== undefined) h._cardSales = Number(payload.cardSales) || 0;
       if (payload.cashSales !== undefined) h._cashSales = Number(payload.cashSales) || 0;
+      if (payload.uberSales !== undefined) h._uberSales = Number(payload.uberSales) || 0;
       const row = {
         date: cleanD,
         store_id: payload.store_id || 'anatolya',
@@ -979,7 +989,7 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       const hourKey = `${hr}:00`;
 
       if (!daysGroup[dateKey]) {
-        daysGroup[dateKey] = { totalSales: 0, cardSales: 0, cashSales: 0, count: 0, hourly: {} };
+        daysGroup[dateKey] = { totalSales: 0, cardSales: 0, cashSales: 0, uberSales: 0, count: 0, hourly: {} };
       }
 
       const isRefund = (r.receipt_type === 'REFUND');
@@ -994,9 +1004,12 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       if (payments.length > 0) {
         for (const p of payments) {
           const pType = (p.type || '').toUpperCase();
+          const pName = (p.name || '').toUpperCase();
           const pAmount = (Number(p.money_amount) || 0) * multiplier;
-          if (pType === 'CASH') {
+          if (pType === 'CASH' || pName === 'CASH') {
             daysGroup[dateKey].cashSales += pAmount;
+          } else if (pName.includes('UBER') || pType.includes('UBER')) {
+            daysGroup[dateKey].uberSales += pAmount;
           } else {
             daysGroup[dateKey].cardSales += pAmount;
           }
@@ -1013,11 +1026,13 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       val.totalSales = Math.round(val.totalSales * 100) / 100;
       val.cardSales = Math.round(val.cardSales * 100) / 100;
       val.cashSales = Math.round(val.cashSales * 100) / 100;
+      val.uberSales = Math.round((val.uberSales || 0) * 100) / 100;
       for (const hKey in val.hourly) {
         val.hourly[hKey] = Math.round(val.hourly[hKey] * 100) / 100;
       }
       val.hourly._cardSales = val.cardSales;
       val.hourly._cashSales = val.cashSales;
+      val.hourly._uberSales = val.uberSales;
 
       rows.push({
         date: dKey,
@@ -1042,6 +1057,7 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
     const totalSales = rows.reduce((s, r) => s + (r.total_sales || 0), 0);
     const totalCard = rows.reduce((s, r) => s + (r.card_sales || 0), 0);
     const totalCash = rows.reduce((s, r) => s + (r.cash_sales || 0), 0);
+    const totalUber = rows.reduce((s, r) => s + ((r.hourly && r.hourly._uberSales) || 0), 0);
 
     return {
       status: 'success',
@@ -1052,7 +1068,14 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       totalSales: Math.round(totalSales * 100) / 100,
       totalCard: Math.round(totalCard * 100) / 100,
       totalCash: Math.round(totalCash * 100) / 100,
-      days: rows.map(r => ({ date: r.date, total: r.total_sales, card: r.card_sales, cash: r.cash_sales })),
+      totalUber: Math.round(totalUber * 100) / 100,
+      days: rows.map(r => ({
+        date: r.date,
+        total: r.total_sales,
+        card: r.card_sales,
+        cash: r.cash_sales,
+        uber: (r.hourly && r.hourly._uberSales) || 0
+      })),
       limitReached,
       requestedStart: originalStart,
       clampedStart: start

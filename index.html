@@ -430,7 +430,7 @@
                             </div>
                             <div id="kpiRangeSales" class="text-xl sm:text-2xl font-black text-emerald-400 tracking-tight leading-none">$0.00</div>
                         </div>
-                        <div class="mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-2 gap-2">
+                        <div id="kpiRangeSalesBreakdown" class="mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-2 gap-2">
                             <div class="bg-slate-950/70 rounded-lg px-2.5 py-1.5 border border-emerald-500/20 flex flex-col justify-center">
                                 <span class="text-[9px] uppercase tracking-wider font-bold text-emerald-300/80 flex items-center gap-1" title="Card Revenue (Included in BAS)">
                                     💳 Card (BAS)
@@ -442,6 +442,12 @@
                                     💵 Cash Sales
                                 </span>
                                 <span id="kpiRangeCashSales" class="text-sm sm:text-base font-black text-amber-300 mt-0.5 leading-tight">$0.00</span>
+                            </div>
+                            <div id="kpiRangeUberCard" class="hidden bg-slate-950/70 rounded-lg px-2.5 py-1.5 border border-purple-500/20 flex flex-col justify-center">
+                                <span class="text-[9px] uppercase tracking-wider font-bold text-purple-300/80 flex items-center gap-1" title="Uber Eats Revenue">
+                                    🚗 Uber
+                                </span>
+                                <span id="kpiRangeUberSales" class="text-sm sm:text-base font-black text-purple-300 mt-0.5 leading-tight">$0.00</span>
                             </div>
                         </div>
                     </div>
@@ -1534,11 +1540,13 @@
                         let totalSales = 0;
                         let cardSales = 0;
                         let cashSales = 0;
+                        let uberSales = 0;
                         const mergedHourly = {};
                         matching.forEach(m => {
                             totalSales += Number(m.totalSales || 0);
                             cardSales += Number(m.cardSales || 0);
                             cashSales += Number(m.cashSales || 0);
+                            uberSales += Number(m.uberSales || (m.hourly && m.hourly._uberSales) || 0);
                             const h = m.hourly || {};
                             for (const [hk, val] of Object.entries(h)) {
                                 if (hk.startsWith("_")) continue;
@@ -1547,12 +1555,14 @@
                         });
                         mergedHourly._cardSales = cardSales;
                         mergedHourly._cashSales = cashSales;
+                        mergedHourly._uberSales = uberSales;
                         return {
                             date: cleanD,
                             store_id: "all",
                             totalSales: Math.round(totalSales * 100) / 100,
                             cardSales: Math.round(cardSales * 100) / 100,
                             cashSales: Math.round(cashSales * 100) / 100,
+                            uberSales: Math.round(uberSales * 100) / 100,
                             hourly: mergedHourly
                         };
                     } else {
@@ -1722,6 +1732,7 @@
                             }
                             let card = null;
                             let cash = null;
+                            let uber = null;
                             if (s.card_sales !== undefined && s.card_sales !== null && Number(s.card_sales) > 0) {
                                 card = Number(s.card_sales);
                             } else if (h._cardSales !== undefined && h._cardSales !== null) {
@@ -1732,13 +1743,19 @@
                             } else if (h._cashSales !== undefined && h._cashSales !== null) {
                                 cash = Number(h._cashSales);
                             }
-                            if (card === null && cash === null) {
+                            if (s.uber_sales !== undefined && s.uber_sales !== null && Number(s.uber_sales) > 0) {
+                                uber = Number(s.uber_sales);
+                            } else if (h._uberSales !== undefined && h._uberSales !== null) {
+                                uber = Number(h._uberSales);
+                            }
+                            if (card === null && cash === null && uber === null) {
                                 card = tot;
                                 cash = 0;
-                            } else if (card === null) {
-                                card = Math.max(0, tot - (cash || 0));
-                            } else if (cash === null) {
-                                cash = Math.max(0, tot - (card || 0));
+                                uber = 0;
+                            } else {
+                                if (cash === null) cash = 0;
+                                if (uber === null) uber = 0;
+                                if (card === null) card = Math.max(0, tot - cash - uber);
                             }
                             return {
                                 date: s.date,
@@ -1746,6 +1763,7 @@
                                 totalSales: tot,
                                 cardSales: Math.round(card * 100) / 100,
                                 cashSales: Math.round(cash * 100) / 100,
+                                uberSales: Math.round((uber || 0) * 100) / 100,
                                 hourly: h,
                                 updatedAt: s.updated_at || ""
                             };
@@ -2276,6 +2294,7 @@
                                 const h = s.hourly || {};
                                 let card = null;
                                 let cash = null;
+                                let uber = null;
                                 if (s.cardSales !== undefined && s.cardSales !== null && Number(s.cardSales) > 0) {
                                     card = Number(s.cardSales);
                                 } else if (h._cardSales !== undefined && h._cardSales !== null) {
@@ -2286,16 +2305,23 @@
                                 } else if (h._cashSales !== undefined && h._cashSales !== null) {
                                     cash = Number(h._cashSales);
                                 }
-                                if (card === null && cash === null) {
+                                if (s.uberSales !== undefined && s.uberSales !== null && Number(s.uberSales) > 0) {
+                                    uber = Number(s.uberSales);
+                                } else if (h._uberSales !== undefined && h._uberSales !== null) {
+                                    uber = Number(h._uberSales);
+                                }
+                                if (card === null && cash === null && uber === null) {
                                     card = s.totalSales;
                                     cash = 0;
-                                } else if (card === null) {
-                                    card = Math.max(0, s.totalSales - (cash || 0));
-                                } else if (cash === null) {
-                                    cash = Math.max(0, s.totalSales - (card || 0));
+                                    uber = 0;
+                                } else {
+                                    if (cash === null) cash = 0;
+                                    if (uber === null) uber = 0;
+                                    if (card === null) card = Math.max(0, s.totalSales - cash - uber);
                                 }
                                 s.cardSales = Math.round(card * 100) / 100;
                                 s.cashSales = Math.round(cash * 100) / 100;
+                                s.uberSales = Math.round((uber || 0) * 100) / 100;
                                 return s;
                             });
                         }
@@ -3987,8 +4013,9 @@
             if (totalIdx === -1) totalIdx = header.findIndex(h => h === 'grosssales' || h.includes('grosssales'));
             if (totalIdx === -1) totalIdx = header.findIndex(h => h.includes('sales'));
 
-            const cardIdx = header.findIndex(h => h.includes('card') || h.includes('electronic') || h.includes('eftpos'));
+            const cardIdx = header.findIndex(h => h.includes('card') || h.includes('electronic') || h.includes('eftpos') || h.includes('tyro'));
             const cashIdx = header.findIndex(h => h.includes('cash'));
+            const uberIdx = header.findIndex(h => h.includes('uber'));
             const typeIdx = header.findIndex(h => h.includes('payment') || h.includes('type'));
 
             if (dateIdx === -1 || totalIdx === -1) {
@@ -4015,7 +4042,7 @@
 
                 const amt = parseFloat((cols[totalIdx] || '0').replace(/[^0-9.-]/g, '')) || 0;
                 if (!daysMap[dIso]) {
-                    daysMap[dIso] = { date: dIso, total: 0, card: 0, cash: 0, count: 0, hourly: {} };
+                    daysMap[dIso] = { date: dIso, total: 0, card: 0, cash: 0, uber: 0, count: 0, hourly: {} };
                 }
 
                 daysMap[dIso].total += amt;
@@ -4027,11 +4054,16 @@
                 if (cashIdx !== -1 && cols[cashIdx]) {
                     daysMap[dIso].cash += parseFloat((cols[cashIdx] || '0').replace(/[^0-9.-]/g, '')) || 0;
                 }
+                if (uberIdx !== -1 && cols[uberIdx]) {
+                    daysMap[dIso].uber += parseFloat((cols[uberIdx] || '0').replace(/[^0-9.-]/g, '')) || 0;
+                }
 
                 if (typeIdx !== -1) {
                     const pType = (cols[typeIdx] || '').toLowerCase();
                     if (pType.includes('cash')) {
                         daysMap[dIso].cash += amt;
+                    } else if (pType.includes('uber')) {
+                        daysMap[dIso].uber += amt;
                     } else {
                         daysMap[dIso].card += amt;
                     }
@@ -4042,11 +4074,13 @@
                 d.total = Math.round(d.total * 100) / 100;
                 d.card = Math.round(d.card * 100) / 100;
                 d.cash = Math.round(d.cash * 100) / 100;
-                if (d.card === 0 && d.cash === 0) {
+                d.uber = Math.round(d.uber * 100) / 100;
+                if (d.card === 0 && d.cash === 0 && d.uber === 0) {
                     d.card = d.total;
                 }
                 d.hourly._cardSales = d.card;
                 d.hourly._cashSales = d.cash;
+                d.hourly._uberSales = d.uber;
                 return d;
             });
         }
@@ -4075,11 +4109,13 @@
                 let totalSales = 0;
                 let totalCard = 0;
                 let totalCash = 0;
+                let totalUber = 0;
 
                 for (let d of days) {
                     totalSales += d.total;
                     totalCard += d.card;
                     totalCash += d.cash;
+                    totalUber += d.uber;
 
                     await callSheetApi({
                         action: "save_hourly_sales",
@@ -4088,6 +4124,7 @@
                         totalSales: d.total,
                         cardSales: d.card,
                         cashSales: d.cash,
+                        uberSales: d.uber,
                         hourly: d.hourly
                     });
 
@@ -4098,6 +4135,7 @@
                         totalSales: d.total,
                         cardSales: d.card,
                         cashSales: d.cash,
+                        uberSales: d.uber,
                         hourly: d.hourly,
                         updatedAt: new Date().toISOString()
                     });
@@ -4108,7 +4146,7 @@
                     statusEl.className = "text-[11px] text-center text-emerald-400 font-bold";
                 }
 
-                alert(`🎉 Loyverse CSV Import Success!\n\nImported ${days.length} day(s) for Green Juice Bar.\n\n• Total Sales: $${totalSales.toFixed(2)}\n• Card Sales: $${totalCard.toFixed(2)}\n• Cash Sales: $${totalCash.toFixed(2)}`);
+                alert(`🎉 Loyverse CSV Import Success!\n\nImported ${days.length} day(s) for Green Juice Bar.\n\n• Total Sales: $${totalSales.toFixed(2)}\n• Card Sales: $${totalCard.toFixed(2)}\n• Cash Sales: $${totalCash.toFixed(2)}${totalUber > 0 ? '\n• Uber Sales: $' + totalUber.toFixed(2) : ''}`);
                 await loadCloudData();
             } catch (err) {
                 console.error("Loyverse CSV import error:", err);
@@ -5196,6 +5234,7 @@
             let rangeSales = 0;
             let rangeCardSales = 0;
             let rangeCashSales = 0;
+            let rangeUberSales = 0;
             let rangeWages = 0;
             let rangeHours = 0;
             let rangeExpenses = 0;
@@ -5219,6 +5258,7 @@
                 const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
                 let cAmt = 0;
                 let cashAmt = 0;
+                let uberAmt = 0;
                 if (sRec) {
                     const h = sRec.hourly || {};
                     cAmt = sRec.cardSales !== undefined && sRec.cardSales !== null
@@ -5226,7 +5266,10 @@
                         : (h._cardSales !== undefined ? Number(h._cardSales) : sAmt);
                     cashAmt = sRec.cashSales !== undefined && sRec.cashSales !== null
                         ? Number(sRec.cashSales)
-                        : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, sAmt - cAmt));
+                        : (h._cashSales !== undefined ? Number(h._cashSales) : 0);
+                    uberAmt = sRec.uberSales !== undefined && sRec.uberSales !== null
+                        ? Number(sRec.uberSales)
+                        : (h._uberSales !== undefined ? Number(h._uberSales) : 0);
                 }
 
                 const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
@@ -5253,6 +5296,7 @@
                 rangeSales += sAmt;
                 rangeCardSales += cAmt;
                 rangeCashSales += cashAmt;
+                rangeUberSales += uberAmt;
                 rangeWages += dWages;
                 rangeHours += dHours;
 
@@ -5270,6 +5314,7 @@
                     sAmt,
                     cAmt,
                     cashAmt,
+                    uberAmt,
                     dWages,
                     dayExp,
                     dHours,
@@ -5283,6 +5328,9 @@
             const kpiSales = document.getElementById('kpiRangeSales');
             const kpiCardSales = document.getElementById('kpiRangeCardSales');
             const kpiCashSales = document.getElementById('kpiRangeCashSales');
+            const kpiUberSales = document.getElementById('kpiRangeUberSales');
+            const kpiUberCard = document.getElementById('kpiRangeUberCard');
+            const kpiBreakdown = document.getElementById('kpiRangeSalesBreakdown');
             const kpiWages = document.getElementById('kpiRangeWages');
             const kpiExpenses = document.getElementById('kpiRangeExpenses');
             const kpiHoursSplh = document.getElementById('kpiRangeHoursSplh');
@@ -5291,6 +5339,16 @@
             if (kpiSales) kpiSales.innerText = `$${rangeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (kpiCardSales) kpiCardSales.innerText = `$${rangeCardSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (kpiCashSales) kpiCashSales.innerText = `$${rangeCashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            
+            if (rangeUberSales > 0) {
+                if (kpiUberCard) kpiUberCard.classList.remove('hidden');
+                if (kpiUberSales) kpiUberSales.innerText = `$${rangeUberSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                if (kpiBreakdown) kpiBreakdown.className = "mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-3 gap-1.5";
+            } else {
+                if (kpiUberCard) kpiUberCard.classList.add('hidden');
+                if (kpiBreakdown) kpiBreakdown.className = "mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-2 gap-2";
+            }
+
             if (kpiWages) kpiWages.innerText = `$${rangeWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (kpiExpenses) kpiExpenses.innerText = `$${rangeExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
@@ -5360,6 +5418,11 @@
                                 <span>Wages: <b class="text-sky-300">$${item.dWages.toFixed(0)}</b> (${item.dHours.toFixed(1)} hrs)</span>
                                 <span>SPLH: <b class="text-amber-300">${item.splh > 0 ? '$' + item.splh.toFixed(0) + '/hr' : '—'}</b></span>
                                 <span>Net: <b class="text-purple-300">$${item.net.toFixed(0)}</b></span>
+                            </div>
+                            <div class="flex items-center gap-2 font-mono text-[9px] text-slate-400">
+                                <span>💳 $${item.cAmt.toFixed(0)}</span>
+                                <span>💵 $${item.cashAmt.toFixed(0)}</span>
+                                ${item.uberAmt > 0 ? `<span class="text-purple-300 font-bold">🚗 $${item.uberAmt.toFixed(0)}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -5835,9 +5898,12 @@ function convertHourStr(hStr) {
             const cardCashBadge = document.getElementById('kpiCardCashSplit');
             if (cardCashBadge) {
                 const cSales = salesRecord ? (salesRecord.cardSales !== undefined ? Number(salesRecord.cardSales) : (hourlyData._cardSales !== undefined ? Number(hourlyData._cardSales) : totalDaySales)) : 0;
-                const mCash = salesRecord ? (salesRecord.cashSales !== undefined ? Number(salesRecord.cashSales) : (hourlyData._cashSales !== undefined ? Number(hourlyData._cashSales) : Math.max(0, totalDaySales - cSales))) : 0;
-                if (mCash > 0 || cSales > 0) {
-                    cardCashBadge.innerText = `💳 $${cSales.toFixed(0)} | 💵 $${mCash.toFixed(0)}`;
+                const mCash = salesRecord ? (salesRecord.cashSales !== undefined ? Number(salesRecord.cashSales) : (hourlyData._cashSales !== undefined ? Number(hourlyData._cashSales) : 0)) : 0;
+                const uSales = salesRecord ? (salesRecord.uberSales !== undefined ? Number(salesRecord.uberSales) : (hourlyData._uberSales !== undefined ? Number(hourlyData._uberSales) : 0)) : 0;
+                if (mCash > 0 || cSales > 0 || uSales > 0) {
+                    const parts = [`💳 $${cSales.toFixed(0)}`, `💵 $${mCash.toFixed(0)}`];
+                    if (uSales > 0) parts.push(`🚗 $${uSales.toFixed(0)}`);
+                    cardCashBadge.innerText = parts.join(' | ');
                 } else {
                     cardCashBadge.innerText = '';
                 }
