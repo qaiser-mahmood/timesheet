@@ -2244,18 +2244,22 @@ cron.schedule('*/5 * * * *', () => {
   const isPeak = (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR);
 
   if (isPeak) {
-    console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Peak hours (${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00). Running 5-min sync.`);
+    console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Peak hours (${PEAK_START_HOUR}:00 - ${PEAK_END_HOUR}:00). Running Anatolya 5-min sync.`);
     runSync(false, false).catch(console.error);
-    syncLoyverseSales().catch(err => console.error('[Cron] Loyverse sync error:', err.message));
   } else {
-    // Outside peak hours: run every 15 minutes (at :00, :15, :30, :45)
+    // Outside peak hours: run Anatolya sync every 15 minutes (at :00, :15, :30, :45)
     if (minute % OFFPEAK_INTERVAL_MINUTES === 0) {
-      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Running ${OFFPEAK_INTERVAL_MINUTES}-min sync.`);
+      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Running Anatolya ${OFFPEAK_INTERVAL_MINUTES}-min sync.`);
       runSync(false, false).catch(console.error);
-      syncLoyverseSales().catch(err => console.error('[Cron] Loyverse sync error:', err.message));
     } else {
-      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Skipping (next sync at :${String(Math.ceil((minute + 1) / OFFPEAK_INTERVAL_MINUTES) * OFFPEAK_INTERVAL_MINUTES % 60).padStart(2, '0')}).`);
+      console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> Standard operating hours. Skipping Anatolya (next sync at :${String(Math.ceil((minute + 1) / OFFPEAK_INTERVAL_MINUTES) * OFFPEAK_INTERVAL_MINUTES % 60).padStart(2, '0')}).`);
     }
+  }
+
+  // Green Juice: Fully driven by real-time Loyverse POS webhooks. Run a daily reconciliation at 8:00 PM close of business.
+  if (hour === OPERATING_END_HOUR && minute === 0) {
+    console.log(`[Cron] Local Time (${TIMEZONE}) ${formatted} -> End of day. Reconciling Green Juice Loyverse sales.`);
+    syncLoyverseSales().catch(err => console.error('[Cron] Loyverse end-of-day reconciliation error:', err.message));
   }
 });
 
