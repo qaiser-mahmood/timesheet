@@ -1276,11 +1276,12 @@
                     <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Expense Category</label>
                     <select id="expenseCategory" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
                         <option value="Meat">🥩 Meat (Meat, Cheese, Oil, Bags)</option>
-                        <option value="Vegies">🥗 Vegies</option>
+                        <option value="Vegies">🥗 Fruit & Vegies</option>
                         <option value="Bread">🍞 Bread</option>
                         <option value="Packaging">📦 Packaging</option>
-                        <option value="Campbels">🥫 Campbels (Chips, Sauces, Consumables)</option>
+                        <option value="Campbells">🥫 Campbells (Chips, Sauces, Consumables)</option>
                         <option value="Drinks">🥤 Drinks</option>
+                        <option value="Ice Cream">🍦 Ice Cream (Royal Foods, Gelato)</option>
                         <option value="Rent">🏢 Rent (Rent, Utilities, Outgoings)</option>
                         <option value="Others">🔧 Others (Repairs, Pest, Misc)</option>
                     </select>
@@ -3499,10 +3500,10 @@
         
         const EXPENSE_CATEGORIES = [
             { key: 'Meat', label: 'Meat (Meat, Cheese, Oil, Bags)', icon: '🥩', color: 'text-rose-400 bg-rose-950/70 border-rose-800', stores: ['anatolya'] },
-            { key: 'Vegies', label: 'Vegies', icon: '🥗', color: 'text-emerald-400 bg-emerald-950/70 border-emerald-800' },
+            { key: 'Vegies', label: 'Fruit & Vegies', icon: '🥗', color: 'text-emerald-400 bg-emerald-950/70 border-emerald-800' },
             { key: 'Bread', label: 'Bread', icon: '🍞', color: 'text-amber-400 bg-amber-950/70 border-amber-800', stores: ['anatolya'] },
             { key: 'Packaging', label: 'Packaging', icon: '📦', color: 'text-orange-400 bg-orange-950/70 border-orange-800' },
-            { key: 'Campbels', label: 'Campbels (Chips, Sauces, Consumables)', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
+            { key: 'Campbells', label: 'Campbells (Chips, Sauces, Consumables)', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
             { key: 'Drinks', label: 'Drinks', icon: '🥤', color: 'text-sky-400 bg-sky-950/70 border-sky-800' },
             { key: 'Ice Cream', label: 'Ice Cream (Royal Foods, Gelato)', icon: '🍦', color: 'text-pink-400 bg-pink-950/70 border-pink-800', stores: ['green_juice'] },
             { key: 'Rent', label: 'Rent (Rent, Utilities, Outgoings)', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
@@ -3510,7 +3511,9 @@
         ];
 
         function isCategoryForStore(catKey, storeKey = currentStore) {
-            const c = EXPENSE_CATEGORIES.find(x => x.key.toLowerCase() === (catKey || '').toLowerCase());
+            let k = (catKey || '').toLowerCase();
+            if (k === 'campbels') k = 'campbells';
+            const c = EXPENSE_CATEGORIES.find(x => x.key.toLowerCase() === k);
             if (!c || !c.stores) return true;
             if (!storeKey || storeKey === 'all') return true;
             return c.stores.includes(storeKey);
@@ -3536,7 +3539,9 @@
         }
 
         function getCategoryMeta(cat) {
-            const found = EXPENSE_CATEGORIES.find(c => c.key.toLowerCase() === (cat || '').toLowerCase());
+            let k = (cat || '').trim();
+            if (k.toLowerCase() === 'campbels') k = 'Campbells';
+            const found = EXPENSE_CATEGORIES.find(c => c.key.toLowerCase() === k.toLowerCase());
             return found || { key: cat || 'Others', label: cat || 'Others', icon: '💸', color: 'text-slate-300 bg-slate-800 border-slate-700' };
         }
 
@@ -4624,10 +4629,13 @@
         const BAS_GST_RULES = {
             'Meat': { taxable: false, rate: 0, label: 'GST-Free (Basic Food / Fresh Meat)' },
             'Vegies': { taxable: false, rate: 0, label: 'GST-Free (Fresh Produce)' },
+            'Fruit & Vegies': { taxable: false, rate: 0, label: 'GST-Free (Fresh Produce)' },
             'Bread': { taxable: false, rate: 0, label: 'GST-Free (Plain Bakery / Bread)' },
             'Packaging': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Containers & Bags)' },
+            'Campbells': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Consumables & Stock)' },
             'Campbels': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Consumables & Stock)' },
             'Drinks': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Beverages)' },
+            'Ice Cream': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Gelato / Ice Cream)' },
             'Rent': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Commercial Lease & Power)' },
             'Others': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Services & Repairs)' }
         };
