@@ -730,15 +730,22 @@
                             <option value="Campbells">🥫 Campbells</option>
                             <option value="Drinks">🥤 Drinks</option>
                             <option value="Ice Cream">🍦 Ice Cream</option>
+                            <option value="Consumables">🛒 Consumables</option>
                             <option value="Rent">🏢 Rent</option>
+                            <option value="Utilities">💡 Utilities</option>
+                            <option value="Fuel & Vehicle">⛽ Fuel & Vehicle</option>
+                            <option value="R & M">🛠️ R & M</option>
                             <option value="Wages">👥 Wages</option>
+                            <option value="Super">🏛️ Super</option>
+                            <option value="Insurance">🛡️ Insurance</option>
+                            <option value="Accounting">📊 Accounting</option>
                             <option value="Others">🔧 Others</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- 8 Categories Summary Grid -->
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="expenseCategorySummaryGrid">
+                <!-- Category Breakdown Summary Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 text-xs" id="expenseCategorySummaryGrid">
                     <!-- Populated dynamically -->
                 </div>
 
@@ -1322,6 +1329,22 @@
                     </div>
                 </div>
 
+                <!-- Duplicates Alert Banner -->
+                <div id="smartDuplicatesBanner" class="hidden shrink-0 bg-amber-950/70 border border-amber-500/50 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-md">
+                    <div class="flex items-center gap-2 text-amber-300 font-bold">
+                        <span class="text-base animate-pulse">⚠️</span>
+                        <span id="smartDuplicatesCountText">0 potential duplicate(s) detected (unselected by default).</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 self-end sm:self-auto">
+                        <button type="button" onclick="discardAllDuplicateRows()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition shadow cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                            <span>🗑️</span> <span>Discard All Duplicates</span>
+                        </button>
+                        <button type="button" onclick="keepAllDuplicateRows()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition shadow cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                            <span>✓</span> <span>Keep All</span>
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Staging Table -->
                 <div class="flex-1 overflow-y-auto overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 shadow">
                     <table class="w-full text-xs text-left border-collapse min-w-[700px]">
@@ -1335,7 +1358,7 @@
                                 <th class="p-2 w-32">Category</th>
                                 <th class="p-2">Supplier / Notes</th>
                                 <th class="p-2 w-24 text-right">Amount ($)</th>
-                                <th class="p-2 w-12 text-center">✕</th>
+                                <th class="p-2 w-24 text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody id="smartStagingTableBody" class="divide-y divide-slate-800/60 text-slate-200">
@@ -1397,8 +1420,15 @@
                         <option value="Campbells">🥫 Campbells</option>
                         <option value="Drinks">🥤 Drinks</option>
                         <option value="Ice Cream">🍦 Ice Cream</option>
+                        <option value="Consumables">🛒 Consumables</option>
                         <option value="Rent">🏢 Rent</option>
+                        <option value="Utilities">💡 Utilities</option>
+                        <option value="Fuel & Vehicle">⛽ Fuel & Vehicle</option>
+                        <option value="R & M">🛠️ R & M</option>
                         <option value="Wages">👥 Wages</option>
+                        <option value="Super">🏛️ Super</option>
+                        <option value="Insurance">🛡️ Insurance</option>
+                        <option value="Accounting">📊 Accounting</option>
                         <option value="Others">🔧 Others</option>
                     </select>
                 </div>
@@ -3944,8 +3974,15 @@
             { key: 'Campbells', label: 'Campbells', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
             { key: 'Drinks', label: 'Drinks', icon: '🥤', color: 'text-sky-400 bg-sky-950/70 border-sky-800' },
             { key: 'Ice Cream', label: 'Ice Cream', icon: '🍦', color: 'text-pink-400 bg-pink-950/70 border-pink-800' },
+            { key: 'Consumables', label: 'Consumables', icon: '🛒', color: 'text-teal-400 bg-teal-950/70 border-teal-800' },
             { key: 'Rent', label: 'Rent', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
+            { key: 'Utilities', label: 'Utilities', icon: '💡', color: 'text-yellow-400 bg-yellow-950/70 border-yellow-800' },
+            { key: 'Fuel & Vehicle', label: 'Fuel & Vehicle', icon: '⛽', color: 'text-emerald-300 bg-emerald-950/70 border-emerald-800' },
+            { key: 'R & M', label: 'R & M', icon: '🛠️', color: 'text-amber-300 bg-amber-950/70 border-amber-800' },
             { key: 'Wages', label: 'Wages', icon: '👥', color: 'text-cyan-400 bg-cyan-950/70 border-cyan-800' },
+            { key: 'Super', label: 'Super', icon: '🏛️', color: 'text-indigo-400 bg-indigo-950/70 border-indigo-800' },
+            { key: 'Insurance', label: 'Insurance', icon: '🛡️', color: 'text-violet-400 bg-violet-950/70 border-violet-800' },
+            { key: 'Accounting', label: 'Accounting', icon: '📊', color: 'text-lime-400 bg-lime-950/70 border-lime-800' },
             { key: 'Others', label: 'Others', icon: '🔧', color: 'text-purple-400 bg-purple-950/70 border-purple-800' }
         ];
 
@@ -3974,8 +4011,11 @@
         function getCategoryMeta(cat) {
             let k = (cat || '').trim();
             if (k.toLowerCase() === 'campbels') k = 'Campbells';
+            if (k.toLowerCase() === 'superannuation') k = 'Super';
+            if (k.toLowerCase() === 'repairs' || k.toLowerCase() === 'r&m' || k.toLowerCase() === 'r & m') k = 'R & M';
+            if (k.toLowerCase() === 'fuel' || k.toLowerCase() === 'vehicle') k = 'Fuel & Vehicle';
             const found = EXPENSE_CATEGORIES.find(c => c.key.toLowerCase() === k.toLowerCase());
-            return found || { key: cat || 'Others', label: cat || 'Others', icon: '💸', color: 'text-slate-300 bg-slate-800 border-slate-700' };
+            return found || { key: cat || 'Others', label: cat || 'Others', icon: '🔧', color: 'text-purple-400 bg-purple-950/70 border-purple-800' };
         }
 
         function openExpenseModal(prefillDate) {
@@ -4789,6 +4829,20 @@
                 return;
             }
 
+            if (!editId && Array.isArray(expensesStore)) {
+                const existingDupe = expensesStore.find(x => 
+                    cleanDateStr(x.date) === cleanDateStr(date) &&
+                    Math.abs(Number(x.amount || 0) - amount) < 0.01 &&
+                    (x.store_id || 'anatolya') === store_id
+                );
+                if (existingDupe) {
+                    const confirmDupe = confirm(`⚠️ Duplicate Warning: An expense for $${amount.toFixed(2)} on ${cleanDateStr(date)} already exists in ${store_id} (${existingDupe.category} · ${existingDupe.notes || ''}).\n\nDo you want to log this duplicate expense anyway?`);
+                    if (!confirmDupe) {
+                        return;
+                    }
+                }
+            }
+
             const btn = document.getElementById('saveExpenseBtn');
             if (btn) { btn.disabled = true; btn.innerText = editId ? "Updating..." : "Saving..."; }
 
@@ -5425,16 +5479,7 @@
                             </td>
                             <td class="p-2.5">
                                 <select onchange="changeExpenseCategory(${x.id}, this.value)" class="text-[11px] font-semibold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs bg-slate-900 border-slate-700 text-slate-200" title="Click to reassign category">
-                                    <option value="Meat" ${x.category === 'Meat' ? 'selected' : ''}>🥩 Meat</option>
-                                    <option value="Vegies" ${x.category === 'Vegies' || x.category === 'Fruit & Vegies' ? 'selected' : ''}>🥗 Fruit & Vegies</option>
-                                    <option value="Bread" ${x.category === 'Bread' ? 'selected' : ''}>🍞 Bread</option>
-                                    <option value="Packaging" ${x.category === 'Packaging' ? 'selected' : ''}>📦 Packaging</option>
-                                    <option value="Campbells" ${x.category === 'Campbells' ? 'selected' : ''}>🥫 Campbells</option>
-                                    <option value="Drinks" ${x.category === 'Drinks' ? 'selected' : ''}>🥤 Drinks</option>
-                                    <option value="Ice Cream" ${x.category === 'Ice Cream' ? 'selected' : ''}>🍦 Ice Cream</option>
-                                    <option value="Rent" ${x.category === 'Rent' ? 'selected' : ''}>🏢 Rent</option>
-                                    <option value="Wages" ${x.category === 'Wages' ? 'selected' : ''}>👥 Wages</option>
-                                    <option value="Others" ${x.category === 'Others' ? 'selected' : ''}>🔧 Others</option>
+                                    ${EXPENSE_CATEGORIES.map(c => `<option value="${c.key}" ${x.category === c.key ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}
                                 </select>
                             </td>
                             <td class="p-2.5 text-slate-300">${x.notes || '<span class="opacity-30">—</span>'}</td>
@@ -5472,7 +5517,7 @@
             { pattern: /ready\s*chef\s*go/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Ready Chef Go' },
             { pattern: /(jaka\s*packaging|detpak|packaging|carton|containers|cups|straws)/i, entity: 'green_juice', category: 'Packaging', label: 'Packaging' },
             { pattern: /tyro\s*fees/i, entity: 'green_juice', category: 'Others', label: 'Tyro Terminal Fees' },
-            { pattern: /woolworths.*carousel/i, entity: 'green_juice', category: 'Others', label: 'Woolworths Carousel' },
+            { pattern: /woolworths.*carousel/i, entity: 'green_juice', category: 'Consumables', label: 'Woolworths Carousel' },
             { pattern: /(juice|citrus|mango|passionfruit|oranges|apple|berries|fruit)/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Fresh Produce' },
             
             // 2. Anatolya Kebabs
@@ -5488,16 +5533,16 @@
             { pattern: /(detpak|packaging|carton|containers|cups|straws)/i, entity: 'anatolya', category: 'Packaging', label: 'Packaging' },
             { pattern: /(coca\s*cola|cca\s*online|schweppes|asahi|drinks|beverage)/i, entity: 'anatolya', category: 'Drinks', label: 'Drinks' },
 
-            // 3. Company Shared / Overhead
-            { pattern: /(you\s*car|toyota\s*finance|car\s*lease|repayments)/i, entity: 'company_shared', category: 'Others', label: 'Company Vehicle' },
-            { pattern: /(vibe\s*petroleum|ampol|bp\s*connect|caltex|7-eleven.*fuel|united\s*petroleum|fuel|petrol)/i, entity: 'company_shared', category: 'Others', label: 'Fuel & Transport' },
-            { pattern: /(transperth|toll|parking)/i, entity: 'company_shared', category: 'Others', label: 'Transport' },
+            // 3. Operational Overheads & Specialized Business Categories
+            { pattern: /(woolworths|coles|iga|supermarket|quality\s*indian\s*grocer|asian\s*grocer|sp\s*nutrition|chemist\s*warehouse|reject\s*shop|kmart|red\s*dot|daiso|smart\s*dollar)/i, category: 'Consumables', label: 'Consumables' },
+            { pattern: /(water\s*corp|water\s*corporation|synergy|alinta|trade\s*waste|telstra|optus|tpg|electricity|power|gas|internet|broadband)/i, category: 'Utilities', label: 'Utilities' },
+            { pattern: /(vibe\s*petroleum|ampol|bp\s*connect|caltex|7-eleven.*fuel|united\s*petroleum|fuel|petrol|diesel|transport\s*wa|your\s*car|toyota\s*finance|car\s*lease|parking)/i, entity: 'company_shared', category: 'Fuel & Vehicle', label: 'Fuel & Vehicle' },
+            { pattern: /(bunnings|johns\s*refrigeration|refrigeration|multifix|the\s*good\s*guys|hardware|repairs|maintenance|equipment\s*repair)/i, category: 'R & M', label: 'R & M' },
+            { pattern: /(superchoice|superannuation|sunsuper|australian\s*super|hostplus|cbus|rest\s*super)/i, entity: 'company_shared', category: 'Super', label: 'Super' },
+            { pattern: /(nrma|biz\s*cover|allianz|qbe|insurance|attvest\s*finance)/i, entity: 'company_shared', category: 'Insurance', label: 'Insurance' },
+            { pattern: /(xero|fintech\s*accountants|accountant|accounting|tax\s*return|bookkeeping)/i, entity: 'company_shared', category: 'Accounting', label: 'Accounting' },
             { pattern: /(tax\s*office|bpay.*75556|gst\s*till|ato)/i, entity: 'company_shared', category: 'Others', label: 'ATO' },
-            { pattern: /(superchoice|superannuation|sunsuper|australian\s*super)/i, entity: 'company_shared', category: 'Others', label: 'Superannuation' },
-            { pattern: /(xero|accountant|tax\s*return)/i, entity: 'company_shared', category: 'Others', label: 'Accounting' },
-            { pattern: /(nrma|biz\s*cover|allianz|qbe|insurance)/i, entity: 'company_shared', category: 'Others', label: 'Insurance' },
-            { pattern: /fines\s*enforcement/i, entity: 'company_shared', category: 'Others', label: 'Fines' },
-            { pattern: /(bunnings|officeworks|chemist\s*warehouse|reject\s*shop|kmart)/i, entity: 'company_shared', category: 'Others', label: 'Supplies' }
+            { pattern: /fines\s*enforcement/i, entity: 'company_shared', category: 'Others', label: 'Fines' }
         ];
 
         // ==================== LEARNED EXPENSE RULES ENGINE ====================
@@ -5699,15 +5744,16 @@
                 }
             }
 
-            // 2. Built-in system static rules
+            // 2. Fallback entity based on active store context
+            const fallbackEntity = (defaultStore === 'green_juice' ? 'green_juice' : (defaultStore === 'company_shared' ? 'company_shared' : 'anatolya'));
+
+            // 3. Built-in system static rules
             for (const rule of EXPENSE_CLASSIFICATION_RULES) {
                 if (rule.pattern.test(cleanD)) {
-                    return { entity: rule.entity, category: rule.category, matchedRule: rule.label };
+                    return { entity: rule.entity || fallbackEntity, category: rule.category, matchedRule: rule.label };
                 }
             }
 
-            // 3. Fallback to active store
-            const fallbackEntity = (defaultStore === 'green_juice' ? 'green_juice' : (defaultStore === 'company_shared' ? 'company_shared' : 'anatolya'));
             return { entity: fallbackEntity, category: 'Others', matchedRule: 'Auto' };
         }
 
@@ -5870,8 +5916,10 @@
                 if (loadEl) loadEl.classList.add('hidden');
                 if (allParsed.length > 0) {
                     smartStagingRows = allParsed;
+                    detectDuplicatesInStaging();
                     renderSmartStagingTable();
-                    showExpensesToast(`Extracted ${allParsed.length} transaction(s)! Review below.`, true);
+                    const dupeCount = smartStagingRows.filter(r => r.isDuplicate).length;
+                    showExpensesToast(`Extracted ${allParsed.length} transaction(s)${dupeCount > 0 ? ` (${dupeCount} potential duplicate(s) flagged)` : ''}! Review below.`, true);
                 } else {
                     showExpensesToast("No transactions found in the uploaded file(s).", false);
                 }
@@ -6254,6 +6302,7 @@ Do not include markdown fences.`;
 
         function removeSmartStagingRow(id) {
             smartStagingRows = smartStagingRows.filter(r => r.id !== id);
+            detectDuplicatesInStaging();
             renderSmartStagingTable();
         }
         window.removeSmartStagingRow = removeSmartStagingRow;
@@ -6268,11 +6317,114 @@ Do not include markdown fences.`;
                 category: 'Others',
                 matchedRule: 'Manual',
                 isDeposit: false,
-                selected: true
+                selected: true,
+                isDuplicate: false,
+                duplicateStatus: 'normal'
             });
+            detectDuplicatesInStaging();
             renderSmartStagingTable();
         }
         window.addManualStagingRow = addManualStagingRow;
+
+        function detectDuplicatesInStaging() {
+            const seenInBatch = new Map();
+
+            smartStagingRows.forEach((r, idx) => {
+                const dStr = cleanDateStr(r.date);
+                const amt = Number(r.amount || 0).toFixed(2);
+                const kw = extractCleanSupplierKeyword(r.notes || '').toLowerCase();
+                const notesClean = (r.notes || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                const batchKey = `${dStr}_${amt}_${kw || notesClean.slice(0, 15)}`;
+
+                // 1. Check against existing expensesStore (saved in cloud database)
+                let matchInDb = null;
+                if (Array.isArray(expensesStore) && expensesStore.length > 0 && Number(amt) > 0) {
+                    matchInDb = expensesStore.find(e => {
+                        const eDate = cleanDateStr(e.date);
+                        const eAmt = Number(e.amount || 0).toFixed(2);
+                        if (eDate === dStr && eAmt === amt) {
+                            const eKw = extractCleanSupplierKeyword(e.notes || e.description || '').toLowerCase();
+                            const eNotesClean = (e.notes || e.description || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                            if (!kw || !eKw || kw === eKw || kw.includes(eKw) || eKw.includes(kw) || notesClean.includes(eNotesClean) || eNotesClean.includes(notesClean) || (e.store_id === r.entity)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                if (matchInDb) {
+                    r.isDuplicate = true;
+                    r.duplicateType = 'ledger';
+                    const dbDesc = matchInDb.notes || matchInDb.description || matchInDb.category || '';
+                    r.duplicateReason = `Already in ledger (${cleanDateStr(matchInDb.date)} · $${amt} · ${dbDesc.slice(0, 30)})`;
+                    if (r.duplicateStatus !== 'kept') {
+                        r.selected = false; // Uncheck by default so it's not accidentally re-imported!
+                        r.duplicateStatus = 'flagged';
+                    }
+                } else if (seenInBatch.has(batchKey) && Number(amt) > 0) {
+                    r.isDuplicate = true;
+                    r.duplicateType = 'batch';
+                    const prevRowIdx = seenInBatch.get(batchKey);
+                    r.duplicateReason = `Duplicate in this file (matches row #${prevRowIdx + 1})`;
+                    if (r.duplicateStatus !== 'kept') {
+                        r.selected = false;
+                        r.duplicateStatus = 'flagged';
+                    }
+                } else {
+                    seenInBatch.set(batchKey, idx);
+                    if (r.duplicateStatus !== 'kept') {
+                        r.isDuplicate = false;
+                        r.duplicateReason = '';
+                        r.duplicateStatus = 'normal';
+                    }
+                }
+            });
+        }
+        window.detectDuplicatesInStaging = detectDuplicatesInStaging;
+
+        function keepSmartRow(id) {
+            const row = smartStagingRows.find(r => r.id === id);
+            if (row) {
+                row.selected = true;
+                row.duplicateStatus = 'kept';
+                renderSmartStagingTable();
+                showExpensesToast("✓ Duplicate marked as Kept for import", true);
+            }
+        }
+        window.keepSmartRow = keepSmartRow;
+
+        function discardSmartRow(id) {
+            smartStagingRows = smartStagingRows.filter(r => r.id !== id);
+            detectDuplicatesInStaging();
+            renderSmartStagingTable();
+            showExpensesToast("🗑️ Duplicate row discarded", true);
+        }
+        window.discardSmartRow = discardSmartRow;
+
+        function discardAllDuplicateRows() {
+            const before = smartStagingRows.length;
+            smartStagingRows = smartStagingRows.filter(r => !(r.isDuplicate && r.duplicateStatus !== 'kept'));
+            const removed = before - smartStagingRows.length;
+            detectDuplicatesInStaging();
+            renderSmartStagingTable();
+            showExpensesToast(`🗑️ Discarded ${removed} duplicate row(s)`, true);
+        }
+        window.discardAllDuplicateRows = discardAllDuplicateRows;
+
+        function keepAllDuplicateRows() {
+            let count = 0;
+            smartStagingRows.forEach(r => {
+                if (r.isDuplicate && r.duplicateStatus !== 'kept') {
+                    r.selected = true;
+                    r.duplicateStatus = 'kept';
+                    count++;
+                }
+            });
+            renderSmartStagingTable();
+            showExpensesToast(`✓ Kept ${count} duplicate row(s) for import`, true);
+        }
+        window.keepAllDuplicateRows = keepAllDuplicateRows;
 
         function updateSmartStagingTotals() {
             const selectedRows = smartStagingRows.filter(r => r.selected);
@@ -6305,6 +6457,19 @@ Do not include markdown fences.`;
             const countBadge = document.getElementById('smartStagingCountBadge');
             if (countBadge) countBadge.innerText = `${smartStagingRows.length} rows`;
 
+            // Update duplicates alert banner
+            const flaggedDupes = smartStagingRows.filter(r => r.isDuplicate && r.duplicateStatus !== 'kept');
+            const dupBanner = document.getElementById('smartDuplicatesBanner');
+            const dupText = document.getElementById('smartDuplicatesCountText');
+            if (dupBanner) {
+                if (flaggedDupes.length > 0) {
+                    dupBanner.classList.remove('hidden');
+                    if (dupText) dupText.innerText = `${flaggedDupes.length} potential duplicate(s) detected (unselected by default to prevent double-entry).`;
+                } else {
+                    dupBanner.classList.add('hidden');
+                }
+            }
+
             const rowsToShow = smartStagingFilter === 'expenses' ? smartStagingRows.filter(r => !r.isDeposit) : smartStagingRows;
             const tbody = document.getElementById('smartStagingTableBody');
             if (!tbody) return;
@@ -6317,8 +6482,13 @@ Do not include markdown fences.`;
 
             let html = '';
             rowsToShow.forEach(r => {
+                const isDupe = !!r.isDuplicate;
+                const isKept = r.duplicateStatus === 'kept';
+                const rowBorderBg = isDupe ? (isKept ? 'bg-emerald-950/20 border-l-4 border-emerald-500' : 'bg-amber-950/30 border-l-4 border-amber-500') : '';
+                const safeNotes = (r.notes || '').replace(/"/g, '&quot;');
+
                 html += `
-                    <tr class="hover:bg-slate-800/40 transition ${r.selected ? '' : 'opacity-40'}">
+                    <tr class="hover:bg-slate-800/40 transition ${r.selected ? '' : 'opacity-50'} ${rowBorderBg}">
                         <td class="p-2 text-center">
                             <input type="checkbox" onchange="updateSmartRowField('${r.id}', 'selected', this.checked)" ${r.selected ? 'checked' : ''} class="rounded border-slate-700 text-emerald-600 focus:ring-0 cursor-pointer" />
                         </td>
@@ -6334,26 +6504,33 @@ Do not include markdown fences.`;
                         </td>
                         <td class="p-1.5">
                             <select onchange="updateSmartRowField('${r.id}', 'category', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-slate-200">
-                                <option value="Meat" ${r.category === 'Meat' ? 'selected' : ''}>🥩 Meat</option>
-                                <option value="Vegies" ${r.category === 'Vegies' || r.category === 'Fruit & Vegies' ? 'selected' : ''}>🥗 Fruit & Vegies</option>
-                                <option value="Bread" ${r.category === 'Bread' ? 'selected' : ''}>🍞 Bread</option>
-                                <option value="Packaging" ${r.category === 'Packaging' ? 'selected' : ''}>📦 Packaging</option>
-                                <option value="Campbells" ${r.category === 'Campbells' ? 'selected' : ''}>🥫 Campbells</option>
-                                <option value="Drinks" ${r.category === 'Drinks' ? 'selected' : ''}>🥤 Drinks</option>
-                                <option value="Ice Cream" ${r.category === 'Ice Cream' ? 'selected' : ''}>🍦 Ice Cream</option>
-                                <option value="Rent" ${r.category === 'Rent' ? 'selected' : ''}>🏢 Rent</option>
-                                <option value="Wages" ${r.category === 'Wages' ? 'selected' : ''}>👥 Wages</option>
-                                <option value="Others" ${r.category === 'Others' ? 'selected' : ''}>🔧 Others</option>
+                                ${EXPENSE_CATEGORIES.map(c => `<option value="${c.key}" ${r.category === c.key ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}
                             </select>
                         </td>
                         <td class="p-1.5">
-                            <input type="text" value="${r.notes || ''}" onchange="updateSmartRowField('${r.id}', 'notes', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white" />
+                            <input type="text" value="${safeNotes}" onchange="updateSmartRowField('${r.id}', 'notes', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white" />
+                            ${isDupe ? `
+                                <div class="text-[10px] ${isKept ? 'text-emerald-400' : 'text-amber-400'} font-medium flex items-center gap-1 mt-0.5">
+                                    <span>${isKept ? '✓' : '⚠️'}</span>
+                                    <span>${r.duplicateReason || 'Potential duplicate'}</span>
+                                </div>
+                            ` : ''}
                         </td>
                         <td class="p-1.5 text-right">
                             <input type="number" step="0.01" min="0" value="${Number(r.amount || 0).toFixed(2)}" onchange="updateSmartRowField('${r.id}', 'amount', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-right font-black text-amber-300" />
                         </td>
-                        <td class="p-1.5 text-center">
-                            <button type="button" onclick="removeSmartStagingRow('${r.id}')" class="text-rose-400 hover:text-rose-300 font-bold text-xs p-1" title="Remove row">✕</button>
+                        <td class="p-1.5 text-center whitespace-nowrap">
+                            ${isDupe && !isKept ? `
+                                <div class="inline-flex items-center gap-1">
+                                    <button type="button" onclick="keepSmartRow('${r.id}')" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer" title="Keep this duplicate anyway">Keep</button>
+                                    <button type="button" onclick="discardSmartRow('${r.id}')" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-1.5 py-0.5 rounded text-[10px] transition cursor-pointer" title="Discard this duplicate">Discard</button>
+                                </div>
+                            ` : `
+                                <div class="inline-flex items-center gap-1">
+                                    ${isDupe && isKept ? `<span class="text-emerald-400 text-[10px] font-bold">✓ Kept</span>` : ''}
+                                    <button type="button" onclick="removeSmartStagingRow('${r.id}')" class="text-rose-400 hover:text-rose-300 font-bold text-xs p-1" title="Remove row">✕</button>
+                                </div>
+                            `}
                         </td>
                     </tr>
                 `;
@@ -6420,9 +6597,17 @@ Do not include markdown fences.`;
             'Campbels': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Consumables & Stock)' },
             'Drinks': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Beverages)' },
             'Ice Cream': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Gelato / Ice Cream)' },
+            'Consumables': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Daily Consumables & Groceries)' },
             'Rent': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Commercial Lease & Power)' },
+            'Utilities': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Water, Power & Telecom)' },
+            'Fuel & Vehicle': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Petrol, Diesel & Vehicle)' },
+            'R & M': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Repairs & Maintenance)' },
             'Wages': { taxable: false, rate: 0, label: 'GST-Free / No GST (Wages & Salaries)' },
-            'Others': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Services & Repairs)' }
+            'Super': { taxable: false, rate: 0, label: 'GST-Free / No GST (Superannuation)' },
+            'Superannuation': { taxable: false, rate: 0, label: 'GST-Free / No GST (Superannuation)' },
+            'Insurance': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Commercial Insurance)' },
+            'Accounting': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Accounting, Xero & Tax)' },
+            'Others': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Services & General)' }
         };
 
         function getBasQuarterDates(quarter, fyYear) {
