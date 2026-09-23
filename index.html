@@ -491,30 +491,30 @@
                     <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold truncate">Staff Wages</div>
                         <div id="kpiRangeWages" class="text-base sm:text-lg font-black text-sky-400 mt-1 leading-tight">$0.00</div>
-                        <div class="text-[9px] text-slate-500 font-medium mt-1">Payroll total</div>
+                        <div id="kpiRangeWagesSub" class="text-[9px] text-slate-500 font-medium mt-1 truncate">Payroll total</div>
                     </div>
 
                     <!-- Expenses (2 Cols on Desktop, 1 Col on Mobile) -->
                     <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm cursor-pointer hover:border-amber-500 transition flex flex-col justify-between" onclick="switchAnalyticsTab('expenses')" title="Click to view expense ledger">
                         <div class="text-[9px] uppercase tracking-wider text-amber-400 font-bold flex items-center justify-between">
-                            <span class="truncate">Expenses</span> <span class="text-[8px] underline shrink-0">➔</span>
+                            <span class="truncate">Operating Expenses</span> <span class="text-[8px] underline shrink-0">➔</span>
                         </div>
                         <div id="kpiRangeExpenses" class="text-base sm:text-lg font-black text-amber-300 mt-1 leading-tight">$0.00</div>
-                        <div class="text-[9px] text-slate-500 font-medium mt-1">Operating exp</div>
+                        <div id="kpiRangeExpensesSub" class="text-[9px] text-slate-500 font-medium mt-1 truncate">Operating exp</div>
                     </div>
 
                     <!-- Hours & SPLH (2 Cols on Desktop, 1 Col on Mobile) -->
                     <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold truncate">Hours & SPLH</div>
                         <div id="kpiRangeHoursSplh" class="text-sm sm:text-base font-black text-slate-300 mt-1 leading-tight">0 hrs</div>
-                        <div class="text-[9px] text-slate-500 font-medium mt-1">Labor efficiency</div>
+                        <div id="kpiRangeHoursSub" class="text-[9px] text-slate-500 font-medium mt-1 truncate">Labor efficiency</div>
                     </div>
 
                     <!-- True Net Profit (2 Cols on Desktop, 1 Col on Mobile) -->
                     <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-purple-500/30 p-2.5 rounded-xl shadow-sm flex flex-col justify-between">
                         <div class="text-[9px] uppercase tracking-wider text-purple-300 font-bold truncate">🏆 Net Profit</div>
                         <div id="kpiRangeNet" class="text-base sm:text-lg font-black text-purple-300 mt-1 leading-tight">$0.00</div>
-                        <div class="text-[9px] text-slate-500 font-medium mt-1">Rev - Wage - Exp</div>
+                        <div id="kpiRangeNetSub" class="text-[9px] text-slate-500 font-medium mt-1 truncate">Rev − Exp − Cash Wages</div>
                     </div>
                 </div>
 
@@ -7216,8 +7216,12 @@ Do not include markdown fences.`;
             let rangeCashSales = 0;
             let rangeUberSales = 0;
             let rangeWages = 0;
+            let rangeCashWages = 0;
+            let rangeTaxWages = 0;
             let rangeHours = 0;
             let rangeExpenses = 0;
+            let rangeBankWages = 0;
+            let rangeOperatingExpenses = 0;
 
             const categoryRangeTotals = {};
             EXPENSE_CATEGORIES.forEach(c => categoryRangeTotals[c.key] = 0);
@@ -7229,6 +7233,11 @@ Do not include markdown fences.`;
                 rangeExpenses += amt;
                 const k = x.category || 'Others';
                 categoryRangeTotals[k] = (categoryRangeTotals[k] || 0) + amt;
+                if (k === 'Wages') {
+                    rangeBankWages += amt;
+                } else {
+                    rangeOperatingExpenses += amt;
+                }
             });
 
             const dayStatsList = [];
@@ -7254,6 +7263,8 @@ Do not include markdown fences.`;
 
                 const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
                 let dWages = 0;
+                let dCashWages = 0;
+                let dTaxWages = 0;
                 let dHours = 0;
 
                 dayShifts.forEach(shift => {
@@ -7265,23 +7276,33 @@ Do not include markdown fences.`;
                         const tr = Number(shift.taxRate) || 0;
                         const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
                         const th = Math.max(0, totH - ch);
-                        dWages += (ch * cr) + (th * tr);
+                        const cPay = ch * cr;
+                        const tPay = th * tr;
+                        dCashWages += cPay;
+                        dTaxWages += tPay;
+                        dWages += (cPay + tPay);
                     }
                 });
 
                 // Day expenses
                 const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, currentStore));
                 const dayExp = dayExpList.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+                const dayBankWages = dayExpList.filter(x => x.category === 'Wages').reduce((sum, x) => sum + Number(x.amount || 0), 0);
+                const dayOperatingExp = dayExp - dayBankWages;
 
                 rangeSales += sAmt;
                 rangeCardSales += cAmt;
                 rangeCashSales += cashAmt;
                 rangeUberSales += uberAmt;
                 rangeWages += dWages;
+                rangeCashWages += dCashWages;
+                rangeTaxWages += dTaxWages;
                 rangeHours += dHours;
 
                 const splh = dHours > 0 ? (sAmt / dHours) : 0;
-                const net = sAmt - dWages - dayExp;
+                // If this day has bank wages recorded, actual labor is bank wages + cash wages
+                const dayActualLabor = dayBankWages > 0 ? (dayBankWages + dCashWages) : dWages;
+                const net = sAmt - dayOperatingExp - dayActualLabor;
 
                 const [y, m, d] = dIso.split('-').map(Number);
                 const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -7295,8 +7316,8 @@ Do not include markdown fences.`;
                     cAmt,
                     cashAmt,
                     uberAmt,
-                    dWages,
-                    dayExp,
+                    dWages: dayActualLabor,
+                    dayExp: dayOperatingExp,
                     dHours,
                     splh,
                     net,
@@ -7305,6 +7326,12 @@ Do not include markdown fences.`;
             });
 
             // Update KPI Cards
+            const hasBankWages = rangeBankWages > 0;
+            const totalActualWages = hasBankWages ? (rangeBankWages + rangeCashWages) : rangeWages;
+            const displayOperatingExp = hasBankWages ? rangeOperatingExpenses : rangeExpenses;
+            // User formula: Income - Expenses - Cash Wages (when bank wages are in expenses)
+            const trueNet = rangeSales - displayOperatingExp - totalActualWages;
+
             const kpiSales = document.getElementById('kpiRangeSales');
             const kpiCardSales = document.getElementById('kpiRangeCardSales');
             const kpiCashSales = document.getElementById('kpiRangeCashSales');
@@ -7329,8 +7356,21 @@ Do not include markdown fences.`;
                 if (kpiBreakdown) kpiBreakdown.className = "mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-2 gap-2";
             }
 
-            if (kpiWages) kpiWages.innerText = `$${rangeWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (kpiExpenses) kpiExpenses.innerText = `$${rangeExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiWages) {
+                kpiWages.innerText = `$${totalActualWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            const kpiWagesSub = document.getElementById('kpiRangeWagesSub');
+            if (kpiWagesSub) {
+                kpiWagesSub.innerText = hasBankWages ? `Bank: $${rangeBankWages.toFixed(0)} + Cash: $${rangeCashWages.toFixed(0)}` : 'Roster estimated';
+            }
+
+            if (kpiExpenses) {
+                kpiExpenses.innerText = `$${displayOperatingExp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            const kpiExpensesSub = document.getElementById('kpiRangeExpensesSub');
+            if (kpiExpensesSub) {
+                kpiExpensesSub.innerText = hasBankWages ? 'Operating (excl. bank wages)' : 'Operating expenses';
+            }
             
             if (kpiHoursSplh) {
                 const avgSplh = rangeHours > 0 ? (rangeSales / rangeHours) : 0;
@@ -7338,10 +7378,13 @@ Do not include markdown fences.`;
             }
 
             if (kpiNet) {
-                const trueNet = rangeSales - rangeWages - rangeExpenses;
                 const color = trueNet >= 0 ? 'text-purple-300' : 'text-rose-400';
                 kpiNet.className = `text-base sm:text-lg font-black ${color}`;
                 kpiNet.innerText = `$${trueNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            const kpiNetSub = document.getElementById('kpiRangeNetSub');
+            if (kpiNetSub) {
+                kpiNetSub.innerText = hasBankWages ? 'Rev − Exp − Cash Wages' : 'Rev − Wage − Exp';
             }
 
             // Category Mini-Pills
@@ -7488,9 +7531,12 @@ Do not include markdown fences.`;
 
         function calculateMetricsForDates(dates) {
             let sales = 0;
-            let wages = 0;
+            let rosterCashWages = 0;
+            let rosterTaxWages = 0;
+            let rosterTotalWages = 0;
             let hours = 0;
-            let expenses = 0;
+            let totalExpenses = 0;
+            let bankWages = 0;
 
             dates.forEach(dIso => {
                 const sRec = getStoreSalesForDate(dIso, currentStore);
@@ -7506,21 +7552,43 @@ Do not include markdown fences.`;
                         const tr = Number(shift.taxRate) || 0;
                         const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
                         const th = Math.max(0, totH - ch);
-                        wages += (ch * cr) + (th * tr);
+                        const cPay = ch * cr;
+                        const tPay = th * tr;
+                        rosterCashWages += cPay;
+                        rosterTaxWages += tPay;
+                        rosterTotalWages += (cPay + tPay);
                     }
                 });
 
                 const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, currentStore));
                 dayExpList.forEach(x => {
-                    expenses += Number(x.amount || 0);
+                    const amt = Number(x.amount || 0);
+                    totalExpenses += amt;
+                    if (x.category === 'Wages') bankWages += amt;
                 });
             });
 
-            const net = sales - wages - expenses;
+            const hasBankWages = bankWages > 0;
+            const totalPaidWages = hasBankWages ? (bankWages + rosterCashWages) : rosterTotalWages;
+            const operatingExpenses = hasBankWages ? (totalExpenses - bankWages) : totalExpenses;
+            // User formula: Income - Expenses - Cash Wages (when bank wages are in expenses)
+            const net = sales - operatingExpenses - totalPaidWages;
             const splh = hours > 0 ? (sales / hours) : 0;
-            const laborPct = sales > 0 ? (wages / sales) * 100 : 0;
+            const laborPct = sales > 0 ? (totalPaidWages / sales) * 100 : 0;
 
-            return { sales, wages, hours, expenses, net, splh, laborPct };
+            return { 
+                sales, 
+                wages: totalPaidWages, 
+                bankWages, 
+                cashWages: rosterCashWages, 
+                hasBankWages, 
+                hours, 
+                expenses: operatingExpenses, 
+                totalExpenses, 
+                net, 
+                splh, 
+                laborPct 
+            };
         }
 
         function runComparison() {
@@ -7637,13 +7705,13 @@ Do not include markdown fences.`;
                                 <td class="p-2.5 text-right">${formatDiff(metA.sales, metB.sales, true, false)}</td>
                             </tr>
                             <tr>
-                                <td class="p-2.5 font-bold">Staff Labor Wages</td>
+                                <td class="p-2.5 font-bold">Staff Labor Wages ${metA.hasBankWages || metB.hasBankWages ? '<span class="text-[9px] text-sky-400 font-normal">(Bank + Cash)</span>' : ''}</td>
                                 <td class="p-2.5 text-right">$${metA.wages.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">$${metB.wages.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">${formatDiff(metA.wages, metB.wages, true, true)}</td>
                             </tr>
                             <tr>
-                                <td class="p-2.5 font-bold">Business Expenses (8 Categories)</td>
+                                <td class="p-2.5 font-bold">Operating Expenses ${metA.hasBankWages || metB.hasBankWages ? '<span class="text-[9px] text-amber-400 font-normal">(excl. bank wages)</span>' : ''}</td>
                                 <td class="p-2.5 text-right font-semibold text-amber-300">$${metA.expenses.toFixed(0)}</td>
                                 <td class="p-2.5 text-right font-semibold text-amber-300">$${metB.expenses.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">${formatDiff(metA.expenses, metB.expenses, true, true)}</td>
@@ -7661,7 +7729,7 @@ Do not include markdown fences.`;
                                 <td class="p-2.5 text-right">${formatDiff(metA.splh, metB.splh, true, false)}</td>
                             </tr>
                             <tr class="bg-purple-950/30">
-                                <td class="p-2.5 font-black text-purple-200">🏆 True Net Profit (Revenue − Wages − Expenses)</td>
+                                <td class="p-2.5 font-black text-purple-200">🏆 True Net Profit (Revenue − Operating Expenses − Wages)</td>
                                 <td class="p-2.5 text-right font-black text-purple-300">$${metA.net.toFixed(0)}</td>
                                 <td class="p-2.5 text-right font-black text-purple-300">$${metB.net.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">${formatDiff(metA.net, metB.net, true, false)}</td>
