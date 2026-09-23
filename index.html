@@ -157,14 +157,14 @@
             </div>
 
             <div id="mainHeaderButtons" class="flex flex-row items-center justify-start sm:justify-end gap-1.5 flex-nowrap overflow-x-auto shrink-0 w-full sm:w-auto">
-                <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    👁️ View Roster
+                <button type="button" id="mainTabRosterBtn" onclick="switchMainAppTab('roster')" class="bg-amber-500 text-slate-950 font-black px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow flex items-center gap-1 whitespace-nowrap cursor-pointer">
+                    📅 Roster
                 </button>
-                <button type="button" onclick="openStaffModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700" title="Manage Staff & Multi-Store Pay Rates">
+                <button type="button" id="mainTabSalesBtn" onclick="switchMainAppTab('sales_expenses')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer">
+                    📊 Sales & Expenses
+                </button>
+                <button type="button" onclick="openStaffModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer" title="Manage Staff & Multi-Store Pay Rates">
                     👥 Staff Rates
-                </button>
-                <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap">
-                    📋 Copy Last Week
                 </button>
                 <button id="authButton" type="button" class="hide-on-share bg-red-600 hover:bg-red-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer">
                     🚪 Logout
@@ -172,30 +172,30 @@
             </div>
         </div>
 
-        <!-- Store Switcher & Venue Context -->
-        <div class="hide-on-share flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
-            <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Store:</span>
-                <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold flex-wrap">
-                    <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs (Epos Now)">
-                        <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya Kebabs</span>
+        <!-- TAB 1: ROSTER VIEW CONTAINER -->
+        <div id="rosterMainViewContainer" class="space-y-4">
+            <!-- Roster Venue Switcher & Action Toolbar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-900 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
+                <div class="hide-on-share flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Roster:</span>
+                    <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold">
+                        <button type="button" id="rosterStoreBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs">
+                            <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya</span>
+                        </button>
+                        <button type="button" id="rosterStoreBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar">
+                            <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Clean printable / shareable roster view">
+                        👁️ View Roster
                     </button>
-                    <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar (Loyverse POS)">
-                        <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice Bar</span>
-                    </button>
-                    <button type="button" id="storeBtn_company_shared" onclick="switchStore('company_shared')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Company shared overhead (vehicles, fuel, insurances, accounting, admin)">
-                        <span>🏢</span> <span>Company Overhead</span>
-                    </button>
-                    <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Consolidated view of all entities for BAS tax reporting">
-                        <span>🌐</span> <span>Consolidated (BAS)</span>
+                    <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Copy last week's shifts to current week">
+                        📋 Copy Last Week
                     </button>
                 </div>
             </div>
-            <div id="storeContextBadge" class="text-[11px] text-slate-300 font-medium flex items-center gap-1.5 pr-1">
-                <span id="storeContextDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span id="storeContextText">Viewing Anatolya Kebabs (Epos Now)</span>
-            </div>
-        </div>
         
         <div id="weeklyTaxLimitSection" class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 sm:p-4 space-y-2.5">
             <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1.5">
@@ -316,9 +316,35 @@
                 </table>
             </div>
         </div>
+        </div> <!-- End #rosterMainViewContainer -->
 
-        <!-- Hourly Sales & Analytics Intelligence (Hide on Share) -->
-        <div id="hourlySalesSection" class="hide-on-share bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-5 space-y-4 shadow-xl border border-slate-800">
+        <!-- TAB 2: Hourly Sales & Analytics Intelligence (Hide on Share) -->
+        <div id="hourlySalesSection" class="hidden hide-on-share bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-5 space-y-4 shadow-xl border border-slate-800">
+            <!-- Store Switcher & Venue Context for Sales & Expenses -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950/80 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800/80">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Entity:</span>
+                    <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold flex-wrap">
+                        <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs (Epos Now)">
+                            <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya</span>
+                        </button>
+                        <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar (Loyverse POS)">
+                            <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice</span>
+                        </button>
+                        <button type="button" id="storeBtn_company_shared" onclick="switchStore('company_shared')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Company shared overhead (vehicles, fuel, insurances, accounting, admin)">
+                            <span>🏢</span> <span>Company Overhead</span>
+                        </button>
+                        <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Consolidated view of all entities for BAS tax reporting">
+                            <span>🌐</span> <span>Consolidated (BAS)</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="storeContextBadge" class="text-[11px] text-slate-300 font-medium flex items-center gap-1.5 pr-1">
+                    <span id="storeContextDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="storeContextText">Viewing Anatolya Kebabs (Epos Now)</span>
+                </div>
+            </div>
+
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
                 <div class="flex flex-wrap items-center gap-2">
@@ -337,11 +363,8 @@
                     <button type="button" onclick="refreshCloudData(true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="Quick reload from Supabase database">
                         <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>Refresh</span>
                     </button>
-                    <button type="button" onclick="openExpenseModal()" class="text-[11px] shrink-0 bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm whitespace-nowrap" title="Log a new business expense">
-                        💸 Log Exp
-                    </button>
-                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="View business expenses ledger">
-                        📋 Ledger
+                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="View business expenses ledger">
+                        📋 Expenses
                     </button>
                 </div>
             </div>
@@ -581,19 +604,19 @@
                         </span>
                     </div>
 
-                    <!-- Row 2 on mobile / Right on desktop: Log Exp & BAS Report Buttons -->
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <button type="button" onclick="openLearnedRulesModal()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="View and manage remembered supplier categorization rules">
+                    <!-- Row 2 on mobile / Right on desktop: Expenses Actions Toolbar -->
+                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+                        <button type="button" onclick="openLearnedRulesModal()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="View remembered supplier categorization rules">
                             <span>🧠</span> <span>Rules (<span id="ledgerLearnedRulesCountBadge">0</span>)</span>
                         </button>
-                        <button type="button" onclick="openSmartExpenseModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Upload screenshot, bank statement CSV/PDF, or invoice for automated reading and categorization">
-                            <span>📷</span> <span>Smart Upload / Ingest</span>
+                        <button type="button" onclick="openSmartExpenseModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="Upload screenshot, bank statement CSV/PDF, or invoice for automated reading">
+                            <span>📷</span> <span>Upload</span>
                         </button>
-                        <button type="button" onclick="openExpenseModal()" class="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Log a single expense manually">
-                            ➕ Log Exp
+                        <button type="button" onclick="openExpenseModal()" class="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-500 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="Log a single expense manually">
+                            <span>➕</span> <span>Log Exp</span>
                         </button>
-                        <button type="button" id="tabBasBtn" onclick="switchAnalyticsTab('bas')" class="flex-1 sm:flex-none bg-purple-700 hover:bg-purple-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap border border-purple-500/40 cursor-pointer" title="Australian Business Activity Statement (BAS) Quarterly Tax Report">
-                            📑 BAS Report
+                        <button type="button" id="tabBasBtn" onclick="switchAnalyticsTab('bas')" class="flex-1 sm:flex-none bg-purple-700 hover:bg-purple-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap border border-purple-500/40 cursor-pointer" title="Australian Business Activity Statement (BAS) Quarterly Tax Report">
+                            <span>📑</span> <span>BAS</span>
                         </button>
                     </div>
                 </div>
@@ -715,6 +738,7 @@
                             <option value="Drinks">🥤 Drinks</option>
                             <option value="Ice Cream">🍦 Ice Cream</option>
                             <option value="Rent">🏢 Rent</option>
+                            <option value="Wages">👥 Wages</option>
                             <option value="Others">🔧 Others</option>
                         </select>
                     </div>
@@ -1381,6 +1405,7 @@
                         <option value="Drinks">🥤 Drinks</option>
                         <option value="Ice Cream">🍦 Ice Cream</option>
                         <option value="Rent">🏢 Rent</option>
+                        <option value="Wages">👥 Wages</option>
                         <option value="Others">🔧 Others</option>
                     </select>
                 </div>
@@ -1559,15 +1584,16 @@
                 <div>
                     <label class="block text-[11px] font-bold text-slate-300 uppercase tracking-tight">Expense Category</label>
                     <select id="expenseCategory" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white text-xs font-semibold focus:outline-none focus:border-amber-500 shadow-sm">
-                        <option value="Meat">🥩 Meat (Meat, Cheese, Oil, Bags)</option>
+                        <option value="Meat">🥩 Meat</option>
                         <option value="Vegies">🥗 Fruit & Vegies</option>
                         <option value="Bread">🍞 Bread</option>
                         <option value="Packaging">📦 Packaging</option>
-                        <option value="Campbells">🥫 Campbells (Chips, Sauces, Consumables)</option>
+                        <option value="Campbells">🥫 Campbells</option>
                         <option value="Drinks">🥤 Drinks</option>
-                        <option value="Ice Cream">🍦 Ice Cream (Royal Foods, Gelato)</option>
-                        <option value="Rent">🏢 Rent (Rent, Utilities, Outgoings)</option>
-                        <option value="Others">🔧 Others (Repairs, Pest, Misc)</option>
+                        <option value="Ice Cream">🍦 Ice Cream</option>
+                        <option value="Rent">🏢 Rent</option>
+                        <option value="Wages">👥 Wages</option>
+                        <option value="Others">🔧 Others</option>
                     </select>
                 </div>
 
@@ -1712,6 +1738,7 @@
         window.syncDirectFromEpos = syncDirectFromEpos;
         window.refreshCloudData = refreshCloudData;
         window.loadCloudData = loadCloudData;
+        window.switchMainAppTab = switchMainAppTab;
         window.switchAnalyticsTab = switchAnalyticsTab;
         window.setHeatmapMode = setHeatmapMode;
         window.drillIntoDay = drillIntoDay;
@@ -1734,6 +1761,7 @@
         window.submitExpenseForm = submitExpenseForm;
         window.deleteExpenseItem = deleteExpenseItem;
         window.changeExpenseEntity = changeExpenseEntity;
+        window.changeExpenseCategory = changeExpenseCategory;
         window.setLedgerEntityFilter = setLedgerEntityFilter;
         window.handleExpenseSearchInput = handleExpenseSearchInput;
         window.clearExpenseSearch = clearExpenseSearch;
@@ -3476,6 +3504,9 @@
 
         function switchAnalyticsTab(tabName) {
             currentAnalyticsTab = tabName;
+            if (typeof activeMainTab !== 'undefined' && activeMainTab !== 'sales_expenses' && typeof switchMainAppTab === 'function') {
+                switchMainAppTab('sales_expenses');
+            }
             const tabRange = document.getElementById('tabRangeBtn');
             const tabCompare = document.getElementById('tabCompareBtn');
             const tabExpenses = document.getElementById('tabExpensesBtn');
@@ -3913,42 +3944,37 @@
 
         
         const EXPENSE_CATEGORIES = [
-            { key: 'Meat', label: 'Meat (Meat, Cheese, Oil, Bags)', icon: '🥩', color: 'text-rose-400 bg-rose-950/70 border-rose-800', stores: ['anatolya'] },
+            { key: 'Meat', label: 'Meat', icon: '🥩', color: 'text-rose-400 bg-rose-950/70 border-rose-800' },
             { key: 'Vegies', label: 'Fruit & Vegies', icon: '🥗', color: 'text-emerald-400 bg-emerald-950/70 border-emerald-800' },
-            { key: 'Bread', label: 'Bread', icon: '🍞', color: 'text-amber-400 bg-amber-950/70 border-amber-800', stores: ['anatolya'] },
+            { key: 'Bread', label: 'Bread', icon: '🍞', color: 'text-amber-400 bg-amber-950/70 border-amber-800' },
             { key: 'Packaging', label: 'Packaging', icon: '📦', color: 'text-orange-400 bg-orange-950/70 border-orange-800' },
-            { key: 'Campbells', label: 'Campbells (Chips, Sauces, Consumables)', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
+            { key: 'Campbells', label: 'Campbells', icon: '🥫', color: 'text-red-400 bg-red-950/70 border-red-800' },
             { key: 'Drinks', label: 'Drinks', icon: '🥤', color: 'text-sky-400 bg-sky-950/70 border-sky-800' },
-            { key: 'Ice Cream', label: 'Ice Cream (Royal Foods, Gelato)', icon: '🍦', color: 'text-pink-400 bg-pink-950/70 border-pink-800', stores: ['green_juice'] },
-            { key: 'Rent', label: 'Rent (Rent, Utilities, Outgoings)', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
-            { key: 'Others', label: 'Others (Repairs, Pest, Misc)', icon: '🔧', color: 'text-purple-400 bg-purple-950/70 border-purple-800' }
+            { key: 'Ice Cream', label: 'Ice Cream', icon: '🍦', color: 'text-pink-400 bg-pink-950/70 border-pink-800' },
+            { key: 'Rent', label: 'Rent', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
+            { key: 'Wages', label: 'Wages', icon: '👥', color: 'text-cyan-400 bg-cyan-950/70 border-cyan-800' },
+            { key: 'Others', label: 'Others', icon: '🔧', color: 'text-purple-400 bg-purple-950/70 border-purple-800' }
         ];
 
         function isCategoryForStore(catKey, storeKey = currentStore) {
-            let k = (catKey || '').toLowerCase();
-            if (k === 'campbels') k = 'campbells';
-            const c = EXPENSE_CATEGORIES.find(x => x.key.toLowerCase() === k);
-            if (!c || !c.stores) return true;
-            if (!storeKey || storeKey === 'all') return true;
-            return c.stores.includes(storeKey);
+            return true;
         }
 
         function updateExpenseModalCategoryOptions(selectedStore = currentStore) {
             const catSelect = document.getElementById('expenseCategory');
             if (!catSelect) return;
             const curVal = catSelect.value;
-            const validCats = EXPENSE_CATEGORIES.filter(c => !c.stores || !selectedStore || selectedStore === 'all' || c.stores.includes(selectedStore));
             catSelect.innerHTML = '';
-            validCats.forEach(c => {
+            EXPENSE_CATEGORIES.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.key;
                 opt.textContent = `${c.icon} ${c.label}`;
                 catSelect.appendChild(opt);
             });
-            if (validCats.some(c => c.key === curVal)) {
+            if (EXPENSE_CATEGORIES.some(c => c.key === curVal)) {
                 catSelect.value = curVal;
-            } else if (validCats.length > 0) {
-                catSelect.value = validCats[0].key;
+            } else if (EXPENSE_CATEGORIES.length > 0) {
+                catSelect.value = EXPENSE_CATEGORIES[0].key;
             }
         }
 
@@ -3992,11 +4018,73 @@
         }
         window.closeExpenseModal = closeExpenseModal;
 
+        // ==================== MAIN APP NAVIGATION (ROSTER vs SALES & EXPENSES) ====================
+        let activeMainTab = localStorage.getItem('alhamd_active_main_tab') || 'roster';
+
+        function updateRosterTabButtonsUI() {
+            const btnAna = document.getElementById('rosterStoreBtn_anatolya');
+            const btnGj = document.getElementById('rosterStoreBtn_green_juice');
+            const activeAnaCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer";
+            const activeGjCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer";
+            const inactiveCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer";
+
+            if (btnAna) btnAna.className = (currentStore === 'anatolya' ? activeAnaCls : inactiveCls);
+            if (btnGj) btnGj.className = (currentStore === 'green_juice' ? activeGjCls : inactiveCls);
+        }
+        window.updateRosterTabButtonsUI = updateRosterTabButtonsUI;
+
+        function switchMainAppTab(tabKey) {
+            if (tabKey !== 'sales_expenses') tabKey = 'roster';
+            activeMainTab = tabKey;
+            localStorage.setItem('alhamd_active_main_tab', tabKey);
+
+            const rosterBtn = document.getElementById('mainTabRosterBtn');
+            const salesBtn = document.getElementById('mainTabSalesBtn');
+            const rosterContainer = document.getElementById('rosterMainViewContainer');
+            const salesContainer = document.getElementById('hourlySalesSection');
+
+            const activeRosterCls = "bg-amber-500 text-slate-950 font-black px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow flex items-center gap-1 whitespace-nowrap cursor-pointer";
+            const inactiveRosterCls = "bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer";
+
+            const activeSalesCls = "bg-purple-600 text-white font-black px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow flex items-center gap-1 whitespace-nowrap cursor-pointer";
+            const inactiveSalesCls = "bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer";
+
+            if (tabKey === 'roster') {
+                if (rosterBtn) rosterBtn.className = activeRosterCls;
+                if (salesBtn) salesBtn.className = inactiveSalesCls;
+                if (rosterContainer) rosterContainer.classList.remove('hidden');
+                if (salesContainer) salesContainer.classList.add('hidden');
+
+                // If currently on company_shared or all, switch to anatolya for roster
+                if (currentStore !== 'anatolya' && currentStore !== 'green_juice') {
+                    switchStore('anatolya');
+                } else {
+                    updateRosterTabButtonsUI();
+                }
+                renderWeeklyTable();
+            } else {
+                if (rosterBtn) rosterBtn.className = inactiveRosterCls;
+                if (salesBtn) salesBtn.className = activeSalesCls;
+                if (rosterContainer) rosterContainer.classList.add('hidden');
+                if (salesContainer) salesContainer.classList.remove('hidden');
+                renderCurrentAnalyticsView();
+            }
+        }
+        window.switchMainAppTab = switchMainAppTab;
+
         // ==================== MULTI-STORE MANAGEMENT & SWITCHER ====================
         function switchStore(storeKey) {
             if (!['anatolya', 'green_juice', 'company_shared', 'all'].includes(storeKey)) storeKey = 'anatolya';
             currentStore = storeKey;
             localStorage.setItem('alhamd_current_store', storeKey);
+
+            // Update Roster Tab Switcher UI
+            updateRosterTabButtonsUI();
+
+            // If switching to company_shared or all, ensure Sales & Expenses view is active
+            if ((storeKey === 'company_shared' || storeKey === 'all') && activeMainTab === 'roster') {
+                switchMainAppTab('sales_expenses');
+            }
 
             // 1. Update Switcher Buttons UI
             const btnAnatolya = document.getElementById('storeBtn_anatolya');
@@ -5164,6 +5252,47 @@
         }
         window.changeExpenseEntity = changeExpenseEntity;
 
+        async function changeExpenseCategory(id, newCategory) {
+            const item = expensesStore.find(x => String(x.id) === String(id));
+            if (!item) return;
+            const oldCategory = item.category || 'Others';
+            if (oldCategory === newCategory) return;
+
+            // 1. Optimistic update
+            item.category = newCategory;
+
+            // 2. Re-render UI immediately
+            renderExpensesLedgerView();
+
+            // 3. Record learning & toast
+            const amtStr = `$${Number(item.amount || 0).toFixed(2)}`;
+            const noteStr = item.notes ? ` (${item.notes.slice(0, 22)})` : '';
+            if (item.notes && typeof recordExpenseLearning === 'function') {
+                const learned = recordExpenseLearning(item.notes, item.store_id || 'anatolya', newCategory);
+                if (learned) {
+                    showExpensesToast(`Categorized as ${newCategory} & 🧠 remembered "${learned.label}"`);
+                } else {
+                    showExpensesToast(`Categorized ${amtStr}${noteStr} as ${newCategory}`);
+                }
+            } else {
+                showExpensesToast(`Categorized ${amtStr}${noteStr} as ${newCategory}`);
+            }
+
+            // 4. Persist to server / Supabase
+            try {
+                await callSheetApi({
+                    action: "save_expense",
+                    expense: item
+                });
+            } catch (err) {
+                console.error("Failed to update expense category in backend:", err);
+                item.category = oldCategory;
+                renderExpensesLedgerView();
+                showExpensesToast(`Failed to update category: ${err.message}`, false);
+            }
+        }
+        window.changeExpenseCategory = changeExpenseCategory;
+
         function renderExpensesLedgerView() {
             updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
@@ -5312,9 +5441,18 @@
                                 </select>
                             </td>
                             <td class="p-2.5">
-                                <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${meta.color}">
-                                    ${meta.icon} ${x.category}
-                                </span>
+                                <select onchange="changeExpenseCategory(${x.id}, this.value)" class="text-[11px] font-semibold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs bg-slate-900 border-slate-700 text-slate-200" title="Click to reassign category">
+                                    <option value="Meat" ${x.category === 'Meat' ? 'selected' : ''}>🥩 Meat</option>
+                                    <option value="Vegies" ${x.category === 'Vegies' || x.category === 'Fruit & Vegies' ? 'selected' : ''}>🥗 Fruit & Vegies</option>
+                                    <option value="Bread" ${x.category === 'Bread' ? 'selected' : ''}>🍞 Bread</option>
+                                    <option value="Packaging" ${x.category === 'Packaging' ? 'selected' : ''}>📦 Packaging</option>
+                                    <option value="Campbells" ${x.category === 'Campbells' ? 'selected' : ''}>🥫 Campbells</option>
+                                    <option value="Drinks" ${x.category === 'Drinks' ? 'selected' : ''}>🥤 Drinks</option>
+                                    <option value="Ice Cream" ${x.category === 'Ice Cream' ? 'selected' : ''}>🍦 Ice Cream</option>
+                                    <option value="Rent" ${x.category === 'Rent' ? 'selected' : ''}>🏢 Rent</option>
+                                    <option value="Wages" ${x.category === 'Wages' ? 'selected' : ''}>👥 Wages</option>
+                                    <option value="Others" ${x.category === 'Others' ? 'selected' : ''}>🔧 Others</option>
+                                </select>
                             </td>
                             <td class="p-2.5 text-slate-300">${x.notes || '<span class="opacity-30">—</span>'}</td>
                             <td class="p-2.5 text-right font-black text-amber-300 whitespace-nowrap">${Number(x.amount || 0).toFixed(2)}</td>
@@ -6221,6 +6359,7 @@ Do not include markdown fences.`;
                                 <option value="Drinks" ${r.category === 'Drinks' ? 'selected' : ''}>🥤 Drinks</option>
                                 <option value="Ice Cream" ${r.category === 'Ice Cream' ? 'selected' : ''}>🍦 Ice Cream</option>
                                 <option value="Rent" ${r.category === 'Rent' ? 'selected' : ''}>🏢 Rent</option>
+                                <option value="Wages" ${r.category === 'Wages' ? 'selected' : ''}>👥 Wages</option>
                                 <option value="Others" ${r.category === 'Others' ? 'selected' : ''}>🔧 Others</option>
                             </select>
                         </td>
@@ -6299,6 +6438,7 @@ Do not include markdown fences.`;
             'Drinks': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Beverages)' },
             'Ice Cream': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Gelato / Ice Cream)' },
             'Rent': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Commercial Lease & Power)' },
+            'Wages': { taxable: false, rate: 0, label: 'GST-Free / No GST (Wages & Salaries)' },
             'Others': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Services & Repairs)' }
         };
 
@@ -7838,6 +7978,7 @@ function convertHourStr(hStr) {
 
                 loadCloudData();
                 switchStore(currentStore);
+                switchMainAppTab(activeMainTab);
             } else {
                 console.log("Logged out / Unauthenticated");
 
