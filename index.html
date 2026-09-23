@@ -5218,7 +5218,11 @@
             { pattern: /majors/i, entity: 'green_juice', category: 'Ice Cream', label: 'Majors' },
             { pattern: /royal\s*foods/i, entity: 'green_juice', category: 'Ice Cream', label: 'Royal Foods' },
             { pattern: /(gelato|ice\s*cream)/i, entity: 'green_juice', category: 'Ice Cream', label: 'Ice Cream' },
-            { pattern: /westfield.*carousel/i, entity: 'green_juice', category: 'Rent', label: 'Westfield Carousel' },
+            { pattern: /(westfield.*carousel|scentre\s*group)/i, entity: 'green_juice', category: 'Rent', label: 'Rent (Carousel/Scentre)' },
+            { pattern: /newtrition/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Newtrition' },
+            { pattern: /ready\s*chef\s*go/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Ready Chef Go' },
+            { pattern: /(jaka\s*packaging|detpak|packaging|carton|containers|cups|straws)/i, entity: 'green_juice', category: 'Packaging', label: 'Packaging' },
+            { pattern: /tyro\s*fees/i, entity: 'green_juice', category: 'Others', label: 'Tyro Terminal Fees' },
             { pattern: /woolworths.*carousel/i, entity: 'green_juice', category: 'Others', label: 'Woolworths Carousel' },
             { pattern: /(juice|citrus|mango|passionfruit|oranges|apple|berries|fruit)/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Fresh Produce' },
             
@@ -5425,62 +5429,130 @@
         }
 
         function parseBankStatementCsv(csvText) {
-            const lines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
-            const rows = [];
-            lines.forEach((line, idx) => {
+            const rawLines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
+            if (rawLines.length === 0) return [];
+
+            const table = [];
+            rawLines.forEach(line => {
                 const matches = line.match(/(?:^|,)(?:"([^"]*)"|([^,]*))/g);
-                if (!matches || matches.length < 3) return;
-                const cols = matches.map(m => m.replace(/^,/, '').replace(/^"/, '').replace(/"$/, '').trim());
+                if (matches) {
+                    const cols = matches.map(m => m.replace(/^,/, '').replace(/^"/, '').replace(/"$/, '').trim());
+                    table.push(cols);
+                }
+            });
 
-                // Find date and amount columns dynamically
-                let rawDate = '', rawAmt = '', desc = '';
+            if (table.length === 0) return [];
 
-                // Try col 0 date, col 1 amount, col 2 desc (CommBank format)
-                if (cols[0].match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/)) {
-                    rawDate = cols[0];
-                    rawAmt = cols[1];
-                    desc = cols[2];
-                } else if (cols[1] && cols[1].match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/)) {
-                    rawDate = cols[1];
-                    rawAmt = cols[2];
-                    desc = cols[3] || cols[0];
+            // 1. Detect Header Row
+            let headerIdx = -1;
+            let colMap = { date: -1, amount: -1, debit: -1, credit: -1, desc: -1, ref: -1, fromTo: -1 };
+
+            for (let r = 0; r < Math.min(table.length, 5); r++) {
+                const row = table[r].map(c => c.toLowerCase());
+                const hasDate = row.some(c => c === 'date' || c.includes('date'));
+                const hasAmt = row.some(c => c === 'amount' || c === 'debit' || c === 'credit' || c.includes('amount'));
+                if (hasDate && hasAmt) {
+                    headerIdx = r;
+                    row.forEach((colName, cIdx) => {
+                        if (colName === 'date' || colName.includes('date')) colMap.date = cIdx;
+                        else if (colName === 'amount') colMap.amount = cIdx;
+                        else if (colName === 'debit' || colName.includes('debit') || colName.includes('withdrawal')) colMap.debit = cIdx;
+                        else if (colName === 'credit' || colName.includes('credit') || colName.includes('deposit')) colMap.credit = cIdx;
+                        else if (colName === 'description' || colName === 'narrative' || colName === 'payee' || colName === 'details') colMap.desc = cIdx;
+                        else if (colName === 'reference' || colName === 'ref') colMap.ref = cIdx;
+                        else if (colName === 'from/to' || colName.includes('from')) colMap.fromTo = cIdx;
+                    });
+                    break;
+                }
+            }
+
+            const dataRows = (headerIdx !== -1) ? table.slice(headerIdx + 1) : table;
+            const results = [];
+
+            dataRows.forEach((cols, idx) => {
+                let rawDate = '', rawAmt = '', desc = '', ref = '';
+
+                if (headerIdx !== -1) {
+                    if (colMap.date !== -1) rawDate = cols[colMap.date] || '';
+                    if (colMap.amount !== -1) rawAmt = cols[colMap.amount] || '';
+                    else if (colMap.debit !== -1 && cols[colMap.debit]) rawAmt = '-' + cols[colMap.debit];
+                    else if (colMap.credit !== -1 && cols[colMap.credit]) rawAmt = '+' + cols[colMap.credit];
+                    
+                    if (colMap.desc !== -1) desc = cols[colMap.desc] || '';
+                    if (colMap.ref !== -1 && cols[colMap.ref]) ref = cols[colMap.ref];
+                    else if (colMap.fromTo !== -1 && cols[colMap.fromTo] && cols[colMap.fromTo].length < 30) ref = cols[colMap.fromTo];
                 } else {
-                    return; // Header or unparseable line
+                    // Fallback fuzzy detection when no header exists
+                    cols.forEach(c => {
+                        if (!rawDate && (c.match(/^\d{4}-\d{2}-\d{2}$/) || c.match(/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/))) {
+                            rawDate = c;
+                        } else if (!rawAmt && c.match(/^[+-]?\$?\d+(?:,\d{3})*(?:\.\d{2})?$/) && !c.includes('/')) {
+                            rawAmt = c;
+                        } else if (c.length > desc.length && !c.match(/^[+-]?\$?\d+/)) {
+                            desc = c;
+                        }
+                    });
                 }
 
+                // Date normalizer (supports YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD)
                 let dateIso = '';
-                if (rawDate.includes('/')) {
+                if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    dateIso = rawDate;
+                } else if (rawDate.includes('/')) {
                     const parts = rawDate.split('/');
                     if (parts.length === 3) {
+                        const p1 = parts[0].padStart(2, '0');
+                        const p2 = parts[1].padStart(2, '0');
+                        const p3 = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+                        if (parts[0].length === 4) {
+                            dateIso = `${parts[0]}-${p2}-${parts[2].padStart(2, '0')}`;
+                        } else {
+                            dateIso = `${p3}-${p2}-${p1}`;
+                        }
+                    }
+                } else if (rawDate.includes('-')) {
+                    const parts = rawDate.split('-');
+                    if (parts.length === 3 && parts[0].length <= 2) {
                         const d = parts[0].padStart(2, '0');
                         const m = parts[1].padStart(2, '0');
                         const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
                         dateIso = `${y}-${m}-${d}`;
                     }
-                } else if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                    dateIso = rawDate;
                 }
 
-                const num = parseFloat((rawAmt || '').replace(/[$,+]/g, ''));
-                if (isNaN(num)) return;
+                if (!dateIso) return; // Skip invalid date rows
 
-                const dLower = (desc || '').toLowerCase();
-                const isDeposit = num > 0 || dLower.includes('adyen') || dLower.includes('uber bv') || dLower.includes('fast transfer from') || dLower.includes('direct credit');
-                const cls = classifyExpenseTransaction(desc);
+                const cleanAmtStr = (rawAmt || '').replace(/[$,]/g, '').trim();
+                const numAmt = parseFloat(cleanAmtStr);
+                if (isNaN(numAmt)) return;
 
-                rows.push({
+                // Merge description and reference for full invoice/payment context
+                let fullNotes = desc;
+                if (ref && !fullNotes.includes(ref)) {
+                    fullNotes = fullNotes ? `${fullNotes} - ${ref}` : ref;
+                }
+
+                const dLower = (fullNotes || '').toLowerCase();
+                // Treat negative amounts or non-zero debits as expenses. Incoming settlements, deposits, or zero-balance rows are unselected.
+                const isZero = (numAmt === 0);
+                const isDeposit = isZero || (numAmt > 0 && !dLower.includes('tyro fees')) || dLower.includes('tyro settlement') || dLower.includes('adyen') || dLower.includes('uber bv') || dLower.includes('direct credit') || dLower.includes('interest payment');
+                
+                const cls = classifyExpenseTransaction(fullNotes);
+
+                results.push({
                     id: `smart_${Date.now()}_${idx}`,
-                    date: dateIso || new Date().toISOString().split('T')[0],
-                    amount: Math.abs(num),
-                    notes: desc || 'Bank Transaction',
+                    date: dateIso,
+                    amount: Math.abs(numAmt),
+                    notes: fullNotes || 'Bank Transaction',
                     entity: cls.entity,
                     category: cls.category,
                     matchedRule: cls.matchedRule,
                     isDeposit,
-                    selected: !isDeposit // default checked if true expense
+                    selected: !isDeposit // True business expenses selected by default!
                 });
             });
-            return rows;
+
+            return results;
         }
 
         async function parsePdfExpenseDocument(file) {
