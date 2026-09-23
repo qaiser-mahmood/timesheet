@@ -176,15 +176,18 @@
         <div class="hide-on-share flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-900 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
             <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Store:</span>
-                <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold">
-                    <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer">
+                <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold flex-wrap">
+                    <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs (Epos Now)">
                         <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya Kebabs</span>
                     </button>
-                    <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer">
+                    <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar (Loyverse POS)">
                         <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice Bar</span>
                     </button>
-                    <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer">
-                        <span>🏢</span> <span>ALHAMD Combined (BAS)</span>
+                    <button type="button" id="storeBtn_company_shared" onclick="switchStore('company_shared')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Company shared overhead (vehicles, fuel, insurances, accounting, admin)">
+                        <span>🏢</span> <span>Company Overhead</span>
+                    </button>
+                    <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Consolidated view of all entities for BAS tax reporting">
+                        <span>🌐</span> <span>Consolidated (BAS)</span>
                     </button>
                 </div>
             </div>
@@ -662,6 +665,55 @@
                     </div>
                 </div>
 
+                <!-- Entity / Shop Filter Pills -->
+                <div class="bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mr-1">View Entity:</span>
+                        <button type="button" id="ledgerEntityBtn_all" onclick="setLedgerEntityFilter('all')" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white bg-slate-900 border border-slate-700">
+                            <span>🌐 All Entities</span>
+                            <span id="ledgerEntityCount_all" class="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-600 font-mono">0</span>
+                        </button>
+                        <button type="button" id="ledgerEntityBtn_anatolya" onclick="setLedgerEntityFilter('anatolya')" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white bg-slate-900 border border-slate-700">
+                            <span>🥙 Anatolya</span>
+                            <span id="ledgerEntityCount_anatolya" class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800/60 font-mono">0</span>
+                        </button>
+                        <button type="button" id="ledgerEntityBtn_green_juice" onclick="setLedgerEntityFilter('green_juice')" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white bg-slate-900 border border-slate-700">
+                            <span>🥤 Green Juice</span>
+                            <span id="ledgerEntityCount_green_juice" class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">0</span>
+                        </button>
+                        <button type="button" id="ledgerEntityBtn_company_shared" onclick="setLedgerEntityFilter('company_shared')" class="px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white bg-slate-900 border border-slate-700">
+                            <span>🏢 Company Shared</span>
+                            <span id="ledgerEntityCount_company_shared" class="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">0</span>
+                        </button>
+                    </div>
+                    <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                        <span>💡</span> <span>Select any row dropdown to reassign entity</span>
+                    </div>
+                </div>
+
+                <!-- Search & Category Filter Toolbar -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-slate-800/60 p-2 rounded-xl border border-slate-700/60">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
+                        <input type="text" id="expenseSearchInput" oninput="handleExpenseSearchInput(this.value)" placeholder="Search supplier, notes, amount, or keyword (e.g. Spudshed, Campbells, Rent, 150)..." class="w-full pl-8 pr-8 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 shadow-inner" />
+                        <button type="button" id="clearExpenseSearchBtn" onclick="clearExpenseSearch()" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white text-xs font-bold cursor-pointer" title="Clear search">✕</button>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <select id="expenseCategoryFilter" onchange="handleExpenseCategoryFilterChange(this.value)" class="bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer">
+                            <option value="all">All Categories</option>
+                            <option value="Meat">🥩 Meat</option>
+                            <option value="Vegies">🥗 Fruit & Vegies</option>
+                            <option value="Bread">🍞 Bread</option>
+                            <option value="Packaging">📦 Packaging</option>
+                            <option value="Campbells">🥫 Campbells</option>
+                            <option value="Drinks">🥤 Drinks</option>
+                            <option value="Ice Cream">🍦 Ice Cream</option>
+                            <option value="Rent">🏢 Rent</option>
+                            <option value="Others">🔧 Others</option>
+                        </select>
+                    </div>
+                </div>
+
                 <!-- 8 Categories Summary Grid -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="expenseCategorySummaryGrid">
                     <!-- Populated dynamically -->
@@ -669,14 +721,15 @@
 
                 <!-- Expenses Table -->
                 <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow">
-                    <table class="w-full text-xs text-left border-collapse min-w-[550px]">
+                    <table class="w-full text-xs text-left border-collapse min-w-[650px]">
                         <thead>
                             <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
                                 <th class="p-2.5 w-24">Date</th>
+                                <th class="p-2.5 w-36">Entity / Shop</th>
                                 <th class="p-2.5 w-32">Category</th>
                                 <th class="p-2.5">Notes / Description</th>
                                 <th class="p-2.5 text-right w-24">Amount</th>
-                                <th class="p-2.5 text-center w-16">Action</th>
+                                <th class="p-2.5 text-center w-20">Action</th>
                             </tr>
                         </thead>
                         <tbody id="expenseLedgerTableBody" class="divide-y divide-slate-800/60 text-slate-200">
@@ -1465,6 +1518,13 @@
         window.closeExpenseModal = closeExpenseModal;
         window.submitExpenseForm = submitExpenseForm;
         window.deleteExpenseItem = deleteExpenseItem;
+        window.changeExpenseEntity = changeExpenseEntity;
+        window.setLedgerEntityFilter = setLedgerEntityFilter;
+        window.handleExpenseSearchInput = handleExpenseSearchInput;
+        window.clearExpenseSearch = clearExpenseSearch;
+        window.handleExpenseCategoryFilterChange = handleExpenseCategoryFilterChange;
+        window.openEditExpenseModal = openEditExpenseModal;
+        window.showExpensesToast = showExpensesToast;
         window.toggleLedgerCalendarPopover = toggleLedgerCalendarPopover;
         window.closeLedgerCalendarPopover = closeLedgerCalendarPopover;
         window.changeLedgerCalMonth = changeLedgerCalMonth;
@@ -1574,7 +1634,7 @@
                 function isExpenseMatch(itemStoreId, targetStore = currentStore) {
                     const sId = itemStoreId || "anatolya";
                     if (!targetStore || targetStore === "all") return true;
-                    return sId === targetStore || sId === "company_shared";
+                    return sId === targetStore;
                 }
 
                 function getStoreSalesForDate(dateStr, storeKey = currentStore) {
@@ -1888,14 +1948,32 @@
                         return { status: "success" };
                     }
 
+                    if (payload.action === "update_expense_entity" && payload.id && payload.store_id) {
+                        const patchRes = await supabaseFetch(`expenses?id=eq.${payload.id}`, {
+                            method: "PATCH",
+                            headers: { "Prefer": "return=representation" },
+                            body: JSON.stringify({ store_id: payload.store_id })
+                        });
+                        return { status: "success", item: patchRes && patchRes[0] ? patchRes[0] : null };
+                    }
+
                     if (payload.action === "save_expense" && payload.expense) {
                         const x = payload.expense;
                         const row = {
                             date: cleanDateStr(x.date),
                             category: x.category || 'Others',
                             amount: Number(x.amount) || 0,
-                            notes: x.notes || ''
+                            notes: x.notes || '',
+                            store_id: x.store_id || 'anatolya'
                         };
+                        if (x.id) {
+                            const res = await supabaseFetch(`expenses?id=eq.${x.id}`, {
+                                method: "PATCH",
+                                headers: { "Prefer": "return=representation" },
+                                body: JSON.stringify(row)
+                            });
+                            return { status: "success", item: res && res[0] ? res[0] : { ...row, id: x.id } };
+                        }
                         const res = await supabaseFetch("expenses", {
                             method: "POST",
                             headers: { "Prefer": "return=representation" },
@@ -3618,28 +3696,40 @@
 
         function closeExpenseModal() {
             const modal = document.getElementById('expenseModal');
-            if (modal) modal.classList.add('hidden');
+            if (modal) {
+                modal.classList.add('hidden');
+                const form = document.getElementById('expenseForm');
+                if (form) delete form.dataset.editId;
+                const modalHeading = modal.querySelector('h3');
+                if (modalHeading) modalHeading.innerText = "Log Business Expense / Invoice";
+                const saveBtn = document.getElementById('saveExpenseBtn');
+                if (saveBtn) saveBtn.innerText = "💾 Save Expense";
+            }
         }
+        window.closeExpenseModal = closeExpenseModal;
 
         // ==================== MULTI-STORE MANAGEMENT & SWITCHER ====================
         function switchStore(storeKey) {
-            if (!['anatolya', 'green_juice', 'all'].includes(storeKey)) storeKey = 'anatolya';
+            if (!['anatolya', 'green_juice', 'company_shared', 'all'].includes(storeKey)) storeKey = 'anatolya';
             currentStore = storeKey;
             localStorage.setItem('alhamd_current_store', storeKey);
 
             // 1. Update Switcher Buttons UI
             const btnAnatolya = document.getElementById('storeBtn_anatolya');
             const btnGJ = document.getElementById('storeBtn_green_juice');
+            const btnCompany = document.getElementById('storeBtn_company_shared');
             const btnAll = document.getElementById('storeBtn_all');
 
             const activeAmberCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer";
             const activeEmeraldCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer";
             const activePurpleCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-purple-600 text-white shadow-xs cursor-pointer";
+            const activeSkyCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-sky-600 text-white shadow-xs cursor-pointer";
             const inactiveCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer";
 
             if (btnAnatolya) btnAnatolya.className = (storeKey === 'anatolya' ? activeAmberCls : inactiveCls);
             if (btnGJ) btnGJ.className = (storeKey === 'green_juice' ? activeEmeraldCls : inactiveCls);
-            if (btnAll) btnAll.className = (storeKey === 'all' ? activePurpleCls : inactiveCls);
+            if (btnCompany) btnCompany.className = (storeKey === 'company_shared' ? activePurpleCls : inactiveCls);
+            if (btnAll) btnAll.className = (storeKey === 'all' ? activeSkyCls : inactiveCls);
 
             // 2. Update Context Badge, Titles, Logo & Sync Button
             const ctxText = document.getElementById('storeContextText');
@@ -3647,7 +3737,6 @@
             const mainTitle = document.getElementById('mainTitle');
             const logoImg = document.getElementById('headerLogoImg');
             const headerLogoWrapper = document.getElementById('headerLogoWrapper');
-            const headerSyncBtn = document.getElementById('headerSyncModalBtn');
 
             if (storeKey === 'anatolya') {
                 if (ctxText) ctxText.innerText = "Viewing Anatolya Kebabs (Epos Now)";
@@ -3670,13 +3759,21 @@
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20";
                     headerLogoWrapper.innerHTML = '<img id="headerLogoImg" src="freshJuiceLogo.png" alt="Green Juice Bar" class="w-full h-full object-contain rounded-lg">';
                 }
-            } else { // 'all'
-                if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES Consolidated (BAS)";
+            } else if (storeKey === 'company_shared') {
+                if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES (Company Overhead & Admin)";
                 if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-purple-400 animate-pulse";
-                if (mainTitle && !isShareModeActive) mainTitle.innerText = "ALHAMD ENTERPRISES Consolidated";
+                if (mainTitle && !isShareModeActive) mainTitle.innerText = "Company Shared & Overhead";
                 if (headerLogoWrapper) {
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-purple-500/40 bg-slate-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-purple-500/20 text-lg";
                     headerLogoWrapper.innerHTML = "🏢";
+                }
+            } else { // 'all'
+                if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES Consolidated (BAS)";
+                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-sky-400 animate-pulse";
+                if (mainTitle && !isShareModeActive) mainTitle.innerText = "ALHAMD ENTERPRISES Consolidated (BAS)";
+                if (headerLogoWrapper) {
+                    headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-sky-500/40 bg-slate-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-sky-500/20 text-lg";
+                    headerLogoWrapper.innerHTML = "🌐";
                 }
             }
 
@@ -3709,8 +3806,8 @@
                 if (shareModeBtn) shareModeBtn.style.display = '';
                 if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = '';
                 if (rosterStoreSummaryTitle) rosterStoreSummaryTitle.innerText = "Green Juice Bar Summary";
-            } else { // 'all' (Company's tab)
-                // User requirement: remove tax limit and timers and roaster from company's tab
+            } else { // 'company_shared' or 'all'
+                // User requirement: remove tax limit and timers and roster from company's tab
                 if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = 'none';
                 if (payForm) payForm.style.display = 'none';
                 if (rosterSection) rosterSection.style.display = 'none';
@@ -3725,6 +3822,11 @@
                         shareModeBtn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
                     }
                 }
+            }
+
+            // Sync expenses ledger entity filter to active store default
+            if (typeof setLedgerEntityFilter === 'function') {
+                setLedgerEntityFilter(storeKey, false);
             }
 
             // 4. Re-render UI components for active store
@@ -4262,8 +4364,64 @@
         }
 
         // ==================== EXPENSE MANAGEMENT ====================
+        function showExpensesToast(msg, isSuccess = true) {
+            let container = document.getElementById('expensesToastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'expensesToastContainer';
+                container.className = 'fixed bottom-5 right-5 z-[9999] pointer-events-none flex flex-col gap-2 max-w-sm';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = `pointer-events-auto flex items-center gap-2 px-3.5 py-2.5 rounded-xl shadow-2xl text-xs font-bold text-white transition-all transform duration-300 translate-y-4 opacity-0 border ${
+                isSuccess ? 'bg-slate-900/95 border-emerald-500/80 text-emerald-200' : 'bg-rose-950/95 border-rose-500/80 text-rose-200'
+            }`;
+            toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span> <span class="flex-1">${msg}</span>`;
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            });
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+        window.showExpensesToast = showExpensesToast;
+
+        function openEditExpenseModal(id) {
+            const item = expensesStore.find(x => String(x.id) === String(id));
+            if (!item) return;
+            const modal = document.getElementById('expenseModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const modalHeading = modal.querySelector('h3');
+                if (modalHeading) modalHeading.innerText = "Edit Business Expense";
+                const form = document.getElementById('expenseForm');
+                if (form) form.dataset.editId = String(item.id);
+                const storeSelect = document.getElementById('expenseStore');
+                if (storeSelect) {
+                    storeSelect.value = item.store_id || 'anatolya';
+                    updateExpenseModalCategoryOptions(storeSelect.value);
+                    storeSelect.onchange = () => updateExpenseModalCategoryOptions(storeSelect.value);
+                }
+                const dInput = document.getElementById('expenseDate');
+                if (dInput) dInput.value = cleanDateStr(item.date);
+                const catSelect = document.getElementById('expenseCategory');
+                if (catSelect) catSelect.value = item.category;
+                const amtInput = document.getElementById('expenseAmount');
+                if (amtInput) amtInput.value = item.amount;
+                const notesInput = document.getElementById('expenseNotes');
+                if (notesInput) notesInput.value = item.notes || '';
+                const saveBtn = document.getElementById('saveExpenseBtn');
+                if (saveBtn) saveBtn.innerText = "💾 Update Expense";
+            }
+        }
+        window.openEditExpenseModal = openEditExpenseModal;
+
         async function submitExpenseForm(e) {
             e.preventDefault();
+            const form = document.getElementById('expenseForm');
+            const editId = form && form.dataset.editId ? form.dataset.editId : null;
             const date = document.getElementById('expenseDate').value;
             const category = document.getElementById('expenseCategory').value;
             const amount = parseFloat(document.getElementById('expenseAmount').value);
@@ -4277,30 +4435,43 @@
             }
 
             const btn = document.getElementById('saveExpenseBtn');
-            if (btn) { btn.disabled = true; btn.innerText = "Saving..."; }
+            if (btn) { btn.disabled = true; btn.innerText = editId ? "Updating..." : "Saving..."; }
 
             const newExp = { date: cleanDateStr(date), store_id, category, amount, notes };
+            if (editId) newExp.id = editId;
+
             try {
                 const res = await callSheetApi({ action: "save_expense", expense: newExp });
-                if (res && res.item) {
-                    expensesStore.unshift(res.item);
+                if (editId) {
+                    const idx = expensesStore.findIndex(x => String(x.id) === String(editId));
+                    if (idx !== -1) {
+                        expensesStore[idx] = { ...expensesStore[idx], ...newExp, id: editId };
+                    }
+                    showExpensesToast(`Updated expense: ${amount.toFixed(2)} - ${category}`);
                 } else {
-                    expensesStore.unshift({ ...newExp, id: Date.now() });
+                    if (res && res.item) {
+                        expensesStore.unshift(res.item);
+                    } else {
+                        expensesStore.unshift({ ...newExp, id: Date.now() });
+                    }
+                    showExpensesToast(`Logged expense: ${amount.toFixed(2)} - ${category}`);
                 }
                 closeExpenseModal();
                 renderCurrentAnalyticsView();
             } catch (err) {
                 alert("Error saving expense: " + err.message);
             } finally {
-                if (btn) { btn.disabled = false; btn.innerText = "💾 Save Expense"; }
+                if (btn) { btn.disabled = false; btn.innerText = editId ? "💾 Update Expense" : "💾 Save Expense"; }
                 loadCloudData({ silent: true });
             }
         }
 
         async function deleteExpenseItem(id) {
             if (!confirm("Are you sure you want to delete this expense record?")) return;
+            const item = expensesStore.find(x => String(x.id) === String(id));
             expensesStore = expensesStore.filter(x => String(x.id) !== String(id));
             renderExpensesLedgerView();
+            showExpensesToast(`Deleted expense record: ${item ? Number(item.amount||0).toFixed(2) : ''}`, true);
             try {
                 await callSheetApi({ action: "delete_expense", id });
             } catch (err) {
@@ -4622,20 +4793,149 @@
             }
         }
 
+        // ==================== EXPENSES LEDGER MANAGEMENT & REASSIGNMENT ====================
+        let ledgerEntityFilter = 'active'; // 'active' (matches currentStore) | 'anatolya' | 'green_juice' | 'company_shared' | 'all'
+        let ledgerSearchQuery = '';
+        let ledgerCategoryFilter = 'all';
+
+        function setLedgerEntityFilter(filterKey, reRender = true) {
+            ledgerEntityFilter = filterKey;
+            if (reRender) renderExpensesLedgerView();
+        }
+        window.setLedgerEntityFilter = setLedgerEntityFilter;
+
+        function handleExpenseSearchInput(query) {
+            ledgerSearchQuery = (query || '').trim().toLowerCase();
+            const clearBtn = document.getElementById('clearExpenseSearchBtn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !ledgerSearchQuery);
+            renderExpensesLedgerView();
+        }
+        window.handleExpenseSearchInput = handleExpenseSearchInput;
+
+        function clearExpenseSearch() {
+            ledgerSearchQuery = '';
+            const inp = document.getElementById('expenseSearchInput');
+            if (inp) inp.value = '';
+            const clearBtn = document.getElementById('clearExpenseSearchBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            renderExpensesLedgerView();
+        }
+        window.clearExpenseSearch = clearExpenseSearch;
+
+        function handleExpenseCategoryFilterChange(cat) {
+            ledgerCategoryFilter = cat;
+            renderExpensesLedgerView();
+        }
+        window.handleExpenseCategoryFilterChange = handleExpenseCategoryFilterChange;
+
+        async function changeExpenseEntity(id, newStoreId) {
+            const item = expensesStore.find(x => String(x.id) === String(id));
+            if (!item) return;
+            const oldStoreId = item.store_id || 'anatolya';
+            if (oldStoreId === newStoreId) return;
+
+            // 1. Optimistic update
+            item.store_id = newStoreId;
+
+            const storeLabels = {
+                'anatolya': '🥙 Anatolya Kebabs',
+                'green_juice': '🥤 Green Juice Bar',
+                'company_shared': '🏢 Company Shared'
+            };
+            const destLabel = storeLabels[newStoreId] || newStoreId;
+
+            // 2. Re-render UI immediately
+            renderExpensesLedgerView();
+
+            // 3. Display toast
+            const amtStr = `${Number(item.amount || 0).toFixed(2)}`;
+            const noteStr = item.notes ? ` (${item.notes.slice(0, 22)})` : '';
+            showExpensesToast(`Moved ${amtStr}${noteStr} to ${destLabel}`);
+
+            // 4. Persist to server / Supabase
+            try {
+                await callSheetApi({
+                    action: "update_expense_entity",
+                    id: item.id,
+                    store_id: newStoreId
+                });
+            } catch (err) {
+                console.error("Failed to update expense entity in backend:", err);
+                item.store_id = oldStoreId;
+                renderExpensesLedgerView();
+                showExpensesToast(`Failed to move: ${err.message}`, false);
+            }
+        }
+        window.changeExpenseEntity = changeExpenseEntity;
+
         function renderExpensesLedgerView() {
             updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
 
-            // Filter expensesStore by ledger date range and store context
-            const filteredExpenses = expensesStore.filter(x => {
+            // 1. Compute Entity Counts & Dollar Totals for Active Date Range
+            const inDateExpenses = expensesStore.filter(x => {
                 if (!x.date) return false;
                 const d = cleanDateStr(x.date);
                 if (ledgerDateFrom && d < ledgerDateFrom) return false;
                 if (ledgerDateTo && d > ledgerDateTo) return false;
-                if (currentStore === 'anatolya') {
-                    return (!x.store_id || x.store_id === 'anatolya' || x.store_id === 'company_shared');
-                } else if (currentStore === 'green_juice') {
-                    return (x.store_id === 'green_juice' || x.store_id === 'company_shared');
+                return true;
+            });
+
+            const entityCounts = { all: 0, anatolya: 0, green_juice: 0, company_shared: 0 };
+            const entitySums = { all: 0, anatolya: 0, green_juice: 0, company_shared: 0 };
+
+            inDateExpenses.forEach(x => {
+                const s = x.store_id || 'anatolya';
+                const amt = Number(x.amount || 0);
+                entityCounts.all++;
+                entitySums.all += amt;
+                if (s === 'green_juice') {
+                    entityCounts.green_juice++;
+                    entitySums.green_juice += amt;
+                } else if (s === 'company_shared') {
+                    entityCounts.company_shared++;
+                    entitySums.company_shared += amt;
+                } else {
+                    entityCounts.anatolya++;
+                    entitySums.anatolya += amt;
+                }
+            });
+
+            // Update Entity Filter Button Counts
+            const elAll = document.getElementById('ledgerEntityCount_all');
+            const elAk = document.getElementById('ledgerEntityCount_anatolya');
+            const elGj = document.getElementById('ledgerEntityCount_green_juice');
+            const elCo = document.getElementById('ledgerEntityCount_company_shared');
+            if (elAll) elAll.innerText = entityCounts.all;
+            if (elAk) elAk.innerText = entityCounts.anatolya;
+            if (elGj) elGj.innerText = entityCounts.green_juice;
+            if (elCo) elCo.innerText = entityCounts.company_shared;
+
+            // Determine active entity filter
+            const activeFilter = (ledgerEntityFilter === 'active') ? currentStore : ledgerEntityFilter;
+
+            // Highlight Active Entity Button
+            const btnAll = document.getElementById('ledgerEntityBtn_all');
+            const btnAk = document.getElementById('ledgerEntityBtn_anatolya');
+            const btnGj = document.getElementById('ledgerEntityBtn_green_juice');
+            const btnCo = document.getElementById('ledgerEntityBtn_company_shared');
+
+            const activeBtnCls = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm border ";
+            const inactiveBtnCls = "px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 cursor-pointer text-slate-300 hover:text-white bg-slate-900 border border-slate-700 ";
+
+            if (btnAll) btnAll.className = (activeFilter === 'all' ? activeBtnCls + "bg-sky-600 text-white border-sky-400" : inactiveBtnCls);
+            if (btnAk) btnAk.className = (activeFilter === 'anatolya' ? activeBtnCls + "bg-amber-600 text-white border-amber-400" : inactiveBtnCls);
+            if (btnGj) btnGj.className = (activeFilter === 'green_juice' ? activeBtnCls + "bg-emerald-600 text-white border-emerald-400" : inactiveBtnCls);
+            if (btnCo) btnCo.className = (activeFilter === 'company_shared' ? activeBtnCls + "bg-purple-600 text-white border-purple-400" : inactiveBtnCls);
+
+            // 2. Filter expenses by date, entity, search query, and category
+            const filteredExpenses = inDateExpenses.filter(x => {
+                const s = x.store_id || 'anatolya';
+                if (activeFilter !== 'all' && s !== activeFilter) return false;
+                if (ledgerCategoryFilter !== 'all' && (x.category || 'Others').toLowerCase() !== ledgerCategoryFilter.toLowerCase()) return false;
+                if (ledgerSearchQuery) {
+                    const text = `${x.notes || ''} ${x.category || ''} ${x.amount || ''} ${x.date || ''} ${s}`.toLowerCase();
+                    if (!text.includes(ledgerSearchQuery)) return false;
                 }
                 return true;
             });
@@ -4656,7 +4956,7 @@
             const countBadge = document.getElementById('expenseLedgerCountBadge');
             const totalBadge = document.getElementById('expenseLedgerTotalBadge');
 
-            // 1. Calculate totals per category
+            // 3. Calculate totals per category
             const catTotals = {};
             EXPENSE_CATEGORIES.forEach(c => catTotals[c.key] = 0);
             let grandTotal = 0;
@@ -4668,48 +4968,62 @@
             });
 
             if (countBadge) countBadge.innerText = `${filteredExpenses.length} record(s)`;
-            if (totalBadge) totalBadge.innerText = `$${grandTotal.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (totalBadge) totalBadge.innerText = `${grandTotal.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             const grid = document.getElementById('expenseCategorySummaryGrid');
             if (grid) {
                 let cards = '';
                 EXPENSE_CATEGORIES.forEach(c => {
-                    if (!isCategoryForStore(c.key, currentStore)) return;
+                    if (activeFilter !== 'all' && !isCategoryForStore(c.key, activeFilter)) return;
                     const amt = catTotals[c.key] || 0;
                     cards += `
                         <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-1">
                             <div class="text-[10px] font-bold text-slate-300 flex items-center gap-1 truncate">
                                 <span>${c.icon}</span> ${c.key}
                             </div>
-                            <div class="text-sm font-black text-amber-300">$${amt.toFixed(2)}</div>
+                            <div class="text-sm font-black text-amber-300">${amt.toFixed(2)}</div>
                         </div>
                     `;
                 });
                 grid.innerHTML = cards;
             }
 
-            // 2. Render expenses table
+            // 4. Render expenses table with inline entity reassignment dropdown
             const tbody = document.getElementById('expenseLedgerTableBody');
             if (tbody) {
                 if (filteredExpenses.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">No expenses recorded for the selected date range.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-slate-500 italic">No expenses matching the selected criteria.</td></tr>`;
                     return;
                 }
                 let rowsHtml = '';
                 filteredExpenses.forEach(x => {
+                    const s = x.store_id || 'anatolya';
                     const meta = getCategoryMeta(x.category);
+
+                    let entityStyle = "bg-amber-950/80 text-amber-300 border-amber-600/70";
+                    if (s === 'green_juice') entityStyle = "bg-emerald-950/80 text-emerald-300 border-emerald-600/70";
+                    else if (s === 'company_shared') entityStyle = "bg-purple-950/80 text-purple-300 border-purple-600/70";
+
                     rowsHtml += `
-                        <tr class="hover:bg-slate-800/40 transition">
-                            <td class="p-2.5 font-semibold text-slate-300">${formatDisplayDateStr(x.date)}</td>
+                        <tr class="hover:bg-slate-800/50 transition">
+                            <td class="p-2.5 font-semibold text-slate-300 whitespace-nowrap">${formatDisplayDateStr(x.date)}</td>
+                            <td class="p-2.5">
+                                <select onchange="changeExpenseEntity(${x.id}, this.value)" class="text-[11px] font-bold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs ${entityStyle}" title="Click to reassign to another shop/entity">
+                                    <option value="anatolya" ${s === 'anatolya' ? 'selected' : ''}>🥙 Anatolya</option>
+                                    <option value="green_juice" ${s === 'green_juice' ? 'selected' : ''}>🥤 Green Juice</option>
+                                    <option value="company_shared" ${s === 'company_shared' ? 'selected' : ''}>🏢 Company Shared</option>
+                                </select>
+                            </td>
                             <td class="p-2.5">
                                 <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${meta.color}">
                                     ${meta.icon} ${x.category}
                                 </span>
                             </td>
                             <td class="p-2.5 text-slate-300">${x.notes || '<span class="opacity-30">—</span>'}</td>
-                            <td class="p-2.5 text-right font-black text-amber-300">$${Number(x.amount || 0).toFixed(2)}</td>
-                            <td class="p-2.5 text-center">
-                                <button type="button" onclick="deleteExpenseItem(${x.id})" class="text-rose-400 hover:text-rose-300 font-bold text-xs" title="Delete record">🗑️</button>
+                            <td class="p-2.5 text-right font-black text-amber-300 whitespace-nowrap">${Number(x.amount || 0).toFixed(2)}</td>
+                            <td class="p-2.5 text-center whitespace-nowrap">
+                                <button type="button" onclick="openEditExpenseModal(${x.id})" class="text-blue-400 hover:text-blue-300 font-bold text-xs mr-2 cursor-pointer" title="Edit expense details">✏️</button>
+                                <button type="button" onclick="deleteExpenseItem(${x.id})" class="text-rose-400 hover:text-rose-300 font-bold text-xs cursor-pointer" title="Delete record">🗑️</button>
                             </td>
                         </tr>
                     `;

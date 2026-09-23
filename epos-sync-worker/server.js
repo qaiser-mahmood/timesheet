@@ -587,6 +587,15 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       return res.json({ status: 'success' });
     }
 
+    if (payload.action === 'update_expense_entity' && payload.id && payload.store_id) {
+      const patchRes = await supabaseServerFetch(`expenses?id=eq.${payload.id}`, {
+        method: 'PATCH',
+        headers: { 'Prefer': 'return=representation' },
+        body: JSON.stringify({ store_id: payload.store_id })
+      });
+      return res.json({ status: 'success', item: patchRes && patchRes[0] ? patchRes[0] : null });
+    }
+
     if (payload.action === 'save_expense' && payload.expense) {
       const x = payload.expense;
       const row = {
@@ -597,6 +606,14 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         store_id: x.store_id || 'anatolya'
       };
       let result;
+      if (x.id) {
+        result = await supabaseServerFetch(`expenses?id=eq.${x.id}`, {
+          method: 'PATCH',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(row)
+        });
+        return res.json({ status: 'success', item: result && result[0] ? result[0] : { ...row, id: x.id } });
+      }
       try {
         result = await supabaseServerFetch('expenses', {
           method: 'POST',
