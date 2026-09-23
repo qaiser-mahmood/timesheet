@@ -583,7 +583,10 @@
 
                     <!-- Row 2 on mobile / Right on desktop: Log Exp & BAS Report Buttons -->
                     <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <button type="button" onclick="openExpenseModal()" class="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-500 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Log a new business expense">
+                        <button type="button" onclick="openSmartExpenseModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Upload screenshot, bank statement CSV/PDF, or invoice for automated reading and categorization">
+                            <span>📷</span> <span>Smart Upload / Ingest</span>
+                        </button>
+                        <button type="button" onclick="openExpenseModal()" class="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Log a single expense manually">
                             ➕ Log Exp
                         </button>
                         <button type="button" id="tabBasBtn" onclick="switchAnalyticsTab('bas')" class="flex-1 sm:flex-none bg-purple-700 hover:bg-purple-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap border border-purple-500/40 cursor-pointer" title="Australian Business Activity Statement (BAS) Quarterly Tax Report">
@@ -1206,6 +1209,132 @@
         </div>
     </div>
 
+    <!-- SMART EXPENSE INGESTION MODAL (Screenshots, Bank Statements, Invoices) -->
+    <div id="smartExpenseModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
+        <div class="bg-slate-900 text-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden p-3.5 sm:p-5 space-y-3.5 border border-slate-700 max-h-[92vh] flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">📸</span>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5">
+                            Smart Expense Ingestion & Auto-Reader
+                        </h3>
+                        <p class="text-[11px] text-slate-400">
+                            Drop a bank statement CSV/PDF, screenshot of receipts/transactions, or supplier invoice.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeSmartExpenseModal()" class="text-slate-400 hover:text-white text-xl font-bold p-1 cursor-pointer">✕</button>
+            </div>
+
+            <!-- Upload Dropzone -->
+            <div id="smartExpenseDropzone" ondragover="handleSmartExpenseDragOver(event)" ondragleave="handleSmartExpenseDragLeave(event)" ondrop="handleSmartExpenseDrop(event)" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/80 rounded-xl p-4 sm:p-5 text-center transition bg-slate-950/50 hover:bg-slate-950/80 cursor-pointer shrink-0">
+                <input type="file" id="smartExpenseFileInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*,.csv,.pdf,.txt" class="hidden" multiple />
+                <div onclick="document.getElementById('smartExpenseFileInput').click()" class="space-y-1.5">
+                    <div class="text-3xl animate-bounce">📥</div>
+                    <div class="text-xs sm:text-sm font-bold text-slate-200">
+                        Drop screenshot, bank statement CSV/PDF, or invoice here, or <span class="text-emerald-400 underline">browse files</span>
+                    </div>
+                    <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-center gap-2 flex-wrap pt-0.5">
+                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">📸 Screenshots (.png, .jpg)</span>
+                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">📑 Bank Statements (.csv)</span>
+                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">🧾 Invoices & Statements (.pdf)</span>
+                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">📋 Or press Ctrl+V to paste screenshot</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Engine & AI Setting Bar -->
+            <div class="shrink-0 flex items-center justify-between text-[11px] bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
+                <span class="text-slate-400 flex items-center gap-1.5">
+                    <span>⚡ Engine:</span>
+                    <span id="smartEngineBadge" class="text-emerald-400 font-bold">Built-in Fast OCR & Bank CSV Parser</span>
+                </span>
+                <button type="button" onclick="toggleSmartAiSettings()" class="text-slate-400 hover:text-white underline text-[10px] cursor-pointer">
+                    Optional Gemini AI Vision Key ⚙️
+                </button>
+            </div>
+            <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+                <label class="block text-[10px] font-bold text-slate-300 uppercase">Google Gemini API Key (Optional for complex handwritten receipts)</label>
+                <div class="flex gap-2">
+                    <input type="password" id="smartGeminiApiKey" placeholder="AIzaSy..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white" />
+                    <button type="button" onclick="saveSmartGeminiApiKey()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-1 rounded-lg text-xs cursor-pointer">Save Key</button>
+                </div>
+            </div>
+
+            <!-- Loading & Status Indicator -->
+            <div id="smartExpenseLoading" class="hidden shrink-0 bg-slate-800/80 p-3 rounded-xl border border-slate-700 space-y-2 text-center">
+                <div class="flex items-center justify-center gap-2 text-xs font-bold text-amber-300">
+                    <span class="animate-spin text-base">⏳</span> <span id="smartExpenseLoadingText">Reading and extracting expenses...</span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                    <div id="smartExpenseProgressBar" class="bg-amber-500 h-1.5 rounded-full transition-all duration-300" style="width: 45%"></div>
+                </div>
+            </div>
+
+            <!-- Staging Review Container -->
+            <div id="smartExpenseStagingContainer" class="hidden flex-1 overflow-hidden flex flex-col space-y-2 min-h-[220px]">
+                <!-- Staging Toolbar & Summaries -->
+                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800 shrink-0 text-xs">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-extrabold text-white flex items-center gap-1">
+                            <span>🔍 Detected:</span>
+                            <span id="smartStagingCountBadge" class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0 rows</span>
+                        </span>
+                        <div class="flex items-center gap-1 text-[11px] bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                            <button type="button" id="smartFilterExpensesBtn" onclick="setSmartStagingFilter('expenses')" class="px-2 py-0.5 rounded font-bold bg-emerald-600 text-white shadow-xs cursor-pointer">Expenses Only</button>
+                            <button type="button" id="smartFilterAllBtn" onclick="setSmartStagingFilter('all')" class="px-2 py-0.5 rounded font-bold text-slate-400 hover:text-white cursor-pointer">All (incl. Deposits)</button>
+                        </div>
+                    </div>
+
+                    <!-- Entity Breakdown Totals -->
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold flex-wrap">
+                        <span id="smartTotalSelectedBadge" class="bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/40">Total: $0.00</span>
+                        <span id="smartAnatolyaTotalBadge" class="bg-amber-950/80 text-amber-300 px-2 py-0.5 rounded-md border border-amber-800/60">🥙 $0.00</span>
+                        <span id="smartGjTotalBadge" class="bg-emerald-950/80 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-800/60">🥤 $0.00</span>
+                        <span id="smartCoTotalBadge" class="bg-purple-950/80 text-purple-300 px-2 py-0.5 rounded-md border border-purple-800/60">🏢 $0.00</span>
+                    </div>
+                </div>
+
+                <!-- Staging Table -->
+                <div class="flex-1 overflow-y-auto overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 shadow">
+                    <table class="w-full text-xs text-left border-collapse min-w-[700px]">
+                        <thead class="sticky top-0 z-10 bg-slate-900 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-800">
+                            <tr>
+                                <th class="p-2 w-10 text-center">
+                                    <input type="checkbox" id="smartSelectAllCheckbox" onchange="toggleSelectAllSmartRows(this.checked)" checked class="rounded border-slate-700 text-emerald-600 focus:ring-0 cursor-pointer" />
+                                </th>
+                                <th class="p-2 w-28">Date</th>
+                                <th class="p-2 w-36">Assigned Entity</th>
+                                <th class="p-2 w-32">Category</th>
+                                <th class="p-2">Supplier / Notes</th>
+                                <th class="p-2 w-24 text-right">Amount ($)</th>
+                                <th class="p-2 w-12 text-center">✕</th>
+                            </tr>
+                        </thead>
+                        <tbody id="smartStagingTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Staging Bottom Toolbar -->
+                <div class="flex items-center justify-between gap-2 pt-1 shrink-0">
+                    <button type="button" onclick="addManualStagingRow()" class="text-slate-400 hover:text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
+                        <span>➕</span> <span>Add Manual Row</span>
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="closeSmartExpenseModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer">Cancel</button>
+                        <button type="button" id="confirmSmartImportBtn" onclick="confirmBatchExpenseImport()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                            <span>💾</span> <span>Confirm & Add to Ledger</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Staff Management & Store Pay Rates Modal -->
     <div id="staffModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 hidden backdrop-blur-xs">
         <div class="bg-slate-900 text-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden p-4 sm:p-6 space-y-4 border border-slate-700 max-h-[90vh] flex flex-col">
@@ -1525,6 +1654,20 @@
         window.handleExpenseCategoryFilterChange = handleExpenseCategoryFilterChange;
         window.openEditExpenseModal = openEditExpenseModal;
         window.showExpensesToast = showExpensesToast;
+        window.openSmartExpenseModal = openSmartExpenseModal;
+        window.closeSmartExpenseModal = closeSmartExpenseModal;
+        window.handleSmartExpenseFileSelect = handleSmartExpenseFileSelect;
+        window.handleSmartExpenseDrop = handleSmartExpenseDrop;
+        window.handleSmartExpenseDragOver = handleSmartExpenseDragOver;
+        window.handleSmartExpenseDragLeave = handleSmartExpenseDragLeave;
+        window.setSmartStagingFilter = setSmartStagingFilter;
+        window.toggleSelectAllSmartRows = toggleSelectAllSmartRows;
+        window.updateSmartRowField = updateSmartRowField;
+        window.removeSmartStagingRow = removeSmartStagingRow;
+        window.addManualStagingRow = addManualStagingRow;
+        window.confirmBatchExpenseImport = confirmBatchExpenseImport;
+        window.toggleSmartAiSettings = toggleSmartAiSettings;
+        window.saveSmartGeminiApiKey = saveSmartGeminiApiKey;
         window.toggleLedgerCalendarPopover = toggleLedgerCalendarPopover;
         window.closeLedgerCalendarPopover = closeLedgerCalendarPopover;
         window.changeLedgerCalMonth = changeLedgerCalMonth;
@@ -1980,6 +2123,32 @@
                             body: JSON.stringify(row)
                         });
                         return { status: "success", item: res && res[0] ? res[0] : row };
+                    }
+
+                    if (payload.action === "batch_save_expenses" && Array.isArray(payload.expenses) && payload.expenses.length > 0) {
+                        const rows = payload.expenses.map(x => ({
+                            date: cleanDateStr(x.date),
+                            category: x.category || 'Others',
+                            amount: Math.abs(Number(x.amount)) || 0,
+                            notes: (x.notes || '').slice(0, 300),
+                            store_id: x.store_id || 'anatolya'
+                        }));
+                        let res;
+                        try {
+                            res = await supabaseFetch("expenses", {
+                                method: "POST",
+                                headers: { "Prefer": "return=representation" },
+                                body: JSON.stringify(rows)
+                            });
+                        } catch (e) {
+                            const rowsNoStore = rows.map(r => { const c = { ...r }; delete c.store_id; return c; });
+                            res = await supabaseFetch("expenses", {
+                                method: "POST",
+                                headers: { "Prefer": "return=representation" },
+                                body: JSON.stringify(rowsNoStore)
+                            });
+                        }
+                        return { status: "success", count: rows.length, items: res || rows };
                     }
 
                     if (payload.action === "delete_expense" && payload.id) {
@@ -5031,6 +5200,655 @@
                 tbody.innerHTML = rowsHtml;
             }
         }
+
+
+        // ==================== SMART EXPENSE INGESTION ENGINE ====================
+        let smartStagingRows = [];
+        let smartStagingFilter = 'expenses'; // 'expenses' | 'all'
+        let tesseractLoaded = false;
+        let pdfJsLoaded = false;
+
+        const EXPENSE_CLASSIFICATION_RULES = [
+            // 1. Green Juice Bar
+            { pattern: /spud\s*shed/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Spudshed' },
+            { pattern: /local\s*fresh\s*gourmet/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Local Fresh Gourmet' },
+            { pattern: /thanh\s*doan/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Thanh Doan' },
+            { pattern: /market\s*city/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Market City' },
+            { pattern: /bake\s*boss/i, entity: 'green_juice', category: 'Ice Cream', label: 'Bake Boss' },
+            { pattern: /majors/i, entity: 'green_juice', category: 'Ice Cream', label: 'Majors' },
+            { pattern: /royal\s*foods/i, entity: 'green_juice', category: 'Ice Cream', label: 'Royal Foods' },
+            { pattern: /(gelato|ice\s*cream)/i, entity: 'green_juice', category: 'Ice Cream', label: 'Ice Cream' },
+            { pattern: /westfield.*carousel/i, entity: 'green_juice', category: 'Rent', label: 'Westfield Carousel' },
+            { pattern: /woolworths.*carousel/i, entity: 'green_juice', category: 'Others', label: 'Woolworths Carousel' },
+            { pattern: /(juice|citrus|mango|passionfruit|oranges|apple|berries|fruit)/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Fresh Produce' },
+            
+            // 2. Anatolya Kebabs
+            { pattern: /balcatta\s*cash/i, entity: 'anatolya', category: 'Campbells', label: 'Balcatta Cash & Carry' },
+            { pattern: /canning\s*vale\s*cash/i, entity: 'anatolya', category: 'Campbells', label: 'Canning Vale Cash & Carry' },
+            { pattern: /campbell/i, entity: 'anatolya', category: 'Campbells', label: 'Campbells Wholesale' },
+            { pattern: /wing\s*ki\s*chan/i, entity: 'anatolya', category: 'Campbells', label: 'Wing Ki Chan' },
+            { pattern: /ism\s*holdings/i, entity: 'anatolya', category: 'Meat', label: 'ISM Holdings' },
+            { pattern: /(kebab|halal|lamb|beef|poultry|chicken)/i, entity: 'anatolya', category: 'Meat', label: 'Meat' },
+            { pattern: /(bakery|bread|pita|turkish\s*bread)/i, entity: 'anatolya', category: 'Bread', label: 'Bread' },
+            { pattern: /westfield.*innaloo/i, entity: 'anatolya', category: 'Rent', label: 'Westfield Innaloo' },
+            { pattern: /epos\s*(now|systems)/i, entity: 'anatolya', category: 'Others', label: 'Epos Now POS' },
+            { pattern: /(detpak|packaging|carton|containers|cups|straws)/i, entity: 'anatolya', category: 'Packaging', label: 'Packaging' },
+            { pattern: /(coca\s*cola|cca\s*online|schweppes|asahi|drinks|beverage)/i, entity: 'anatolya', category: 'Drinks', label: 'Drinks' },
+
+            // 3. Company Shared / Overhead
+            { pattern: /(you\s*car|toyota\s*finance|car\s*lease|repayments)/i, entity: 'company_shared', category: 'Others', label: 'Company Vehicle' },
+            { pattern: /(vibe\s*petroleum|ampol|bp\s*connect|caltex|7-eleven.*fuel|united\s*petroleum|fuel|petrol)/i, entity: 'company_shared', category: 'Others', label: 'Fuel & Transport' },
+            { pattern: /(transperth|toll|parking)/i, entity: 'company_shared', category: 'Others', label: 'Transport' },
+            { pattern: /(tax\s*office|bpay.*75556|gst\s*till|ato)/i, entity: 'company_shared', category: 'Others', label: 'ATO' },
+            { pattern: /(superchoice|superannuation|sunsuper|australian\s*super)/i, entity: 'company_shared', category: 'Others', label: 'Superannuation' },
+            { pattern: /(xero|accountant|tax\s*return)/i, entity: 'company_shared', category: 'Others', label: 'Accounting' },
+            { pattern: /(nrma|biz\s*cover|allianz|qbe|insurance)/i, entity: 'company_shared', category: 'Others', label: 'Insurance' },
+            { pattern: /fines\s*enforcement/i, entity: 'company_shared', category: 'Others', label: 'Fines' },
+            { pattern: /(bunnings|officeworks|chemist\s*warehouse|reject\s*shop|kmart)/i, entity: 'company_shared', category: 'Others', label: 'Supplies' }
+        ];
+
+        function classifyExpenseTransaction(desc, defaultStore = currentStore) {
+            const cleanD = (desc || '').trim();
+            for (const rule of EXPENSE_CLASSIFICATION_RULES) {
+                if (rule.pattern.test(cleanD)) {
+                    return { entity: rule.entity, category: rule.category, matchedRule: rule.label };
+                }
+            }
+            const fallbackEntity = (defaultStore === 'green_juice' ? 'green_juice' : (defaultStore === 'company_shared' ? 'company_shared' : 'anatolya'));
+            return { entity: fallbackEntity, category: 'Others', matchedRule: 'Auto' };
+        }
+
+        async function loadTesseractLibrary() {
+            if (window.Tesseract) return window.Tesseract;
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+                s.onload = () => { tesseractLoaded = true; resolve(window.Tesseract); };
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        async function loadPdfJsLibrary() {
+            if (window.pdfjsLib) return window.pdfjsLib;
+            return new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                s.onload = () => {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    pdfJsLoaded = true;
+                    resolve(window.pdfjsLib);
+                };
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+        }
+
+        function openSmartExpenseModal() {
+            const modal = document.getElementById('smartExpenseModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const savedKey = localStorage.getItem('alhamd_gemini_api_key') || '';
+                const keyInp = document.getElementById('smartGeminiApiKey');
+                if (keyInp) keyInp.value = savedKey;
+                const badge = document.getElementById('smartEngineBadge');
+                if (badge) {
+                    badge.innerText = savedKey ? "Gemini 2.0 Flash AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
+                }
+            }
+        }
+        window.openSmartExpenseModal = openSmartExpenseModal;
+
+        function closeSmartExpenseModal() {
+            const modal = document.getElementById('smartExpenseModal');
+            if (modal) modal.classList.add('hidden');
+            const loadEl = document.getElementById('smartExpenseLoading');
+            if (loadEl) loadEl.classList.add('hidden');
+        }
+        window.closeSmartExpenseModal = closeSmartExpenseModal;
+
+        function toggleSmartAiSettings() {
+            const cont = document.getElementById('smartAiSettingsContainer');
+            if (cont) cont.classList.toggle('hidden');
+        }
+        window.toggleSmartAiSettings = toggleSmartAiSettings;
+
+        function saveSmartGeminiApiKey() {
+            const inp = document.getElementById('smartGeminiApiKey');
+            const key = inp ? inp.value.trim() : '';
+            localStorage.setItem('alhamd_gemini_api_key', key);
+            const badge = document.getElementById('smartEngineBadge');
+            if (badge) {
+                badge.innerText = key ? "Gemini 2.0 Flash AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
+            }
+            showExpensesToast(key ? "Gemini AI Vision key saved!" : "Key removed. Using built-in OCR.", true);
+            toggleSmartAiSettings();
+        }
+        window.saveSmartGeminiApiKey = saveSmartGeminiApiKey;
+
+        function handleSmartExpenseDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const dz = document.getElementById('smartExpenseDropzone');
+            if (dz) dz.classList.add('border-emerald-500', 'bg-slate-950/90');
+        }
+        window.handleSmartExpenseDragOver = handleSmartExpenseDragOver;
+
+        function handleSmartExpenseDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const dz = document.getElementById('smartExpenseDropzone');
+            if (dz) dz.classList.remove('border-emerald-500', 'bg-slate-950/90');
+        }
+        window.handleSmartExpenseDragLeave = handleSmartExpenseDragLeave;
+
+        function handleSmartExpenseDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSmartExpenseDragLeave(e);
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                processUploadedSmartFiles(e.dataTransfer.files);
+            }
+        }
+        window.handleSmartExpenseDrop = handleSmartExpenseDrop;
+
+        function handleSmartExpenseFileSelect(e) {
+            if (e.target && e.target.files && e.target.files.length > 0) {
+                processUploadedSmartFiles(e.target.files);
+                e.target.value = '';
+            }
+        }
+        window.handleSmartExpenseFileSelect = handleSmartExpenseFileSelect;
+
+        // Clipboard paste listener: paste screenshot directly
+        window.addEventListener('paste', e => {
+            const modal = document.getElementById('smartExpenseModal');
+            if (!modal || modal.classList.contains('hidden')) return;
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            const imageFiles = [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    if (blob) imageFiles.push(blob);
+                }
+            }
+            if (imageFiles.length > 0) {
+                processUploadedSmartFiles(imageFiles);
+            }
+        });
+
+        async function processUploadedSmartFiles(fileList) {
+            const loadEl = document.getElementById('smartExpenseLoading');
+            const loadTxt = document.getElementById('smartExpenseLoadingText');
+            const pBar = document.getElementById('smartExpenseProgressBar');
+            if (loadEl) loadEl.classList.remove('hidden');
+
+            const allParsed = [];
+
+            for (let i = 0; i < fileList.length; i++) {
+                const file = fileList[i];
+                if (loadTxt) loadTxt.innerText = `Processing ${file.name || 'file'} (${i + 1}/${fileList.length})...`;
+                if (pBar) pBar.style.width = `${Math.round(((i + 0.5) / fileList.length) * 100)}%`;
+
+                try {
+                    const ext = (file.name || '').split('.').pop().toLowerCase();
+                    const mime = file.type || '';
+
+                    if (ext === 'csv' || mime.includes('csv') || ext === 'txt') {
+                        const text = await file.text();
+                        const rows = parseBankStatementCsv(text);
+                        allParsed.push(...rows);
+                    } else if (ext === 'pdf' || mime.includes('pdf')) {
+                        const rows = await parsePdfExpenseDocument(file);
+                        allParsed.push(...rows);
+                    } else if (mime.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+                        const rows = await parseImageExpenseDocument(file);
+                        allParsed.push(...rows);
+                    }
+                } catch (err) {
+                    console.error("Error parsing file:", file.name, err);
+                    showExpensesToast(`Error reading ${file.name}: ${err.message}`, false);
+                }
+            }
+
+            if (pBar) pBar.style.width = '100%';
+            setTimeout(() => {
+                if (loadEl) loadEl.classList.add('hidden');
+                if (allParsed.length > 0) {
+                    smartStagingRows = allParsed;
+                    renderSmartStagingTable();
+                    showExpensesToast(`Extracted ${allParsed.length} transaction(s)! Review below.`, true);
+                } else {
+                    showExpensesToast("No transactions found in the uploaded file(s).", false);
+                }
+            }, 300);
+        }
+
+        function parseBankStatementCsv(csvText) {
+            const lines = csvText.split('\n').map(l => l.trim()).filter(Boolean);
+            const rows = [];
+            lines.forEach((line, idx) => {
+                const matches = line.match(/(?:^|,)(?:"([^"]*)"|([^,]*))/g);
+                if (!matches || matches.length < 3) return;
+                const cols = matches.map(m => m.replace(/^,/, '').replace(/^"/, '').replace(/"$/, '').trim());
+
+                // Find date and amount columns dynamically
+                let rawDate = '', rawAmt = '', desc = '';
+
+                // Try col 0 date, col 1 amount, col 2 desc (CommBank format)
+                if (cols[0].match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/)) {
+                    rawDate = cols[0];
+                    rawAmt = cols[1];
+                    desc = cols[2];
+                } else if (cols[1] && cols[1].match(/\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/)) {
+                    rawDate = cols[1];
+                    rawAmt = cols[2];
+                    desc = cols[3] || cols[0];
+                } else {
+                    return; // Header or unparseable line
+                }
+
+                let dateIso = '';
+                if (rawDate.includes('/')) {
+                    const parts = rawDate.split('/');
+                    if (parts.length === 3) {
+                        const d = parts[0].padStart(2, '0');
+                        const m = parts[1].padStart(2, '0');
+                        const y = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+                        dateIso = `${y}-${m}-${d}`;
+                    }
+                } else if (rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    dateIso = rawDate;
+                }
+
+                const num = parseFloat((rawAmt || '').replace(/[$,+]/g, ''));
+                if (isNaN(num)) return;
+
+                const dLower = (desc || '').toLowerCase();
+                const isDeposit = num > 0 || dLower.includes('adyen') || dLower.includes('uber bv') || dLower.includes('fast transfer from') || dLower.includes('direct credit');
+                const cls = classifyExpenseTransaction(desc);
+
+                rows.push({
+                    id: `smart_${Date.now()}_${idx}`,
+                    date: dateIso || new Date().toISOString().split('T')[0],
+                    amount: Math.abs(num),
+                    notes: desc || 'Bank Transaction',
+                    entity: cls.entity,
+                    category: cls.category,
+                    matchedRule: cls.matchedRule,
+                    isDeposit,
+                    selected: !isDeposit // default checked if true expense
+                });
+            });
+            return rows;
+        }
+
+        async function parsePdfExpenseDocument(file) {
+            const pdfjs = await loadPdfJsLibrary();
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+            for (let i = 1; i <= Math.min(pdf.numPages, 10); i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                const pageText = content.items.map(it => it.str).join(' ');
+                fullText += '\n' + pageText;
+            }
+            return parseRawTextToExpenses(fullText, file.name);
+        }
+
+        async function parseImageExpenseDocument(file) {
+            const apiKey = localStorage.getItem('alhamd_gemini_api_key');
+            if (apiKey) {
+                try {
+                    const aiRows = await callGeminiVisionExpenseExtraction(file, apiKey);
+                    if (aiRows && aiRows.length > 0) return aiRows;
+                } catch (e) {
+                    console.warn("Gemini vision fallback to Tesseract:", e);
+                }
+            }
+
+            const Tesseract = await loadTesseractLibrary();
+            const worker = await Tesseract.createWorker('eng');
+            const ret = await worker.recognize(file);
+            await worker.terminate();
+            return parseRawTextToExpenses(ret.data.text, file.name);
+        }
+
+        async function callGeminiVisionExpenseExtraction(file, apiKey) {
+            const base64Data = await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+
+            const prompt = `Extract all business expenses from this receipt, invoice, or bank screenshot.
+Return ONLY a valid JSON array of objects with the following schema:
+[
+  {
+    "date": "YYYY-MM-DD",
+    "amount": 123.45,
+    "supplier": "Supplier or description",
+    "entity": "anatolya" or "green_juice" or "company_shared",
+    "category": "Meat" or "Fruit & Vegies" or "Bread" or "Packaging" or "Campbells" or "Drinks" or "Ice Cream" or "Rent" or "Others",
+    "isDeposit": false
+  }
+]
+Rules:
+- Spudshed, Local Fresh Gourmet, Thanh Doan -> entity "green_juice", category "Fruit & Vegies"
+- Bake Boss, Majors, Royal Foods, Gelato -> entity "green_juice", category "Ice Cream"
+- Westfield Carousel -> entity "green_juice", category "Rent"
+- Balcatta Cash, Canning Vale Cash, Campbells, Wing Ki Chan -> entity "anatolya", category "Campbells"
+- ISM Holdings, halal meat, chicken, beef -> entity "anatolya", category "Meat"
+- Westfield Innaloo -> entity "anatolya", category "Rent"
+- Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, superannuation, insurance, accounting -> entity "company_shared", category "Others"
+Do not include markdown fences.`;
+
+            const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [
+                            { text: prompt },
+                            { inline_data: { mime_type: file.type || 'image/jpeg', data: base64Data } }
+                        ]
+                    }]
+                })
+            });
+            const data = await resp.json();
+            const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            const cleanJson = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            return parsed.map((item, idx) => ({
+                id: `ai_${Date.now()}_${idx}`,
+                date: item.date || new Date().toISOString().split('T')[0],
+                amount: Math.abs(Number(item.amount) || 0),
+                notes: item.supplier || 'Receipt Item',
+                entity: item.entity || 'anatolya',
+                category: item.category || 'Others',
+                matchedRule: 'Gemini AI ✨',
+                isDeposit: !!item.isDeposit,
+                selected: !item.isDeposit
+            }));
+        }
+
+        function parseRawTextToExpenses(rawText, defaultFileName = '') {
+            const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+            const dateRegex = /\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i;
+            const amountRegex = /(?:TOTAL|AMOUNT|SUBTOTAL|AUD|DUE)?\s*[\$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2}))\b/i;
+
+            const detectedTransactions = [];
+
+            // Case A: Look for lines with both date and amount (transaction log)
+            lines.forEach((l, idx) => {
+                const dm = l.match(dateRegex);
+                const am = l.match(amountRegex);
+                if (dm && am) {
+                    const amt = parseFloat(am[1].replace(/,/g, ''));
+                    const cleanDesc = l.replace(dm[0], '').replace(am[0], '').replace(/\$|Value Date:|Card xx\d+/gi, '').trim();
+                    if (amt > 0) {
+                        const cls = classifyExpenseTransaction(cleanDesc || defaultFileName);
+                        detectedTransactions.push({
+                            id: `tx_${Date.now()}_${idx}`,
+                            date: normalizeDateStringToIso(dm[0]),
+                            amount: amt,
+                            notes: cleanDesc || defaultFileName,
+                            entity: cls.entity,
+                            category: cls.category,
+                            matchedRule: cls.matchedRule,
+                            isDeposit: false,
+                            selected: true
+                        });
+                    }
+                }
+            });
+
+            // Case B: Single invoice / receipt (has total amount & doc date)
+            if (detectedTransactions.length === 0) {
+                let docDate = '';
+                for (const l of lines) {
+                    const dm = l.match(dateRegex);
+                    if (dm) { docDate = normalizeDateStringToIso(dm[0]); break; }
+                }
+
+                let maxAmt = 0;
+                for (const l of lines) {
+                    const am = l.match(amountRegex);
+                    if (am) {
+                        const v = parseFloat(am[1].replace(/,/g, ''));
+                        if (v > maxAmt) maxAmt = v;
+                    }
+                }
+
+                // Pick supplier from header lines
+                let supplier = defaultFileName.replace(/\.[^/.]+$/, '');
+                for (const l of lines) {
+                    const t = l.trim();
+                    if (t.length > 3 && !t.match(dateRegex) && !t.match(/^\$?[\d,\.]+$/) && !t.toLowerCase().includes('tax invoice') && !t.toLowerCase().includes('receipt')) {
+                        supplier = t;
+                        break;
+                    }
+                }
+
+                if (maxAmt > 0) {
+                    const cls = classifyExpenseTransaction(supplier);
+                    detectedTransactions.push({
+                        id: `doc_${Date.now()}`,
+                        date: docDate || new Date().toISOString().split('T')[0],
+                        amount: maxAmt,
+                        notes: supplier,
+                        entity: cls.entity,
+                        category: cls.category,
+                        matchedRule: cls.matchedRule,
+                        isDeposit: false,
+                        selected: true
+                    });
+                }
+            }
+
+            return detectedTransactions;
+        }
+
+        function normalizeDateStringToIso(str) {
+            if (!str) return new Date().toISOString().split('T')[0];
+            if (str.includes('/')) {
+                const p = str.split('/');
+                if (p.length === 3) {
+                    const d = p[0].padStart(2, '0');
+                    const m = p[1].padStart(2, '0');
+                    const y = p[2].length === 2 ? `20${p[2]}` : p[2];
+                    return `${y}-${m}-${d}`;
+                }
+            } else if (str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return str;
+            }
+            try {
+                const parsed = new Date(str);
+                if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+            } catch(e) {}
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function setSmartStagingFilter(mode) {
+            smartStagingFilter = mode;
+            const btnExp = document.getElementById('smartFilterExpensesBtn');
+            const btnAll = document.getElementById('smartFilterAllBtn');
+            if (btnExp) btnExp.className = (mode === 'expenses' ? "px-2 py-0.5 rounded font-bold bg-emerald-600 text-white shadow-xs cursor-pointer" : "px-2 py-0.5 rounded font-bold text-slate-400 hover:text-white cursor-pointer");
+            if (btnAll) btnAll.className = (mode === 'all' ? "px-2 py-0.5 rounded font-bold bg-emerald-600 text-white shadow-xs cursor-pointer" : "px-2 py-0.5 rounded font-bold text-slate-400 hover:text-white cursor-pointer");
+            renderSmartStagingTable();
+        }
+        window.setSmartStagingFilter = setSmartStagingFilter;
+
+        function toggleSelectAllSmartRows(checked) {
+            const rowsToUpdate = smartStagingFilter === 'expenses' ? smartStagingRows.filter(r => !r.isDeposit) : smartStagingRows;
+            rowsToUpdate.forEach(r => r.selected = checked);
+            renderSmartStagingTable();
+        }
+        window.toggleSelectAllSmartRows = toggleSelectAllSmartRows;
+
+        function updateSmartRowField(id, field, value) {
+            const row = smartStagingRows.find(r => r.id === id);
+            if (!row) return;
+            if (field === 'selected') row.selected = !!value;
+            else if (field === 'amount') row.amount = parseFloat(value) || 0;
+            else row[field] = value;
+            updateSmartStagingTotals();
+        }
+        window.updateSmartRowField = updateSmartRowField;
+
+        function removeSmartStagingRow(id) {
+            smartStagingRows = smartStagingRows.filter(r => r.id !== id);
+            renderSmartStagingTable();
+        }
+        window.removeSmartStagingRow = removeSmartStagingRow;
+
+        function addManualStagingRow() {
+            smartStagingRows.push({
+                id: `manual_${Date.now()}`,
+                date: new Date().toISOString().split('T')[0],
+                amount: 0,
+                notes: 'Manual expense',
+                entity: currentStore === 'green_juice' ? 'green_juice' : (currentStore === 'company_shared' ? 'company_shared' : 'anatolya'),
+                category: 'Others',
+                matchedRule: 'Manual',
+                isDeposit: false,
+                selected: true
+            });
+            renderSmartStagingTable();
+        }
+        window.addManualStagingRow = addManualStagingRow;
+
+        function updateSmartStagingTotals() {
+            const selectedRows = smartStagingRows.filter(r => r.selected);
+            let tot = 0, ak = 0, gj = 0, co = 0;
+            selectedRows.forEach(r => {
+                const a = Number(r.amount || 0);
+                tot += a;
+                if (r.entity === 'green_juice') gj += a;
+                else if (r.entity === 'company_shared') co += a;
+                else ak += a;
+            });
+
+            const elTot = document.getElementById('smartTotalSelectedBadge');
+            const elAk = document.getElementById('smartAnatolyaTotalBadge');
+            const elGj = document.getElementById('smartGjTotalBadge');
+            const elCo = document.getElementById('smartCoTotalBadge');
+            const btnConfirm = document.getElementById('confirmSmartImportBtn');
+
+            if (elTot) elTot.innerText = `Total: ${tot.toFixed(2)} (${selectedRows.length})`;
+            if (elAk) elAk.innerText = `🥙 ${ak.toFixed(2)}`;
+            if (elGj) elGj.innerText = `🥤 ${gj.toFixed(2)}`;
+            if (elCo) elCo.innerText = `🏢 ${co.toFixed(2)}`;
+            if (btnConfirm) btnConfirm.innerHTML = `<span>💾</span> <span>Confirm & Add ${selectedRows.length} to Ledger</span>`;
+        }
+
+        function renderSmartStagingTable() {
+            const cont = document.getElementById('smartExpenseStagingContainer');
+            if (cont) cont.classList.remove('hidden');
+
+            const countBadge = document.getElementById('smartStagingCountBadge');
+            if (countBadge) countBadge.innerText = `${smartStagingRows.length} rows`;
+
+            const rowsToShow = smartStagingFilter === 'expenses' ? smartStagingRows.filter(r => !r.isDeposit) : smartStagingRows;
+            const tbody = document.getElementById('smartStagingTableBody');
+            if (!tbody) return;
+
+            if (rowsToShow.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 italic">No rows detected in this view.</td></tr>`;
+                updateSmartStagingTotals();
+                return;
+            }
+
+            let html = '';
+            rowsToShow.forEach(r => {
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition ${r.selected ? '' : 'opacity-40'}">
+                        <td class="p-2 text-center">
+                            <input type="checkbox" onchange="updateSmartRowField('${r.id}', 'selected', this.checked)" ${r.selected ? 'checked' : ''} class="rounded border-slate-700 text-emerald-600 focus:ring-0 cursor-pointer" />
+                        </td>
+                        <td class="p-1.5">
+                            <input type="date" value="${cleanDateStr(r.date)}" onchange="updateSmartRowField('${r.id}', 'date', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-white" />
+                        </td>
+                        <td class="p-1.5">
+                            <select onchange="updateSmartRowField('${r.id}', 'entity', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-bold text-slate-200">
+                                <option value="anatolya" ${r.entity === 'anatolya' ? 'selected' : ''}>🥙 Anatolya</option>
+                                <option value="green_juice" ${r.entity === 'green_juice' ? 'selected' : ''}>🥤 Green Juice</option>
+                                <option value="company_shared" ${r.entity === 'company_shared' ? 'selected' : ''}>🏢 Company Shared</option>
+                            </select>
+                        </td>
+                        <td class="p-1.5">
+                            <select onchange="updateSmartRowField('${r.id}', 'category', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-slate-200">
+                                <option value="Meat" ${r.category === 'Meat' ? 'selected' : ''}>🥩 Meat</option>
+                                <option value="Vegies" ${r.category === 'Vegies' || r.category === 'Fruit & Vegies' ? 'selected' : ''}>🥗 Fruit & Vegies</option>
+                                <option value="Bread" ${r.category === 'Bread' ? 'selected' : ''}>🍞 Bread</option>
+                                <option value="Packaging" ${r.category === 'Packaging' ? 'selected' : ''}>📦 Packaging</option>
+                                <option value="Campbells" ${r.category === 'Campbells' ? 'selected' : ''}>🥫 Campbells</option>
+                                <option value="Drinks" ${r.category === 'Drinks' ? 'selected' : ''}>🥤 Drinks</option>
+                                <option value="Ice Cream" ${r.category === 'Ice Cream' ? 'selected' : ''}>🍦 Ice Cream</option>
+                                <option value="Rent" ${r.category === 'Rent' ? 'selected' : ''}>🏢 Rent</option>
+                                <option value="Others" ${r.category === 'Others' ? 'selected' : ''}>🔧 Others</option>
+                            </select>
+                        </td>
+                        <td class="p-1.5">
+                            <input type="text" value="${r.notes || ''}" onchange="updateSmartRowField('${r.id}', 'notes', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs text-white" />
+                        </td>
+                        <td class="p-1.5 text-right">
+                            <input type="number" step="0.01" min="0" value="${Number(r.amount || 0).toFixed(2)}" onchange="updateSmartRowField('${r.id}', 'amount', this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-right font-black text-amber-300" />
+                        </td>
+                        <td class="p-1.5 text-center">
+                            <button type="button" onclick="removeSmartStagingRow('${r.id}')" class="text-rose-400 hover:text-rose-300 font-bold text-xs p-1" title="Remove row">✕</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+            updateSmartStagingTotals();
+        }
+
+        async function confirmBatchExpenseImport() {
+            const rowsToImport = smartStagingRows.filter(r => r.selected && Number(r.amount || 0) > 0);
+            if (rowsToImport.length === 0) {
+                alert("Please select at least one expense row to import.");
+                return;
+            }
+
+            const btn = document.getElementById('confirmSmartImportBtn');
+            if (btn) { btn.disabled = true; btn.innerText = "Importing..."; }
+
+            try {
+                const payloadRows = rowsToImport.map(r => ({
+                    date: cleanDateStr(r.date),
+                    store_id: r.entity,
+                    category: r.category === 'Fruit & Vegies' ? 'Vegies' : r.category,
+                    amount: Number(r.amount || 0),
+                    notes: (r.notes || '').slice(0, 300)
+                }));
+
+                const res = await callSheetApi({
+                    action: "batch_save_expenses",
+                    expenses: payloadRows
+                });
+
+                // Add to local expensesStore immediately
+                if (res && res.items && Array.isArray(res.items)) {
+                    res.items.forEach(it => expensesStore.unshift(it));
+                } else {
+                    payloadRows.forEach(it => expensesStore.unshift({ ...it, id: Date.now() + Math.random() }));
+                }
+
+                closeSmartExpenseModal();
+                renderExpensesLedgerView();
+                showExpensesToast(`✅ Successfully added ${payloadRows.length} expense(s) to the ledger!`, true);
+            } catch (err) {
+                console.error("Batch import error:", err);
+                alert("Error importing expenses: " + err.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = "<span>💾</span> <span>Confirm & Add to Ledger</span>"; }
+                loadCloudData({ silent: true });
+            }
+        }
+        window.confirmBatchExpenseImport = confirmBatchExpenseImport;
 
         // ==================== BAS QUARTERLY TAX REPORT ====================
         let currentBasQuarter = 'Q1'; // 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'FY'

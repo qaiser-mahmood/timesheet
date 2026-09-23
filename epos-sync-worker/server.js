@@ -631,6 +631,32 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       return res.json({ status: 'success', item: result && result[0] ? result[0] : row });
     }
 
+    if (payload.action === 'batch_save_expenses' && Array.isArray(payload.expenses) && payload.expenses.length > 0) {
+      const rows = payload.expenses.map(x => ({
+        date: cleanDateStr(x.date),
+        category: x.category || 'Others',
+        amount: Math.abs(Number(x.amount)) || 0,
+        notes: (x.notes || '').slice(0, 300),
+        store_id: x.store_id || 'anatolya'
+      }));
+      let result;
+      try {
+        result = await supabaseServerFetch('expenses', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(rows)
+        });
+      } catch (err) {
+        const rowsNoStore = rows.map(r => { const c = { ...r }; delete c.store_id; return c; });
+        result = await supabaseServerFetch('expenses', {
+          method: 'POST',
+          headers: { 'Prefer': 'return=representation' },
+          body: JSON.stringify(rowsNoStore)
+        });
+      }
+      return res.json({ status: 'success', count: rows.length, items: result || rows });
+    }
+
     if (payload.action === 'delete_expense' && payload.id) {
       await supabaseServerFetch(`expenses?id=eq.${payload.id}`, {
         method: 'DELETE'
