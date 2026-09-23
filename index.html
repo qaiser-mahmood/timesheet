@@ -320,8 +320,8 @@
 
         <!-- TAB 2: Hourly Sales & Analytics Intelligence (Hide on Share) -->
         <div id="hourlySalesSection" class="hidden hide-on-share bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-5 space-y-4 shadow-xl border border-slate-800">
-            <!-- Store Switcher & Venue Context for Sales & Expenses -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-950/80 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800/80">
+            <!-- Store Switcher for Sales & Expenses -->
+            <div class="flex items-center gap-2 bg-slate-950/80 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800/80">
                 <div class="flex items-center gap-2 flex-wrap">
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Entity:</span>
                     <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold flex-wrap">
@@ -338,10 +338,6 @@
                             <span>🌐</span> <span>Consolidated (BAS)</span>
                         </button>
                     </div>
-                </div>
-                <div id="storeContextBadge" class="text-[11px] text-slate-300 font-medium flex items-center gap-1.5 pr-1">
-                    <span id="storeContextDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                    <span id="storeContextText">Viewing Anatolya Kebabs (Epos Now)</span>
                 </div>
             </div>
 
@@ -4103,16 +4099,12 @@
             if (btnCompany) btnCompany.className = (storeKey === 'company_shared' ? activePurpleCls : inactiveCls);
             if (btnAll) btnAll.className = (storeKey === 'all' ? activeSkyCls : inactiveCls);
 
-            // 2. Update Context Badge, Titles, Logo & Sync Button
-            const ctxText = document.getElementById('storeContextText');
-            const ctxDot = document.getElementById('storeContextDot');
+            // 2. Update Titles, Logo & Sync Button
             const mainTitle = document.getElementById('mainTitle');
             const logoImg = document.getElementById('headerLogoImg');
             const headerLogoWrapper = document.getElementById('headerLogoWrapper');
 
             if (storeKey === 'anatolya') {
-                if (ctxText) ctxText.innerText = "Viewing Anatolya Kebabs (Epos Now)";
-                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
                 if (mainTitle && !isShareModeActive) mainTitle.innerText = "Anatolya Kebabs Roster";
                 if (logoImg) {
                     logoImg.src = "logo.png";
@@ -4124,24 +4116,18 @@
                     headerLogoWrapper.innerHTML = '<img id="headerLogoImg" src="logo.png" alt="Anatolya Kebabs" class="w-full h-full object-contain rounded-lg">';
                 }
             } else if (storeKey === 'green_juice') {
-                if (ctxText) ctxText.innerText = "Viewing Green Juice Bar (Loyverse POS)";
-                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
                 if (mainTitle && !isShareModeActive) mainTitle.innerText = "Green Juice Bar Timesheet";
                 if (headerLogoWrapper) {
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-emerald-500/40 bg-emerald-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-emerald-500/20";
                     headerLogoWrapper.innerHTML = '<img id="headerLogoImg" src="freshJuiceLogo.png" alt="Green Juice Bar" class="w-full h-full object-contain rounded-lg">';
                 }
             } else if (storeKey === 'company_shared') {
-                if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES (Company Overhead & Admin)";
-                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-purple-400 animate-pulse";
                 if (mainTitle && !isShareModeActive) mainTitle.innerText = "Company Shared & Overhead";
                 if (headerLogoWrapper) {
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-purple-500/40 bg-slate-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-purple-500/20 text-lg";
                     headerLogoWrapper.innerHTML = "🏢";
                 }
             } else { // 'all'
-                if (ctxText) ctxText.innerText = "Viewing ALHAMD ENTERPRISES Consolidated (BAS)";
-                if (ctxDot) ctxDot.className = "w-2 h-2 rounded-full bg-sky-400 animate-pulse";
                 if (mainTitle && !isShareModeActive) mainTitle.innerText = "ALHAMD ENTERPRISES Consolidated (BAS)";
                 if (headerLogoWrapper) {
                     headerLogoWrapper.className = "w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-sm border border-sky-500/40 bg-slate-950 flex items-center justify-center p-0.5 shrink-0 ring-2 ring-sky-500/20 text-lg";
