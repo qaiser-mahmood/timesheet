@@ -583,6 +583,9 @@
 
                     <!-- Row 2 on mobile / Right on desktop: Log Exp & BAS Report Buttons -->
                     <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button type="button" onclick="openLearnedRulesModal()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold px-2.5 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="View and manage remembered supplier categorization rules">
+                            <span>🧠</span> <span>Rules (<span id="ledgerLearnedRulesCountBadge">0</span>)</span>
+                        </button>
                         <button type="button" onclick="openSmartExpenseModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer" title="Upload screenshot, bank statement CSV/PDF, or invoice for automated reading and categorization">
                             <span>📷</span> <span>Smart Upload / Ingest</span>
                         </button>
@@ -1251,9 +1254,14 @@
                     <span>⚡ Engine:</span>
                     <span id="smartEngineBadge" class="text-emerald-400 font-bold">Built-in Fast OCR & Bank CSV Parser</span>
                 </span>
-                <button type="button" onclick="toggleSmartAiSettings()" class="text-slate-400 hover:text-white underline text-[10px] cursor-pointer">
-                    Optional Gemini AI Vision Key ⚙️
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="openLearnedRulesModal()" class="text-amber-300 hover:text-amber-200 font-bold text-[11px] flex items-center gap-1 bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded cursor-pointer" title="View remembered supplier rules">
+                        <span>🧠 Learned Rules</span> <span id="smartLearnedRulesCountBadge" class="bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full text-[10px] font-black">0</span>
+                    </button>
+                    <button type="button" onclick="toggleSmartAiSettings()" class="text-slate-400 hover:text-white underline text-[10px] cursor-pointer">
+                        Optional Gemini AI Vision Key ⚙️
+                    </button>
+                </div>
             </div>
             <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
                 <label class="block text-[10px] font-bold text-slate-300 uppercase">Google Gemini API Key (Optional for complex handwritten receipts)</label>
@@ -1331,6 +1339,84 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEARNED EXPENSE RULES MODAL -->
+    <div id="learnedRulesModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
+        <div class="bg-slate-900 text-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden p-4 sm:p-5 space-y-4 border border-slate-700 max-h-[90vh] flex flex-col">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">🧠</span>
+                    <div>
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            Learned Supplier & Expense Mappings
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            The parser remembers your corrections automatically. Next time these suppliers appear, they will be classified to your chosen shop and category.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeLearnedRulesModal()" class="text-slate-400 hover:text-white text-xl font-bold p-1 cursor-pointer">✕</button>
+            </div>
+
+            <!-- Add / Quick Rule Entry -->
+            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 shrink-0 space-y-2">
+                <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">➕ Add or Override Supplier Keyword</div>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <input type="text" id="newRuleKeywordInput" placeholder="Supplier keyword (e.g. Royal Foods, Newtrition)" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white sm:col-span-2" />
+                    <select id="newRuleEntitySelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                        <option value="anatolya">🥙 Anatolya</option>
+                        <option value="green_juice">🥤 Green Juice</option>
+                        <option value="company_shared">🏢 Company Shared</option>
+                    </select>
+                    <select id="newRuleCategorySelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white">
+                        <option value="Meat">🥩 Meat</option>
+                        <option value="Vegies">🥗 Fruit & Vegies</option>
+                        <option value="Bread">🍞 Bread</option>
+                        <option value="Packaging">📦 Packaging</option>
+                        <option value="Campbells">🥫 Campbells</option>
+                        <option value="Drinks">🥤 Drinks</option>
+                        <option value="Ice Cream">🍦 Ice Cream</option>
+                        <option value="Rent">🏢 Rent</option>
+                        <option value="Others">🔧 Others</option>
+                    </select>
+                </div>
+                <div class="flex justify-end pt-1">
+                    <button type="button" onclick="addManualLearnedRule()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1 rounded-lg text-xs transition cursor-pointer shadow">
+                        Save Mapping
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rules Filter & List Header -->
+            <div class="flex items-center justify-between gap-2 shrink-0">
+                <input type="text" id="learnedRulesSearchInput" oninput="renderLearnedRulesList()" placeholder="Filter remembered suppliers..." class="w-full sm:w-64 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white" />
+                <span id="learnedRulesTotalBadge" class="text-xs font-bold text-slate-400">0 rules</span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60 shadow-inner">
+                <table class="w-full text-xs text-left border-collapse">
+                    <thead class="sticky top-0 bg-slate-900 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-800">
+                        <tr>
+                            <th class="p-2.5">Supplier / Keyword</th>
+                            <th class="p-2.5 w-36">Target Entity</th>
+                            <th class="p-2.5 w-32">Target Category</th>
+                            <th class="p-2.5 w-14 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="learnedRulesTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                        <!-- Rendered dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800 shrink-0 text-xs">
+                <span class="text-slate-400 text-[11px]">Synced across devices and cached locally for instant offline parsing.</span>
+                <button type="button" onclick="closeLearnedRulesModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold transition cursor-pointer">Close</button>
             </div>
         </div>
     </div>
@@ -1668,6 +1754,14 @@
         window.confirmBatchExpenseImport = confirmBatchExpenseImport;
         window.toggleSmartAiSettings = toggleSmartAiSettings;
         window.saveSmartGeminiApiKey = saveSmartGeminiApiKey;
+        window.openLearnedRulesModal = openLearnedRulesModal;
+        window.closeLearnedRulesModal = closeLearnedRulesModal;
+        window.renderLearnedRulesList = renderLearnedRulesList;
+        window.addManualLearnedRule = addManualLearnedRule;
+        window.deleteLearnedRule = deleteLearnedRule;
+        window.extractCleanSupplierKeyword = extractCleanSupplierKeyword;
+        window.recordExpenseLearning = recordExpenseLearning;
+        window.updateLearnedRulesBadges = updateLearnedRulesBadges;
         window.toggleLedgerCalendarPopover = toggleLedgerCalendarPopover;
         window.closeLedgerCalendarPopover = closeLedgerCalendarPopover;
         window.changeLedgerCalMonth = changeLedgerCalMonth;
@@ -2158,6 +2252,10 @@
                         return { status: "success" };
                     }
 
+                    if (payload.action === "save_learned_rule" || payload.action === "delete_learned_rule") {
+                        return { status: "success" };
+                    }
+
                     if (payload.action === "delete") {
                         const cleanD = cleanDateStr(payload.date);
                         const nameEnc = encodeURIComponent(payload.name.toString().trim());
@@ -2576,6 +2674,23 @@
                                     ...x,
                                     store_id: x.store_id || 'anatolya'
                                 }));
+                            }
+                            if (responseObj.learnedRules && Array.isArray(responseObj.learnedRules)) {
+                                const ruleMap = new Map();
+                                learnedExpenseRules.forEach(r => { if (r && r.keyword) ruleMap.set(r.keyword.toLowerCase(), r); });
+                                responseObj.learnedRules.forEach(r => {
+                                    if (r && r.keyword) {
+                                        const k = r.keyword.toLowerCase();
+                                        if (!ruleMap.has(k)) {
+                                            ruleMap.set(k, r);
+                                        }
+                                    }
+                                });
+                                learnedExpenseRules = Array.from(ruleMap.values());
+                                try {
+                                    localStorage.setItem('alhamd_learned_expense_rules', JSON.stringify(learnedExpenseRules));
+                                } catch (_) {}
+                                if (typeof updateLearnedRulesBadges === 'function') updateLearnedRulesBadges();
                             }
                             hourlySalesStore = responseObj.sales.map(s => {
                                 s.store_id = s.store_id || 'anatolya';
@@ -4625,6 +4740,9 @@
                     }
                     showExpensesToast(`Logged expense: ${amount.toFixed(2)} - ${category}`);
                 }
+                if (notes && typeof recordExpenseLearning === 'function') {
+                    recordExpenseLearning(notes, store_id, category);
+                }
                 closeExpenseModal();
                 renderCurrentAnalyticsView();
             } catch (err) {
@@ -5016,10 +5134,19 @@
             // 2. Re-render UI immediately
             renderExpensesLedgerView();
 
-            // 3. Display toast
+            // 3. Display toast and record learning
             const amtStr = `${Number(item.amount || 0).toFixed(2)}`;
             const noteStr = item.notes ? ` (${item.notes.slice(0, 22)})` : '';
-            showExpensesToast(`Moved ${amtStr}${noteStr} to ${destLabel}`);
+            if (item.notes && typeof recordExpenseLearning === 'function') {
+                const learned = recordExpenseLearning(item.notes, newStoreId, item.category);
+                if (learned) {
+                    showExpensesToast(`Moved to ${destLabel} & 🧠 remembered "${learned.label}"`);
+                } else {
+                    showExpensesToast(`Moved ${amtStr}${noteStr} to ${destLabel}`);
+                }
+            } else {
+                showExpensesToast(`Moved ${amtStr}${noteStr} to ${destLabel}`);
+            }
 
             // 4. Persist to server / Supabase
             try {
@@ -5040,6 +5167,7 @@
         function renderExpensesLedgerView() {
             updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
+            updateLearnedRulesBadges();
 
             // 1. Compute Entity Counts & Dollar Totals for Active Date Range
             const inDateExpenses = expensesStore.filter(x => {
@@ -5251,13 +5379,213 @@
             { pattern: /(bunnings|officeworks|chemist\s*warehouse|reject\s*shop|kmart)/i, entity: 'company_shared', category: 'Others', label: 'Supplies' }
         ];
 
+        // ==================== LEARNED EXPENSE RULES ENGINE ====================
+        let learnedExpenseRules = [];
+        try {
+            const savedRules = localStorage.getItem('alhamd_learned_expense_rules');
+            if (savedRules) learnedExpenseRules = JSON.parse(savedRules);
+        } catch (e) {
+            console.warn("Could not load local learned rules:", e);
+        }
+
+        function extractCleanSupplierKeyword(notes) {
+            if (!notes) return '';
+            let str = notes.trim();
+            if (str.includes(' - ')) str = str.split(' - ')[0];
+            str = str.replace(/^(Transfer (To|From)|Fast Transfer From|Direct Debit \d+|Direct Credit \d+|Fast Transfer)\s*/i, '');
+            str = str.replace(/CommBank App.*$/i, '');
+            str = str.replace(/NetBank BPAY.*$/i, '');
+            str = str.replace(/BPAY \d+.*$/i, '');
+            str = str.replace(/Value Date:.*$/i, '');
+            str = str.replace(/Card xx\d+.*$/i, '');
+            str = str.replace(/(INV|Invoice)\s*\d+.*$/i, '');
+            str = str.replace(/\s*(PTY LTD|PTY\. LTD\.|LTD|LIMITED|AU|Aust|Australia)$/i, '');
+            str = str.replace(/\s+\d{3,}.*$/, '');
+            str = str.replace(/\s+\b(CANNINGTON|BALCATTA|WELSHPOOL|INNALOO|BENTLEY|MALAGA|PERTH|OSBORNE PARK|SYDNEY|MELBOURNE)\b.*$/i, '');
+            str = str.trim();
+            return str.length >= 3 ? str : notes.trim();
+        }
+        window.extractCleanSupplierKeyword = extractCleanSupplierKeyword;
+
+        function updateLearnedRulesBadges() {
+            const count = Array.isArray(learnedExpenseRules) ? learnedExpenseRules.length : 0;
+            const b1 = document.getElementById('smartLearnedRulesCountBadge');
+            const b2 = document.getElementById('ledgerLearnedRulesCountBadge');
+            const b3 = document.getElementById('learnedRulesTotalBadge');
+            if (b1) b1.innerText = count;
+            if (b2) b2.innerText = count;
+            if (b3) b3.innerText = `${count} rules`;
+        }
+        window.updateLearnedRulesBadges = updateLearnedRulesBadges;
+
+        function recordExpenseLearning(notes, entity, category) {
+            const keyword = extractCleanSupplierKeyword(notes);
+            if (!keyword || keyword.length < 3) return null;
+            const keyLower = keyword.toLowerCase();
+            const existingIdx = learnedExpenseRules.findIndex(r => (r.keyword || '').toLowerCase() === keyLower);
+            const ruleObj = {
+                keyword: keyLower,
+                label: keyword,
+                entity: entity || 'anatolya',
+                category: category || 'Others',
+                updatedAt: new Date().toISOString()
+            };
+            if (existingIdx !== -1) {
+                learnedExpenseRules[existingIdx] = ruleObj;
+            } else {
+                learnedExpenseRules.unshift(ruleObj);
+            }
+            try {
+                localStorage.setItem('alhamd_learned_expense_rules', JSON.stringify(learnedExpenseRules));
+            } catch (_) {}
+            updateLearnedRulesBadges();
+
+            // Sync to server worker
+            callSheetApi({
+                action: 'save_learned_rule',
+                rule: ruleObj
+            }).catch(err => console.warn('Could not sync learned rule to server:', err.message));
+
+            return ruleObj;
+        }
+        window.recordExpenseLearning = recordExpenseLearning;
+
+        async function deleteLearnedRule(keyword) {
+            if (!keyword) return;
+            const kw = keyword.toLowerCase();
+            learnedExpenseRules = learnedExpenseRules.filter(r => (r.keyword || '').toLowerCase() !== kw);
+            try {
+                localStorage.setItem('alhamd_learned_expense_rules', JSON.stringify(learnedExpenseRules));
+            } catch (_) {}
+            updateLearnedRulesBadges();
+            renderLearnedRulesList();
+            showExpensesToast(`Removed rule for "${keyword}"`);
+
+            try {
+                await callSheetApi({
+                    action: 'delete_learned_rule',
+                    keyword: kw
+                });
+            } catch (err) {
+                console.warn('Could not sync delete to server:', err.message);
+            }
+        }
+        window.deleteLearnedRule = deleteLearnedRule;
+
+        function openLearnedRulesModal() {
+            const modal = document.getElementById('learnedRulesModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                renderLearnedRulesList();
+            }
+        }
+        window.openLearnedRulesModal = openLearnedRulesModal;
+
+        function closeLearnedRulesModal() {
+            const modal = document.getElementById('learnedRulesModal');
+            if (modal) modal.classList.add('hidden');
+        }
+        window.closeLearnedRulesModal = closeLearnedRulesModal;
+
+        function renderLearnedRulesList() {
+            const tbody = document.getElementById('learnedRulesTableBody');
+            if (!tbody) return;
+            updateLearnedRulesBadges();
+
+            const searchInput = document.getElementById('learnedRulesSearchInput');
+            const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
+            let list = learnedExpenseRules;
+            if (query) {
+                list = list.filter(r => (r.label || r.keyword || '').toLowerCase().includes(query) || (r.category || '').toLowerCase().includes(query) || (r.entity || '').toLowerCase().includes(query));
+            }
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500 italic">${query ? 'No matching rules found.' : 'No learned rules yet. The system will automatically record your corrections as you categorize expenses!'}</td></tr>`;
+                return;
+            }
+
+            const entityLabels = {
+                'anatolya': '🥙 Anatolya',
+                'green_juice': '🥤 Green Juice',
+                'company_shared': '🏢 Company Shared'
+            };
+
+            let html = '';
+            list.forEach(r => {
+                const entName = entityLabels[r.entity] || r.entity;
+                const kwEscaped = (r.keyword || '').replace(/'/g, "\\'");
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition">
+                        <td class="p-2.5 font-bold text-white flex items-center gap-1.5">
+                            <span class="text-amber-400">⚡</span>
+                            <span>${r.label || r.keyword}</span>
+                        </td>
+                        <td class="p-2.5">
+                            <span class="text-xs px-2 py-0.5 rounded font-bold ${r.entity === 'green_juice' ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60' : (r.entity === 'company_shared' ? 'bg-purple-950/80 text-purple-300 border border-purple-800/60' : 'bg-amber-950/80 text-amber-300 border border-amber-800/60')}">
+                                ${entName}
+                            </span>
+                        </td>
+                        <td class="p-2.5">
+                            <span class="text-xs px-2 py-0.5 rounded font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                                ${r.category}
+                            </span>
+                        </td>
+                        <td class="p-2.5 text-center">
+                            <button type="button" onclick="deleteLearnedRule('${kwEscaped}')" class="text-rose-400 hover:text-rose-300 font-bold text-xs p-1 cursor-pointer" title="Delete rule">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+        window.renderLearnedRulesList = renderLearnedRulesList;
+
+        function addManualLearnedRule() {
+            const inp = document.getElementById('newRuleKeywordInput');
+            const entSel = document.getElementById('newRuleEntitySelect');
+            const catSel = document.getElementById('newRuleCategorySelect');
+            const kw = inp ? inp.value.trim() : '';
+            if (!kw || kw.length < 3) {
+                alert("Please enter a supplier or keyword with at least 3 characters.");
+                return;
+            }
+            const entity = entSel ? entSel.value : 'anatolya';
+            const category = catSel ? catSel.value : 'Others';
+            recordExpenseLearning(kw, entity, category);
+            if (inp) inp.value = '';
+            renderLearnedRulesList();
+            showExpensesToast(`Saved rule for "${kw}"!`);
+        }
+        window.addManualLearnedRule = addManualLearnedRule;
+
         function classifyExpenseTransaction(desc, defaultStore = currentStore) {
             const cleanD = (desc || '').trim();
+            const lowerD = cleanD.toLowerCase();
+
+            // 1. HIGHEST PRIORITY: Check user-learned correction rules first
+            if (Array.isArray(learnedExpenseRules)) {
+                for (const rule of learnedExpenseRules) {
+                    if (rule && rule.keyword && lowerD.includes(rule.keyword.toLowerCase())) {
+                        return {
+                            entity: rule.entity,
+                            category: rule.category,
+                            matchedRule: `Learned: ${rule.label || rule.keyword}`
+                        };
+                    }
+                }
+            }
+
+            // 2. Built-in system static rules
             for (const rule of EXPENSE_CLASSIFICATION_RULES) {
                 if (rule.pattern.test(cleanD)) {
                     return { entity: rule.entity, category: rule.category, matchedRule: rule.label };
                 }
             }
+
+            // 3. Fallback to active store
             const fallbackEntity = (defaultStore === 'green_juice' ? 'green_juice' : (defaultStore === 'company_shared' ? 'company_shared' : 'anatolya'));
             return { entity: fallbackEntity, category: 'Others', matchedRule: 'Auto' };
         }
@@ -5292,6 +5620,7 @@
             const modal = document.getElementById('smartExpenseModal');
             if (modal) {
                 modal.classList.remove('hidden');
+                updateLearnedRulesBadges();
                 const savedKey = localStorage.getItem('alhamd_gemini_api_key') || '';
                 const keyInp = document.getElementById('smartGeminiApiKey');
                 if (keyInp) keyInp.value = savedKey;
@@ -5762,9 +6091,42 @@ Do not include markdown fences.`;
         function updateSmartRowField(id, field, value) {
             const row = smartStagingRows.find(r => r.id === id);
             if (!row) return;
-            if (field === 'selected') row.selected = !!value;
-            else if (field === 'amount') row.amount = parseFloat(value) || 0;
-            else row[field] = value;
+            if (field === 'selected') {
+                row.selected = !!value;
+            } else if (field === 'amount') {
+                row.amount = parseFloat(value) || 0;
+            } else {
+                row[field] = value;
+            }
+
+            // If user edited entity or category, learn supplier mapping and auto-propagate to matching rows!
+            if ((field === 'entity' || field === 'category') && row.notes) {
+                const learned = recordExpenseLearning(row.notes, row.entity, row.category);
+                if (learned) {
+                    let updatedCount = 0;
+                    const kw = learned.keyword.toLowerCase();
+                    smartStagingRows.forEach(otherRow => {
+                        if (otherRow.id !== id && (otherRow.notes || '').toLowerCase().includes(kw)) {
+                            if (field === 'entity') otherRow.entity = value;
+                            if (field === 'category') otherRow.category = value;
+                            otherRow.matchedRule = `Learned: ${learned.label}`;
+                            updatedCount++;
+                        }
+                    });
+
+                    const entityLabels = {
+                        'anatolya': '🥙 Anatolya',
+                        'green_juice': '🥤 Green Juice',
+                        'company_shared': '🏢 Company Shared'
+                    };
+                    const entityLabel = entityLabels[row.entity] || row.entity;
+                    showExpensesToast(`🧠 Remembered: "${learned.label}" ➔ ${entityLabel} (${row.category})${updatedCount > 0 ? ` [Updated ${updatedCount} other items]` : ''}`);
+                    if (updatedCount > 0) {
+                        renderSmartStagingTable();
+                        return;
+                    }
+                }
+            }
             updateSmartStagingTotals();
         }
         window.updateSmartRowField = updateSmartRowField;

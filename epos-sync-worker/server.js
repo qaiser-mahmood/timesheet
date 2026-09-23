@@ -28,6 +28,28 @@ const TARGET_URL = 'https://reporting.eposnowhq.com/transactions';
 const LOYVERSE_TOKEN = process.env.LOYVERSE_TOKEN || '';
 const LOYVERSE_API_BASE = 'https://api.loyverse.com/v1.0';
 
+// Learned Expense Rules Persistence
+const LEARNED_RULES_FILE = path.join(__dirname, 'learned_expense_rules.json');
+let learnedExpenseRules = [];
+function loadLearnedExpenseRules() {
+  try {
+    if (fs.existsSync(LEARNED_RULES_FILE)) {
+      learnedExpenseRules = JSON.parse(fs.readFileSync(LEARNED_RULES_FILE, 'utf8'));
+    }
+  } catch (e) {
+    console.warn('Could not load learned_expense_rules.json:', e.message);
+  }
+}
+loadLearnedExpenseRules();
+
+function saveLearnedExpenseRules() {
+  try {
+    fs.writeFileSync(LEARNED_RULES_FILE, JSON.stringify(learnedExpenseRules, null, 2), 'utf8');
+  } catch (e) {
+    console.warn('Could not save learned_expense_rules.json:', e.message);
+  }
+}
+
 // Whitelisted management email accounts (Server-enforced, configurable via Render Env Var or code)
 const DEFAULT_MANAGERS = [
   'hqmahmood@gmail.com',
@@ -515,7 +537,7 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       store_id: x.store_id || 'anatolya'
     }));
 
-    res.json({ logs, staff, sales, expenses });
+    res.json({ logs, staff, sales, expenses, learnedRules: learnedExpenseRules });
   } catch (err) {
     console.error('Error in /api/data:', err);
     res.status(500).json({ error: 'Failed to fetch data', message: err.message });
@@ -783,11 +805,42 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       return res.json({ status: 'success', count: copied.length });
     }
 
+    if (payload.action === 'save_learned_rule' && payload.rule && payload.rule.keyword) {
+      const kw = payload.rule.keyword.toString().trim().toLowerCase();
+      const existingIdx = learnedExpenseRules.findIndex(r => (r.keyword || '').toLowerCase() === kw);
+      const ruleObj = {
+        keyword: kw,
+        label: (payload.rule.label || payload.rule.keyword).toString().trim(),
+        entity: payload.rule.entity || 'anatolya',
+        category: payload.rule.category || 'Others',
+        updated_at: new Date().toISOString()
+      };
+      if (existingIdx >= 0) {
+        learnedExpenseRules[existingIdx] = ruleObj;
+      } else {
+        learnedExpenseRules.unshift(ruleObj);
+      }
+      saveLearnedExpenseRules();
+      return res.json({ status: 'success', rule: ruleObj, totalRules: learnedExpenseRules.length });
+    }
+
+    if (payload.action === 'delete_learned_rule' && payload.keyword) {
+      const kw = payload.keyword.toString().trim().toLowerCase();
+      learnedExpenseRules = learnedExpenseRules.filter(r => (r.keyword || '').toLowerCase() !== kw);
+      saveLearnedExpenseRules();
+      return res.json({ status: 'success', totalRules: learnedExpenseRules.length });
+    }
+
     return res.status(400).json({ error: `Unknown action ${payload.action}` });
   } catch (err) {
     console.error('Error in /api/mutate:', err);
     res.status(500).json({ error: 'Mutation failed', message: err.message });
   }
+});
+
+// Endpoint to retrieve learned expense rules
+app.get('/api/learned-rules', requireAuthorizedManager, (req, res) => {
+  res.json({ status: 'success', rules: learnedExpenseRules });
 });
 
 // Endpoint for browser bookmarklet sync (e.g. past months or custom ranges scraped directly by user in browser)
