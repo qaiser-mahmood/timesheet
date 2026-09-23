@@ -160,8 +160,8 @@
                 <button type="button" id="mainTabRosterBtn" onclick="switchMainAppTab('roster')" class="bg-amber-500 text-slate-950 font-black px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow flex items-center gap-1 whitespace-nowrap cursor-pointer">
                     📅 Roster
                 </button>
-                <button type="button" id="mainTabSalesBtn" onclick="switchMainAppTab('sales_expenses')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer">
-                    📊 Sales & Expenses
+                <button type="button" id="mainTabSalesBtn" onclick="switchMainAppTab('sales_expenses')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2 sm:px-2.5 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer" title="Sales & Expenses Analytics">
+                    📊 Sales & Exp
                 </button>
                 <button type="button" onclick="openStaffModal()" class="hide-on-share bg-slate-800 hover:bg-slate-700 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs transition shadow-sm flex items-center gap-1 whitespace-nowrap border border-slate-700 cursor-pointer" title="Manage Staff & Multi-Store Pay Rates">
                     👥 Staff Rates
@@ -174,25 +174,22 @@
 
         <!-- TAB 1: ROSTER VIEW CONTAINER -->
         <div id="rosterMainViewContainer" class="space-y-4">
-            <!-- Roster Venue Switcher & Action Toolbar -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-900 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
-                <div class="hide-on-share flex items-center gap-2 flex-wrap">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Roster:</span>
-                    <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold">
-                        <button type="button" id="rosterStoreBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs">
-                            <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya</span>
-                        </button>
-                        <button type="button" id="rosterStoreBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar">
-                            <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice</span>
-                        </button>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Clean printable / shareable roster view">
-                        👁️ View Roster
+            <!-- Roster Venue Switcher & Action Toolbar (Single Responsive Line, 4 Buttons) -->
+            <div class="flex items-center justify-between gap-1 sm:gap-2 bg-slate-900 text-white p-1.5 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
+                <div class="hide-on-share inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-[11px] sm:text-xs font-semibold shrink-0">
+                    <button type="button" id="rosterStoreBtn_anatolya" onclick="switchStore('anatolya')" class="px-2 sm:px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1 sm:gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs">
+                        <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya</span>
                     </button>
-                    <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Copy last week's shifts to current week">
-                        📋 Copy Last Week
+                    <button type="button" id="rosterStoreBtn_green_juice" onclick="switchStore('green_juice')" class="px-2 sm:px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1 sm:gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar">
+                        <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice</span>
+                    </button>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <button type="button" id="shareModeBtn" onclick="toggleRosterShareMode()" class="bg-green-600 text-white font-bold px-2 sm:px-2.5 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Clean printable / shareable roster view">
+                        <span>👁️</span> <span>View</span>
+                    </button>
+                    <button type="button" id="copyPrevWeekBtn" onclick="copyPreviousWeekRoster()" class="hide-on-share bg-indigo-600 text-white font-bold px-2 sm:px-2.5 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-indigo-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap cursor-pointer" title="Copy last week's shifts to current week">
+                        <span>📋</span> <span>Copy Last</span>
                     </button>
                 </div>
             </div>
@@ -1844,7 +1841,7 @@
                     } else {
                         app.classList.remove('roster-share-active');
                         title.innerText = (currentStore === 'green_juice') ? "Green Juice Bar Timesheet" : "Anatolya Kebabs Roster";
-                        btn.innerText = "👁️ View Roster";
+                        btn.innerText = "👁️ View";
                         btn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
                     }
                     updateRosterShareHeader();
@@ -4176,7 +4173,7 @@
                     if (app) app.classList.remove('roster-share-active');
                     isShareModeActive = false;
                     if (shareModeBtn) {
-                        shareModeBtn.innerText = "👁️ View Roster";
+                        shareModeBtn.innerText = "👁️ View";
                         shareModeBtn.className = "bg-green-600 text-white font-bold px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs hover:bg-green-700 transition shadow-sm flex items-center gap-1 whitespace-nowrap";
                     }
                 }
