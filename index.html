@@ -193,27 +193,6 @@
                     </button>
                 </div>
             </div>
-        
-        <div id="weeklyTaxLimitSection" class="hide-on-share bg-blue-50/70 border border-blue-200 rounded-xl p-3 sm:p-4 space-y-2.5">
-            <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1.5">
-                <span>⚡</span> Weekly Tax-Limit Auto Splitter
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
-                <div>
-                    <label class="block text-[10px] font-bold text-blue-900 uppercase tracking-tight">Staff Target</label>
-                    <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-xs h-10 shadow-sm">
-                        <option value="">Loading Staff...</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-blue-900 uppercase tracking-tight">Target Tax Hours</label>
-                    <input type="number" id="bulkTaxHours" step="0.1" placeholder="e.g. 24" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-xs h-10 shadow-sm">
-                </div>
-                <button type="button" onclick="distributeWeeklyTaxHours()" class="w-full bg-blue-700 text-white font-bold rounded-md text-xs hover:bg-blue-800 transition shadow-sm h-10 flex items-center justify-center">
-                    Apply Week Tax
-                </button>
-            </div>
-        </div>
 
         <form id="payForm" class="hide-on-share space-y-4 max-w-full">
             <div class="grid grid-cols-3 gap-3 items-end">
@@ -311,6 +290,28 @@
                         <tr id="weeklyTableFoot"></tr>
                     </tfoot>
                 </table>
+            </div>
+        </div>
+
+        <!-- Weekly Tax-Limit Auto Splitter (Moved after shift roster) -->
+        <div id="weeklyTaxLimitSection" class="hide-on-share mt-4 bg-blue-50/70 border border-blue-200 rounded-xl p-3 sm:p-4 space-y-2.5">
+            <h3 class="text-xs font-bold text-blue-950 uppercase tracking-wide flex items-center gap-1.5">
+                <span>⚡</span> Weekly Tax-Limit Auto Splitter
+            </h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                <div>
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase tracking-tight">Staff Target</label>
+                    <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-xs h-10 shadow-sm">
+                        <option value="">Loading Staff...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-blue-900 uppercase tracking-tight">Target Tax Hours</label>
+                    <input type="number" id="bulkTaxHours" step="0.1" placeholder="e.g. 24" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-xs h-10 shadow-sm">
+                </div>
+                <button type="button" onclick="distributeWeeklyTaxHours()" class="w-full bg-blue-700 text-white font-bold rounded-md text-xs hover:bg-blue-800 transition shadow-sm h-10 flex items-center justify-center">
+                    Apply Week Tax
+                </button>
             </div>
         </div>
         </div> <!-- End #rosterMainViewContainer -->
@@ -517,6 +518,9 @@
                         <div id="kpiRangeNetSub" class="text-[9px] text-slate-500 font-medium mt-1 truncate">Rev − Exp − Cash Wages</div>
                     </div>
                 </div>
+
+                <!-- Range Weekly Net Profit Breakdown (Reconciles Month to Weeks) -->
+                <div id="rangeWeeklyBreakdownContainer" class="hidden"></div>
 
                 <!-- Range Expense Categories Mini-Pills -->
                 <div id="rangeExpenseCategoryPills" class="flex items-center gap-1.5 overflow-x-auto text-[10px] pb-0.5">
@@ -751,15 +755,76 @@
 
                 <!-- Expenses Table -->
                 <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow">
-                    <table class="w-full text-xs text-left border-collapse min-w-[650px]">
+                    <table class="w-full text-xs text-left border-collapse min-w-[700px]">
                         <thead>
-                            <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
-                                <th class="p-2.5 w-24">Date</th>
-                                <th class="p-2.5 w-36">Entity / Shop</th>
-                                <th class="p-2.5 w-32">Category</th>
-                                <th class="p-2.5">Notes / Description</th>
-                                <th class="p-2.5 text-right w-24">Amount</th>
-                                <th class="p-2.5 text-center w-20">Action</th>
+                            <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/70">
+                                <th class="p-2.5 w-28 align-top">
+                                    <div class="flex items-center justify-between gap-1">
+                                        <span>Date</span>
+                                        <button type="button" onclick="toggleLedgerDateSort()" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer text-[9px] flex items-center gap-0.5" title="Toggle Date Order">
+                                            <span id="ledgerDateSortIcon">▼ New</span>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="p-2.5 w-36 align-top">
+                                    <div class="space-y-1">
+                                        <div>Entity / Shop</div>
+                                        <select id="ledgerHeaderEntitySelect" onchange="onLedgerHeaderEntityChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-[10px] font-bold rounded px-1.5 py-1 focus:outline-none focus:border-amber-500 cursor-pointer shadow-xs">
+                                            <option value="all">🏢 All Entities</option>
+                                            <option value="anatolya">🥙 Anatolya</option>
+                                            <option value="green_juice">🥤 Green Juice</option>
+                                            <option value="company_shared">🏢 Shared</option>
+                                        </select>
+                                    </div>
+                                </th>
+                                <th class="p-2.5 w-44 align-top">
+                                    <div class="space-y-1 relative" id="ledgerHeaderCatDropdownWrapper">
+                                        <div class="flex items-center justify-between">
+                                            <span>Category</span>
+                                            <span id="ledgerHeaderCatActiveCount" class="text-[9px] text-amber-400 font-bold"></span>
+                                        </div>
+                                        <button type="button" id="ledgerHeaderCatButton" onclick="toggleLedgerCategoryDropdown(event)" class="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 text-[10px] font-bold rounded px-2 py-1 flex items-center justify-between transition cursor-pointer shadow-xs">
+                                            <span id="ledgerHeaderCatButtonLabel" class="truncate">📂 All Categories</span>
+                                            <span class="text-[8px] text-slate-400 ml-1">▼</span>
+                                        </button>
+                                        <!-- Multi-select Dropdown Popover -->
+                                        <div id="ledgerHeaderCatMenu" class="hidden absolute left-0 top-full mt-1 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 space-y-1.5 max-h-64 overflow-y-auto">
+                                            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 px-1 text-[10px]">
+                                                <button type="button" onclick="selectAllLedgerCategories(event)" class="text-amber-400 hover:text-amber-300 font-bold cursor-pointer">Select All</button>
+                                                <button type="button" onclick="clearAllLedgerCategories(event)" class="text-slate-400 hover:text-slate-200 font-bold cursor-pointer">Clear</button>
+                                            </div>
+                                            <div id="ledgerHeaderCatCheckboxes" class="space-y-0.5">
+                                                <!-- Populated dynamically with store-specific categories -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </th>
+                                <th class="p-2.5 align-top">
+                                    <div class="space-y-1">
+                                        <div>Notes / Description</div>
+                                        <div class="relative">
+                                            <input type="text" id="ledgerHeaderNotesFilter" placeholder="🔍 Filter description..." oninput="onLedgerHeaderNotesInput(this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-[10px] rounded px-2 py-1 pr-6 placeholder:text-slate-500 focus:outline-none focus:border-amber-500 font-normal">
+                                            <button type="button" id="ledgerHeaderNotesClearBtn" onclick="clearLedgerNotesFilter()" class="hidden absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs cursor-pointer">✕</button>
+                                        </div>
+                                    </div>
+                                </th>
+                                <th class="p-2.5 text-right w-28 align-top">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center justify-end gap-1">
+                                            <span>Amount</span>
+                                            <button type="button" onclick="toggleLedgerAmountSort()" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition cursor-pointer text-[9px]" title="Toggle Amount Sort">
+                                                <span id="ledgerAmountSortIcon">↕</span>
+                                            </button>
+                                        </div>
+                                        <div class="text-[9px] font-bold text-amber-300/80 text-right pr-0.5">AUD ($)</div>
+                                    </div>
+                                </th>
+                                <th class="p-2.5 text-center w-20 align-top">
+                                    <div class="space-y-1">
+                                        <div>Action</div>
+                                        <button type="button" id="ledgerHeaderResetBtn" onclick="resetAllLedgerHeaderFilters()" class="hidden w-full px-1 py-1 bg-rose-900/80 hover:bg-rose-800 text-rose-200 border border-rose-700 rounded text-[9px] font-bold cursor-pointer transition shadow-xs" title="Reset all active header filters">Reset</button>
+                                    </div>
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="expenseLedgerTableBody" class="divide-y divide-slate-800/60 text-slate-200">
@@ -2215,6 +2280,7 @@
 
                     if (payload.action === "save" && payload.entry) {
                         const e = payload.entry;
+                        const targetStore = e.store_id || (currentStore === 'green_juice' ? 'green_juice' : 'anatolya');
                         const row = {
                             date: cleanDateStr(e.date),
                             week_commencing: e.weekCommencing || getMondayString(cleanDateStr(e.date)),
@@ -2226,13 +2292,31 @@
                             total_hours: Number(e.totalHours) || 0,
                             cash_hours: Number(e.cashHours) || 0,
                             tax_hours: Number(e.taxHours) || 0,
+                            store_id: targetStore,
                             updated_at: new Date().toISOString()
                         };
-                        await supabaseFetch("roster?on_conflict=date,name", {
-                            method: "POST",
-                            headers: { "Prefer": "resolution=merge-duplicates" },
-                            body: JSON.stringify(row)
-                        });
+                        try {
+                            await supabaseFetch("roster?on_conflict=date,name,store_id", {
+                                method: "POST",
+                                headers: { "Prefer": "resolution=merge-duplicates" },
+                                body: JSON.stringify(row)
+                            });
+                        } catch (upsertErr) {
+                            // Check if existing shift exists for date, name, store_id
+                            const existCheck = await supabaseFetch(`roster?date=eq.${row.date}&name=eq.${encodeURIComponent(row.name)}&store_id=eq.${targetStore}`).catch(() => []);
+                            if (existCheck && existCheck.length > 0) {
+                                await supabaseFetch(`roster?id=eq.${existCheck[0].id}`, {
+                                    method: "PATCH",
+                                    body: JSON.stringify(row)
+                                });
+                            } else {
+                                await supabaseFetch("roster?on_conflict=date,name", {
+                                    method: "POST",
+                                    headers: { "Prefer": "resolution=merge-duplicates" },
+                                    body: JSON.stringify(row)
+                                });
+                            }
+                        }
                         return { status: "success" };
                     }
 
@@ -2310,8 +2394,13 @@
                     if (payload.action === "delete") {
                         const cleanD = cleanDateStr(payload.date);
                         const nameEnc = encodeURIComponent(payload.name.toString().trim());
-                        await supabaseFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+                        const storeFilter = payload.store_id ? `&store_id=eq.${payload.store_id}` : '';
+                        await supabaseFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}${storeFilter}`, {
                             method: "DELETE"
+                        }).catch(() => {
+                            return supabaseFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+                                method: "DELETE"
+                            });
                         });
                         return { status: "success" };
                     }
@@ -3106,7 +3195,15 @@
                     dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
                     dataStore.push(newEntry);
                     renderWeeklyTable();
-                    try { await callSheetApi({ action: "save", entry: newEntry }); } catch (err) { console.error(err); }
+                    try { 
+                        const saveRes = await callSheetApi({ action: "save", entry: newEntry }); 
+                        if (saveRes && saveRes.error) {
+                            alert("Warning: Could not save shift to cloud: " + (saveRes.message || saveRes.error));
+                        }
+                    } catch (err) { 
+                        console.error(err); 
+                        alert("Could not save shift: " + err.message);
+                    }
                     loadCloudData();
                 });
 
@@ -3941,6 +4038,16 @@
                     closeLedgerCalendarPopover();
                 }
             }
+
+            const cWrapper = document.getElementById('ledgerHeaderCatDropdownWrapper');
+            const cMenu = document.getElementById('ledgerHeaderCatMenu');
+            if (cMenu && !cMenu.classList.contains('hidden')) {
+                if (cWrapper && (cWrapper.contains(e.target) || (e.target && e.target.closest && e.target.closest('#ledgerHeaderCatDropdownWrapper')))) {
+                    // inside
+                } else {
+                    cMenu.classList.add('hidden');
+                }
+            }
         });
 
         function applyCustomDateRange() {
@@ -3987,6 +4094,15 @@
         ];
 
         function isCategoryForStore(catKey, storeKey = currentStore) {
+            if (!storeKey || storeKey === 'all') return true;
+            if (storeKey === 'anatolya') {
+                // Anatolya Turkish Kebabs does not sell ice cream
+                return catKey !== 'Ice Cream';
+            }
+            if (storeKey === 'green_juice') {
+                // Green Juice Bar does not buy meat, bread, or campbells
+                return !['Meat', 'Bread', 'Campbells'].includes(catKey);
+            }
             return true;
         }
 
@@ -3995,16 +4111,17 @@
             if (!catSelect) return;
             const curVal = catSelect.value;
             catSelect.innerHTML = '';
-            EXPENSE_CATEGORIES.forEach(c => {
+            const validCats = EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, selectedStore));
+            validCats.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.key;
                 opt.textContent = `${c.icon} ${c.label}`;
                 catSelect.appendChild(opt);
             });
-            if (EXPENSE_CATEGORIES.some(c => c.key === curVal)) {
+            if (validCats.some(c => c.key === curVal)) {
                 catSelect.value = curVal;
-            } else if (EXPENSE_CATEGORIES.length > 0) {
-                catSelect.value = EXPENSE_CATEGORIES[0].key;
+            } else if (validCats.length > 0) {
+                catSelect.value = validCats[0].key;
             }
         }
 
@@ -5330,6 +5447,96 @@
         }
         window.changeExpenseCategory = changeExpenseCategory;
 
+        let ledgerCategoryFilters = new Set();
+        let ledgerNotesQuery = '';
+        let ledgerDateSort = 'desc';
+        let ledgerAmountSort = null; // 'desc' | 'asc' | null
+
+        function toggleLedgerDateSort() {
+            ledgerAmountSort = null;
+            ledgerDateSort = (ledgerDateSort === 'desc' ? 'asc' : 'desc');
+            renderExpensesLedgerView();
+        }
+        window.toggleLedgerDateSort = toggleLedgerDateSort;
+
+        function toggleLedgerAmountSort() {
+            if (ledgerAmountSort === null) ledgerAmountSort = 'desc';
+            else if (ledgerAmountSort === 'desc') ledgerAmountSort = 'asc';
+            else ledgerAmountSort = null;
+            renderExpensesLedgerView();
+        }
+        window.toggleLedgerAmountSort = toggleLedgerAmountSort;
+
+        function onLedgerHeaderEntityChange(val) {
+            filterExpensesByEntity(val);
+        }
+        window.onLedgerHeaderEntityChange = onLedgerHeaderEntityChange;
+
+        function toggleLedgerCategoryDropdown(e) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            const menu = document.getElementById('ledgerHeaderCatMenu');
+            if (menu) menu.classList.toggle('hidden');
+        }
+        window.toggleLedgerCategoryDropdown = toggleLedgerCategoryDropdown;
+
+        function toggleLedgerCategoryFilter(catKey) {
+            if (ledgerCategoryFilters.has(catKey)) {
+                ledgerCategoryFilters.delete(catKey);
+            } else {
+                ledgerCategoryFilters.add(catKey);
+            }
+            renderExpensesLedgerView();
+        }
+        window.toggleLedgerCategoryFilter = toggleLedgerCategoryFilter;
+
+        function selectAllLedgerCategories(e) {
+            if (e) e.stopPropagation();
+            ledgerCategoryFilters.clear();
+            renderExpensesLedgerView();
+        }
+        window.selectAllLedgerCategories = selectAllLedgerCategories;
+
+        function clearAllLedgerCategories(e) {
+            if (e) e.stopPropagation();
+            ledgerCategoryFilters = new Set(['__none__']);
+            renderExpensesLedgerView();
+        }
+        window.clearAllLedgerCategories = clearAllLedgerCategories;
+
+        function onLedgerHeaderNotesInput(val) {
+            ledgerNotesQuery = (val || '').trim();
+            const clearBtn = document.getElementById('ledgerHeaderNotesClearBtn');
+            if (clearBtn) clearBtn.classList.toggle('hidden', !ledgerNotesQuery);
+            renderExpensesLedgerView();
+        }
+        window.onLedgerHeaderNotesInput = onLedgerHeaderNotesInput;
+
+        function clearLedgerNotesFilter() {
+            ledgerNotesQuery = '';
+            const input = document.getElementById('ledgerHeaderNotesFilter');
+            if (input) input.value = '';
+            const clearBtn = document.getElementById('ledgerHeaderNotesClearBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            renderExpensesLedgerView();
+        }
+        window.clearLedgerNotesFilter = clearLedgerNotesFilter;
+
+        function resetAllLedgerHeaderFilters() {
+            ledgerCategoryFilters.clear();
+            ledgerNotesQuery = '';
+            ledgerDateSort = 'desc';
+            ledgerAmountSort = null;
+            const input = document.getElementById('ledgerHeaderNotesFilter');
+            if (input) input.value = '';
+            const clearBtn = document.getElementById('ledgerHeaderNotesClearBtn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+            renderExpensesLedgerView();
+        }
+        window.resetAllLedgerHeaderFilters = resetAllLedgerHeaderFilters;
+
         function renderExpensesLedgerView() {
             updateLedgerPresetButtonsUI();
             updateLedgerCalendarDisplay();
@@ -5391,17 +5598,98 @@
             if (btnGj) btnGj.className = (activeFilter === 'green_juice' ? activeBtnCls + "bg-emerald-600 text-white border-emerald-400" : inactiveBtnCls);
             if (btnCo) btnCo.className = (activeFilter === 'company_shared' ? activeBtnCls + "bg-purple-600 text-white border-purple-400" : inactiveBtnCls);
 
-            // 2. Filter expenses by date, entity, search query, and category
-            const filteredExpenses = inDateExpenses.filter(x => {
+            // Sync Header Entity Select dropdown
+            const headerEntitySel = document.getElementById('ledgerHeaderEntitySelect');
+            if (headerEntitySel && headerEntitySel.value !== activeFilter) {
+                headerEntitySel.value = activeFilter;
+            }
+
+            // Sync Header Category Multi-select checkboxes (filtered by active entity!)
+            const validStoreCats = EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, activeFilter));
+            const cbCont = document.getElementById('ledgerHeaderCatCheckboxes');
+            if (cbCont) {
+                let cbHtml = '';
+                validStoreCats.forEach(c => {
+                    const checked = (ledgerCategoryFilters.size === 0) || ledgerCategoryFilters.has(c.key);
+                    cbHtml += `
+                        <label class="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-800 text-slate-200 text-[10px] cursor-pointer">
+                            <input type="checkbox" value="${c.key}" ${checked ? 'checked' : ''} onchange="toggleLedgerCategoryFilter('${c.key}')" class="rounded text-amber-500 bg-slate-950 border-slate-700">
+                            <span>${c.icon}</span> <span class="font-bold flex-1 truncate">${c.key}</span>
+                        </label>
+                    `;
+                });
+                cbCont.innerHTML = cbHtml;
+            }
+
+            const catBtnLabel = document.getElementById('ledgerHeaderCatButtonLabel');
+            const catActiveCount = document.getElementById('ledgerHeaderCatActiveCount');
+            if (catBtnLabel) {
+                if (ledgerCategoryFilters.size === 0) {
+                    catBtnLabel.innerText = "📂 All Categories";
+                    if (catActiveCount) catActiveCount.innerText = "";
+                } else if (ledgerCategoryFilters.has('__none__')) {
+                    catBtnLabel.innerText = "None Selected";
+                    if (catActiveCount) catActiveCount.innerText = "(0)";
+                } else if (ledgerCategoryFilters.size === 1) {
+                    const onlyKey = Array.from(ledgerCategoryFilters)[0];
+                    const meta = getCategoryMeta(onlyKey);
+                    catBtnLabel.innerText = `${meta.icon} ${onlyKey}`;
+                    if (catActiveCount) catActiveCount.innerText = "(1)";
+                } else {
+                    catBtnLabel.innerText = `✓ ${ledgerCategoryFilters.size} Categories`;
+                    if (catActiveCount) catActiveCount.innerText = `(${ledgerCategoryFilters.size})`;
+                }
+            }
+
+            // 2. Filter expenses by date, entity, multi-category, notes, and search query
+            let filteredExpenses = inDateExpenses.filter(x => {
                 const s = x.store_id || 'anatolya';
                 if (activeFilter !== 'all' && s !== activeFilter) return false;
-                if (ledgerCategoryFilter !== 'all' && (x.category || 'Others').toLowerCase() !== ledgerCategoryFilter.toLowerCase()) return false;
+
+                const cat = x.category || 'Others';
+                // Multi-category filter check
+                if (ledgerCategoryFilters && ledgerCategoryFilters.size > 0) {
+                    if (ledgerCategoryFilters.has('__none__')) return false;
+                    if (!ledgerCategoryFilters.has(cat)) return false;
+                } else if (ledgerCategoryFilter !== 'all' && cat.toLowerCase() !== ledgerCategoryFilter.toLowerCase()) {
+                    return false;
+                }
+
+                // Inline header notes filter
+                if (ledgerNotesQuery) {
+                    const notes = (x.notes || '').toLowerCase();
+                    if (!notes.includes(ledgerNotesQuery.toLowerCase())) return false;
+                }
+
+                // Global search query
                 if (ledgerSearchQuery) {
                     const text = `${x.notes || ''} ${x.category || ''} ${x.amount || ''} ${x.date || ''} ${s}`.toLowerCase();
                     if (!text.includes(ledgerSearchQuery)) return false;
                 }
                 return true;
             });
+
+            // Apply Sorting
+            filteredExpenses.sort((a, b) => {
+                if (ledgerAmountSort === 'asc') return Number(a.amount || 0) - Number(b.amount || 0);
+                if (ledgerAmountSort === 'desc') return Number(b.amount || 0) - Number(a.amount || 0);
+                if (ledgerDateSort === 'asc') return (a.date || '').localeCompare(b.date || '');
+                return (b.date || '').localeCompare(a.date || '');
+            });
+
+            // Update Sort Icons & Reset Button
+            const dSortIcon = document.getElementById('ledgerDateSortIcon');
+            if (dSortIcon) dSortIcon.innerText = (ledgerDateSort === 'desc' ? '▼ New' : '▲ Old');
+
+            const aSortIcon = document.getElementById('ledgerAmountSortIcon');
+            if (aSortIcon) {
+                aSortIcon.innerText = (ledgerAmountSort === 'desc' ? '▼ High' : (ledgerAmountSort === 'asc' ? '▲ Low' : '↕'));
+                aSortIcon.className = ledgerAmountSort ? "text-amber-400 font-bold" : "text-slate-400";
+            }
+
+            const hasActiveFilter = (ledgerCategoryFilters.size > 0) || !!ledgerNotesQuery || (ledgerAmountSort !== null) || (ledgerDateSort !== 'desc');
+            const resetBtn = document.getElementById('ledgerHeaderResetBtn');
+            if (resetBtn) resetBtn.classList.toggle('hidden', !hasActiveFilter);
 
             // Update top header sales badge when viewing Ledger!
             const badgeEl = document.getElementById('salesSelectedDayBadge');
@@ -5462,6 +5750,7 @@
                 filteredExpenses.forEach(x => {
                     const s = x.store_id || 'anatolya';
                     const meta = getCategoryMeta(x.category);
+                    const rowValidCats = EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, s));
 
                     let entityStyle = "bg-amber-950/80 text-amber-300 border-amber-600/70";
                     if (s === 'green_juice') entityStyle = "bg-emerald-950/80 text-emerald-300 border-emerald-600/70";
@@ -5479,7 +5768,7 @@
                             </td>
                             <td class="p-2.5">
                                 <select onchange="changeExpenseCategory(${x.id}, this.value)" class="text-[11px] font-semibold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs bg-slate-900 border-slate-700 text-slate-200" title="Click to reassign category">
-                                    ${EXPENSE_CATEGORIES.map(c => `<option value="${c.key}" ${x.category === c.key ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}
+                                    ${rowValidCats.map(c => `<option value="${c.key}" ${x.category === c.key ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}
                                 </select>
                             </td>
                             <td class="p-2.5 text-slate-300">${x.notes || '<span class="opacity-30">—</span>'}</td>
@@ -7189,6 +7478,223 @@ Do not include markdown fences.`;
             }
         }
 
+        function computePeriodFinancials(datesList, storeKey = currentStore) {
+            let salesTotal = 0;
+            let cardSalesTotal = 0;
+            let cashSalesTotal = 0;
+            let uberSalesTotal = 0;
+            let totalHours = 0;
+            let totalOperatingExpenses = 0;
+            let totalBankWages = 0;
+            let totalCashWages = 0;
+            let totalTaxLabor = 0;
+
+            const categoryRangeTotals = {};
+            if (typeof EXPENSE_CATEGORIES !== 'undefined') {
+                EXPENSE_CATEGORIES.forEach(c => categoryRangeTotals[c.key] = 0);
+            }
+
+            if (!datesList || datesList.length === 0) {
+                return {
+                    sales: 0, cardSales: 0, cashSales: 0, uberSales: 0,
+                    hours: 0, operatingExpenses: 0, totalExpenses: 0, expenses: 0,
+                    bankWages: 0, cashWages: 0, taxWages: 0, totalPaidWages: 0, wages: 0,
+                    hasBankWages: false, net: 0, splh: 0, laborPct: 0,
+                    categoryTotals: categoryRangeTotals, dayBreakdown: [], weeksBreakdown: []
+                };
+            }
+
+            // 1. Group bank wages by Monday of their week
+            const weekBankWages = {};
+            expensesStore.filter(x => isExpenseMatch(x.store_id, storeKey)).forEach(x => {
+                if (x.category === 'Wages') {
+                    const wMon = getMondayString(cleanDateStr(x.date));
+                    weekBankWages[wMon] = (weekBankWages[wMon] || 0) + Number(x.amount || 0);
+                }
+            });
+
+            // 2. Group roster tax wages by Monday of their week
+            const weekRosterTaxWages = {};
+            dataStore.filter(entry => entry.from && entry.to && isStoreMatch(entry.store_id, storeKey)).forEach(shift => {
+                const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                if (!isOwner) {
+                    const wMon = getMondayString(cleanDateStr(shift.date));
+                    const totH = Number(shift.totalHours) || 0;
+                    const tr = Number(shift.taxRate) || 0;
+                    const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                    const th = Math.max(0, totH - ch);
+                    weekRosterTaxWages[wMon] = (weekRosterTaxWages[wMon] || 0) + (th * tr);
+                }
+            });
+
+            const dayBreakdown = [];
+            const weekBreakdownMap = new Map();
+
+            datesList.forEach(dIso => {
+                const wMon = getMondayString(dIso);
+                const sRec = getStoreSalesForDate(dIso, storeKey);
+                const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
+                let cAmt = 0;
+                let cashAmt = 0;
+                let uberAmt = 0;
+                if (sRec) {
+                    const h = sRec.hourly || {};
+                    cAmt = sRec.cardSales !== undefined && sRec.cardSales !== null
+                        ? Number(sRec.cardSales)
+                        : (h._cardSales !== undefined ? Number(h._cardSales) : sAmt);
+                    cashAmt = sRec.cashSales !== undefined && sRec.cashSales !== null
+                        ? Number(sRec.cashSales)
+                        : (h._cashSales !== undefined ? Number(h._cashSales) : 0);
+                    uberAmt = sRec.uberSales !== undefined && sRec.uberSales !== null
+                        ? Number(sRec.uberSales)
+                        : (h._uberSales !== undefined ? Number(h._uberSales) : 0);
+                }
+
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, storeKey));
+                let dHours = 0;
+                let dCashWages = 0;
+                let dTaxWages = 0;
+                dayShifts.forEach(shift => {
+                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                    const totH = Number(shift.totalHours) || 0;
+                    dHours += totH;
+                    if (!isOwner) {
+                        const cr = Number(shift.cashRate) || 0;
+                        const tr = Number(shift.taxRate) || 0;
+                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const th = Math.max(0, totH - ch);
+                        dCashWages += (ch * cr);
+                        dTaxWages += (th * tr);
+                    }
+                });
+
+                const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, storeKey));
+                let dDayTotalExp = 0;
+                let dDayBankWages = 0;
+                dayExpList.forEach(x => {
+                    const amt = Number(x.amount || 0);
+                    dDayTotalExp += amt;
+                    const k = x.category || 'Others';
+                    categoryRangeTotals[k] = (categoryRangeTotals[k] || 0) + amt;
+                    if (k === 'Wages') {
+                        dDayBankWages += amt;
+                    }
+                });
+                const dDayOpExp = dDayTotalExp - dDayBankWages;
+
+                const wBank = weekBankWages[wMon] || 0;
+                const wTax = weekRosterTaxWages[wMon] || 0;
+
+                let dayTaxLabor = 0;
+                if (wBank > 0) {
+                    dayTaxLabor = wTax > 0 ? (wBank * (dTaxWages / wTax)) : (wBank / 7);
+                } else {
+                    dayTaxLabor = dTaxWages;
+                }
+
+                const dayTotalLabor = dCashWages + dayTaxLabor;
+                const dayNet = sAmt - dDayOpExp - dayTotalLabor;
+                const splh = dHours > 0 ? (sAmt / dHours) : 0;
+
+                salesTotal += sAmt;
+                cardSalesTotal += cAmt;
+                cashSalesTotal += cashAmt;
+                uberSalesTotal += uberAmt;
+                totalHours += dHours;
+                totalOperatingExpenses += dDayOpExp;
+                totalBankWages += dDayBankWages;
+                totalCashWages += dCashWages;
+                totalTaxLabor += dayTaxLabor;
+
+                const [y, m, d] = dIso.split('-').map(Number);
+                const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+                const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow];
+
+                const dayObj = {
+                    dIso,
+                    dayName,
+                    dow,
+                    sAmt,
+                    cAmt,
+                    cashAmt,
+                    uberAmt,
+                    dWages: dayTotalLabor,
+                    dCashWages,
+                    dayTaxLabor,
+                    dayExp: dDayOpExp,
+                    dHours,
+                    splh,
+                    net: dayNet,
+                    hoursDesc: (typeof getShopHoursDescription === 'function' ? getShopHoursDescription(dow) : '')
+                };
+                dayBreakdown.push(dayObj);
+
+                if (!weekBreakdownMap.has(wMon)) {
+                    weekBreakdownMap.set(wMon, {
+                        wMon,
+                        wSun: addDaysString(wMon, 6),
+                        firstDate: dIso,
+                        lastDate: dIso,
+                        daysCount: 0,
+                        sales: 0,
+                        cardSales: 0,
+                        cashSales: 0,
+                        uberSales: 0,
+                        opExp: 0,
+                        hours: 0,
+                        cashWages: 0,
+                        taxLabor: 0,
+                        labor: 0,
+                        net: 0,
+                        hasBankWages: (wBank > 0),
+                        bankWages: wBank
+                    });
+                }
+                const wData = weekBreakdownMap.get(wMon);
+                wData.lastDate = dIso;
+                wData.daysCount += 1;
+                wData.sales += sAmt;
+                wData.cardSales += cAmt;
+                wData.cashSales += cashAmt;
+                wData.uberSales += uberAmt;
+                wData.opExp += dDayOpExp;
+                wData.hours += dHours;
+                wData.cashWages += dCashWages;
+                wData.taxLabor += dayTaxLabor;
+                wData.labor += dayTotalLabor;
+                wData.net += dayNet;
+            });
+
+            const totalLabor = totalCashWages + totalTaxLabor;
+            const net = salesTotal - totalOperatingExpenses - totalLabor;
+            const splh = totalHours > 0 ? (salesTotal / totalHours) : 0;
+            const laborPct = salesTotal > 0 ? (totalLabor / salesTotal) * 100 : 0;
+
+            return {
+                sales: salesTotal,
+                cardSales: cardSalesTotal,
+                cashSales: cashSalesTotal,
+                uberSales: uberSalesTotal,
+                hours: totalHours,
+                expenses: totalOperatingExpenses,
+                operatingExpenses: totalOperatingExpenses,
+                totalExpenses: totalOperatingExpenses + totalBankWages,
+                bankWages: totalBankWages,
+                cashWages: totalCashWages,
+                taxWages: totalTaxLabor,
+                totalPaidWages: totalLabor,
+                wages: totalLabor,
+                hasBankWages: (totalBankWages > 0),
+                net,
+                splh,
+                laborPct,
+                categoryTotals: categoryRangeTotals,
+                dayBreakdown,
+                weeksBreakdown: Array.from(weekBreakdownMap.values())
+            };
+        }
+        window.computePeriodFinancials = computePeriodFinancials;
+
         function renderDateRangeView() {
             initDateRangeDefaults();
             const fromInput = document.getElementById('chartRangeFrom');
@@ -7211,127 +7717,10 @@ Do not include markdown fences.`;
             const countHeader = document.getElementById('rangeDaysCountHeader');
             if (countHeader) countHeader.innerText = `Daily Performance (${dates.length} days)`;
 
-            let rangeSales = 0;
-            let rangeCardSales = 0;
-            let rangeCashSales = 0;
-            let rangeUberSales = 0;
-            let rangeWages = 0;
-            let rangeCashWages = 0;
-            let rangeTaxWages = 0;
-            let rangeHours = 0;
-            let rangeExpenses = 0;
-            let rangeBankWages = 0;
-            let rangeOperatingExpenses = 0;
-
-            const categoryRangeTotals = {};
-            EXPENSE_CATEGORIES.forEach(c => categoryRangeTotals[c.key] = 0);
-
-            // Filter expenses in range
-            const rangeExpensesList = expensesStore.filter(x => x.date >= startIso && x.date <= endIso && isExpenseMatch(x.store_id, currentStore));
-            rangeExpensesList.forEach(x => {
-                const amt = Number(x.amount) || 0;
-                rangeExpenses += amt;
-                const k = x.category || 'Others';
-                categoryRangeTotals[k] = (categoryRangeTotals[k] || 0) + amt;
-                if (k === 'Wages') {
-                    rangeBankWages += amt;
-                } else {
-                    rangeOperatingExpenses += amt;
-                }
-            });
-
-            const dayStatsList = [];
-
-            dates.forEach(dIso => {
-                const sRec = getStoreSalesForDate(dIso, currentStore);
-                const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
-                let cAmt = 0;
-                let cashAmt = 0;
-                let uberAmt = 0;
-                if (sRec) {
-                    const h = sRec.hourly || {};
-                    cAmt = sRec.cardSales !== undefined && sRec.cardSales !== null
-                        ? Number(sRec.cardSales)
-                        : (h._cardSales !== undefined ? Number(h._cardSales) : sAmt);
-                    cashAmt = sRec.cashSales !== undefined && sRec.cashSales !== null
-                        ? Number(sRec.cashSales)
-                        : (h._cashSales !== undefined ? Number(h._cashSales) : 0);
-                    uberAmt = sRec.uberSales !== undefined && sRec.uberSales !== null
-                        ? Number(sRec.uberSales)
-                        : (h._uberSales !== undefined ? Number(h._uberSales) : 0);
-                }
-
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
-                let dWages = 0;
-                let dCashWages = 0;
-                let dTaxWages = 0;
-                let dHours = 0;
-
-                dayShifts.forEach(shift => {
-                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
-                    const totH = Number(shift.totalHours) || 0;
-                    dHours += totH;
-                    if (!isOwner) {
-                        const cr = Number(shift.cashRate) || 0;
-                        const tr = Number(shift.taxRate) || 0;
-                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
-                        const th = Math.max(0, totH - ch);
-                        const cPay = ch * cr;
-                        const tPay = th * tr;
-                        dCashWages += cPay;
-                        dTaxWages += tPay;
-                        dWages += (cPay + tPay);
-                    }
-                });
-
-                // Day expenses
-                const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, currentStore));
-                const dayExp = dayExpList.reduce((sum, x) => sum + Number(x.amount || 0), 0);
-                const dayBankWages = dayExpList.filter(x => x.category === 'Wages').reduce((sum, x) => sum + Number(x.amount || 0), 0);
-                const dayOperatingExp = dayExp - dayBankWages;
-
-                rangeSales += sAmt;
-                rangeCardSales += cAmt;
-                rangeCashSales += cashAmt;
-                rangeUberSales += uberAmt;
-                rangeWages += dWages;
-                rangeCashWages += dCashWages;
-                rangeTaxWages += dTaxWages;
-                rangeHours += dHours;
-
-                const splh = dHours > 0 ? (sAmt / dHours) : 0;
-                // If this day has bank wages recorded, actual labor is bank wages + cash wages
-                const dayActualLabor = dayBankWages > 0 ? (dayBankWages + dCashWages) : dWages;
-                const net = sAmt - dayOperatingExp - dayActualLabor;
-
-                const [y, m, d] = dIso.split('-').map(Number);
-                const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-                const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow];
-
-                dayStatsList.push({
-                    dIso,
-                    dayName,
-                    dow,
-                    sAmt,
-                    cAmt,
-                    cashAmt,
-                    uberAmt,
-                    dWages: dayActualLabor,
-                    dayExp: dayOperatingExp,
-                    dHours,
-                    splh,
-                    net,
-                    hoursDesc: getShopHoursDescription(dow)
-                });
-            });
+            const fin = computePeriodFinancials(dates, currentStore);
+            const hasBankWages = fin.bankWages > 0;
 
             // Update KPI Cards
-            const hasBankWages = rangeBankWages > 0;
-            const totalActualWages = hasBankWages ? (rangeBankWages + rangeCashWages) : rangeWages;
-            const displayOperatingExp = hasBankWages ? rangeOperatingExpenses : rangeExpenses;
-            // User formula: Income - Expenses - Cash Wages (when bank wages are in expenses)
-            const trueNet = rangeSales - displayOperatingExp - totalActualWages;
-
             const kpiSales = document.getElementById('kpiRangeSales');
             const kpiCardSales = document.getElementById('kpiRangeCardSales');
             const kpiCashSales = document.getElementById('kpiRangeCashSales');
@@ -7343,13 +7732,13 @@ Do not include markdown fences.`;
             const kpiHoursSplh = document.getElementById('kpiRangeHoursSplh');
             const kpiNet = document.getElementById('kpiRangeNet');
 
-            if (kpiSales) kpiSales.innerText = `$${rangeSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (kpiCardSales) kpiCardSales.innerText = `$${rangeCardSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            if (kpiCashSales) kpiCashSales.innerText = `$${rangeCashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiSales) kpiSales.innerText = `$${fin.sales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiCardSales) kpiCardSales.innerText = `$${fin.cardSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (kpiCashSales) kpiCashSales.innerText = `$${fin.cashSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
-            if (rangeUberSales > 0) {
+            if (fin.uberSales > 0) {
                 if (kpiUberCard) kpiUberCard.classList.remove('hidden');
-                if (kpiUberSales) kpiUberSales.innerText = `$${rangeUberSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                if (kpiUberSales) kpiUberSales.innerText = `$${fin.uberSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 if (kpiBreakdown) kpiBreakdown.className = "mt-2 pt-2 border-t border-slate-700/60 grid grid-cols-3 gap-1.5";
             } else {
                 if (kpiUberCard) kpiUberCard.classList.add('hidden');
@@ -7357,15 +7746,17 @@ Do not include markdown fences.`;
             }
 
             if (kpiWages) {
-                kpiWages.innerText = `$${totalActualWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                kpiWages.innerText = `$${fin.totalPaidWages.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
             const kpiWagesSub = document.getElementById('kpiRangeWagesSub');
             if (kpiWagesSub) {
-                kpiWagesSub.innerText = hasBankWages ? `Bank: $${rangeBankWages.toFixed(0)} + Cash: $${rangeCashWages.toFixed(0)}` : 'Roster estimated';
+                kpiWagesSub.innerText = hasBankWages
+                    ? `Bank: $${fin.bankWages.toFixed(0)} + Cash: $${fin.cashWages.toFixed(0)}${fin.taxWages > fin.bankWages ? ' (+ Roster)' : ''}`
+                    : 'Roster estimated';
             }
 
             if (kpiExpenses) {
-                kpiExpenses.innerText = `$${displayOperatingExp.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                kpiExpenses.innerText = `$${fin.operatingExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
             const kpiExpensesSub = document.getElementById('kpiRangeExpensesSub');
             if (kpiExpensesSub) {
@@ -7373,18 +7764,87 @@ Do not include markdown fences.`;
             }
             
             if (kpiHoursSplh) {
-                const avgSplh = rangeHours > 0 ? (rangeSales / rangeHours) : 0;
-                kpiHoursSplh.innerText = `${rangeHours.toFixed(1)} hrs (${avgSplh > 0 ? '$' + avgSplh.toFixed(0) + '/hr' : '—'})`;
+                kpiHoursSplh.innerText = `${fin.hours.toFixed(1)} hrs (${fin.splh > 0 ? '$' + fin.splh.toFixed(0) + '/hr' : '—'})`;
             }
 
             if (kpiNet) {
-                const color = trueNet >= 0 ? 'text-purple-300' : 'text-rose-400';
+                const color = fin.net >= 0 ? 'text-purple-300' : 'text-rose-400';
                 kpiNet.className = `text-base sm:text-lg font-black ${color}`;
-                kpiNet.innerText = `$${trueNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                kpiNet.innerText = `$${fin.net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
             const kpiNetSub = document.getElementById('kpiRangeNetSub');
             if (kpiNetSub) {
-                kpiNetSub.innerText = hasBankWages ? 'Rev − Exp − Cash Wages' : 'Rev − Wage − Exp';
+                kpiNetSub.innerText = 'Rev − Operating Exp − Labor';
+            }
+
+            // Populate Weekly Reconciliation Breakdown (#rangeWeeklyBreakdownContainer)
+            const weeklyCont = document.getElementById('rangeWeeklyBreakdownContainer');
+            if (weeklyCont) {
+                if (fin.weeksBreakdown && fin.weeksBreakdown.length > 1) {
+                    weeklyCont.classList.remove('hidden');
+                    const sumWeeksNet = fin.weeksBreakdown.reduce((sum, w) => sum + w.net, 0);
+                    let wCardsHtml = `
+                        <div class="bg-slate-900/90 border border-purple-500/30 rounded-xl p-3 space-y-2 shadow-sm">
+                            <div class="flex items-center justify-between flex-wrap gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-black text-purple-300 flex items-center gap-1.5">
+                                        <span>📊</span> Weekly Net Profit Reconciliation
+                                    </span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-700/60 text-purple-200 font-bold">
+                                        Sum of Weeks: $${sumWeeksNet.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} = Period Net: $${fin.net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ✓
+                                    </span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 font-medium">
+                                    ${fin.weeksBreakdown.length} weeks reconciled
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    `;
+
+                    fin.weeksBreakdown.forEach((w, wIdx) => {
+                        const netColor = w.net >= 0 ? 'text-emerald-400' : 'text-rose-400';
+                        const netBg = w.net >= 0 ? 'bg-emerald-950/30 border-emerald-800/40' : 'bg-rose-950/30 border-rose-800/40';
+                        const laborBadge = w.hasBankWages
+                            ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 border border-sky-700/60 text-sky-300 font-semibold" title="Bank statement wages applied">🏦 Bank</span>'
+                            : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-400 font-semibold" title="Roster estimated tax wages">📋 Roster</span>';
+
+                        wCardsHtml += `
+                            <div class="p-2.5 rounded-lg border ${netBg} bg-slate-800/60 flex flex-col justify-between space-y-1.5">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="font-extrabold text-white">Week ${wIdx + 1}</span>
+                                    <span class="text-[10px] text-slate-400">${formatDisplayDateStr(w.firstDate)} – ${formatDisplayDateStr(w.lastDate)}</span>
+                                </div>
+                                <div class="flex items-baseline justify-between">
+                                    <span class="text-[10px] text-slate-400 font-semibold">Net Profit:</span>
+                                    <span class="text-xs font-black ${netColor}">$${w.net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                <div class="pt-1 border-t border-slate-700/50 text-[10px] text-slate-300 space-y-0.5">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Sales:</span>
+                                        <span class="font-bold text-slate-200">$${w.sales.toFixed(0)}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-400">Op. Exp:</span>
+                                        <span class="font-bold text-slate-200">$${w.opExp.toFixed(0)}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-400">Labor:</span>
+                                        <span class="font-bold text-sky-300 flex items-center gap-1">$${w.labor.toFixed(0)} ${laborBadge}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    wCardsHtml += `
+                            </div>
+                        </div>
+                    `;
+                    weeklyCont.innerHTML = wCardsHtml;
+                } else {
+                    weeklyCont.classList.add('hidden');
+                    weeklyCont.innerHTML = '';
+                }
             }
 
             // Category Mini-Pills
@@ -7394,14 +7854,14 @@ Do not include markdown fences.`;
                 let hasExp = false;
                 EXPENSE_CATEGORIES.forEach(c => {
                     if (!isCategoryForStore(c.key, currentStore)) return;
-                    const amt = categoryRangeTotals[c.key] || 0;
+                    const amt = fin.categoryTotals[c.key] || 0;
                     if (amt > 0) {
                         hasExp = true;
                         pillsHtml += `<span class="px-2 py-0.5 rounded-md border ${c.color} font-bold whitespace-nowrap">${c.icon} ${c.key}: $${amt.toFixed(0)}</span>`;
                     }
                 });
                 if (!hasExp) {
-                    pillsHtml += `<span class="text-slate-500 italic">No expenses logged in this date range. Tap "Log Expense" above to add receipts.</span>`;
+                    pillsHtml += '<span class="text-slate-500 italic">No expenses logged in this date range. Tap "Log Expense" above to add receipts.</span>';
                 }
                 pillsCont.innerHTML = pillsHtml;
             }
@@ -7410,10 +7870,10 @@ Do not include markdown fences.`;
             const container = document.getElementById('rangeTrendCardsContainer');
             if (!container) return;
 
-            const maxSale = Math.max(...dayStatsList.map(d => d.sAmt), 400);
+            const maxSale = Math.max(...fin.dayBreakdown.map(d => d.sAmt), 400);
 
             let cardsHtml = '';
-            dayStatsList.forEach(item => {
+            fin.dayBreakdown.forEach(item => {
                 const saleBarWidth = Math.round((item.sAmt / maxSale) * 100);
 
                 cardsHtml += `
@@ -7438,9 +7898,9 @@ Do not include markdown fences.`;
                         <!-- Metrics Row -->
                         <div class="flex items-center justify-between text-[10px] text-slate-300 pt-0.5">
                             <div class="flex items-center gap-3">
-                                <span>Wages: <b class="text-sky-300">$${item.dWages.toFixed(0)}</b> (${item.dHours.toFixed(1)} hrs)</span>
+                                <span>Labor: <b class="text-sky-300">$${item.dWages.toFixed(0)}</b> (${item.dHours.toFixed(1)} hrs)</span>
                                 <span>SPLH: <b class="text-amber-300">${item.splh > 0 ? '$' + item.splh.toFixed(0) + '/hr' : '—'}</b></span>
-                                <span>Net: <b class="text-purple-300">$${item.net.toFixed(0)}</b></span>
+                                <span>Net: <b class="${item.net >= 0 ? 'text-purple-300' : 'text-rose-400 font-bold'}">$${item.net.toFixed(0)}</b></span>
                             </div>
                             <div class="flex items-center gap-2 font-mono text-[9px] text-slate-400">
                                 <span>💳 $${item.cAmt.toFixed(0)}</span>
@@ -7530,65 +7990,7 @@ Do not include markdown fences.`;
         }
 
         function calculateMetricsForDates(dates) {
-            let sales = 0;
-            let rosterCashWages = 0;
-            let rosterTaxWages = 0;
-            let rosterTotalWages = 0;
-            let hours = 0;
-            let totalExpenses = 0;
-            let bankWages = 0;
-
-            dates.forEach(dIso => {
-                const sRec = getStoreSalesForDate(dIso, currentStore);
-                if (sRec) sales += Number(sRec.totalSales || 0);
-
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
-                dayShifts.forEach(shift => {
-                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
-                    const totH = Number(shift.totalHours) || 0;
-                    hours += totH;
-                    if (!isOwner) {
-                        const cr = Number(shift.cashRate) || 0;
-                        const tr = Number(shift.taxRate) || 0;
-                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
-                        const th = Math.max(0, totH - ch);
-                        const cPay = ch * cr;
-                        const tPay = th * tr;
-                        rosterCashWages += cPay;
-                        rosterTaxWages += tPay;
-                        rosterTotalWages += (cPay + tPay);
-                    }
-                });
-
-                const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, currentStore));
-                dayExpList.forEach(x => {
-                    const amt = Number(x.amount || 0);
-                    totalExpenses += amt;
-                    if (x.category === 'Wages') bankWages += amt;
-                });
-            });
-
-            const hasBankWages = bankWages > 0;
-            const totalPaidWages = hasBankWages ? (bankWages + rosterCashWages) : rosterTotalWages;
-            const operatingExpenses = hasBankWages ? (totalExpenses - bankWages) : totalExpenses;
-            // User formula: Income - Expenses - Cash Wages (when bank wages are in expenses)
-            const net = sales - operatingExpenses - totalPaidWages;
-            const splh = hours > 0 ? (sales / hours) : 0;
-            const laborPct = sales > 0 ? (totalPaidWages / sales) * 100 : 0;
-
-            return { 
-                sales, 
-                wages: totalPaidWages, 
-                bankWages, 
-                cashWages: rosterCashWages, 
-                hasBankWages, 
-                hours, 
-                expenses: operatingExpenses, 
-                totalExpenses, 
-                net, 
-                splh, 
-                laborPct 
-            };
+            return computePeriodFinancials(dates, currentStore);
         }
 
         function runComparison() {

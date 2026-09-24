@@ -598,13 +598,20 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
           body: JSON.stringify(row)
         });
       } catch (err) {
-        // Fallback if unique constraint or store_id column is not yet migrated
-        delete row.store_id;
-        await supabaseServerFetch('roster?on_conflict=date,name', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(row)
-        });
+        // Fallback: check if existing row exists for date and name and store_id without losing store_id
+        const existing = await supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${encodeURIComponent(row.name)}&store_id=eq.${row.store_id}`).catch(() => []);
+        if (existing && existing.length > 0) {
+          await supabaseServerFetch(`roster?id=eq.${existing[0].id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(row)
+          });
+        } else {
+          await supabaseServerFetch('roster?on_conflict=date,name', {
+            method: 'POST',
+            headers: { 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify(row)
+          });
+        }
       }
       return res.json({ status: 'success' });
     }
