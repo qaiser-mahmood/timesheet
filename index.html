@@ -8030,11 +8030,10 @@ Do not include markdown fences.`;
             let dataA = [];
             let dataB = [];
             let chartType = 'bar';
-            let indexAxis = 'x';
             let datasets = [];
 
             if (isDay) {
-                indexAxis = 'y'; // Horizontal hourly bar chart on same chart
+                // User requirement: Day vs Day with time on horizontal axis and money on vertical axis
                 chartType = 'bar';
 
                 const recA = getStoreSalesForDate(datesA[0], currentStore);
@@ -8084,7 +8083,7 @@ Do not include markdown fences.`;
                     }
                 ];
             } else if (isWeek) {
-                indexAxis = 'x'; // Grouped daily bars for both weeks on same plot
+                // User requirement: Daily sale bar chart for both weeks on same plot
                 chartType = 'bar';
                 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -8123,8 +8122,9 @@ Do not include markdown fences.`;
                     }
                 ];
             } else if (isMonth) {
-                chartType = 'line'; // Daily sales plot of both months on same plot
-                labels = Array.from({ length: 31 }, (_, i) => `Day ${i + 1}`);
+                // User requirement: Vertical column bar chart instead of continuous line for Month vs Month
+                chartType = 'bar';
+                labels = Array.from({ length: 31 }, (_, i) => String(i + 1));
 
                 for (let d = 1; d <= 31; d++) {
                     const dStr = String(d).padStart(2, '0');
@@ -8132,36 +8132,28 @@ Do not include markdown fences.`;
                     const isoB = `${valB}-${dStr}`;
 
                     const recA = datesA.includes(isoA) ? getStoreSalesForDate(isoA, currentStore) : null;
-                    dataA.push(recA ? Number(recA.totalSales || 0) : (datesA.includes(isoA) ? 0 : null));
+                    dataA.push(recA ? Number(recA.totalSales || 0) : (datesA.includes(isoA) ? 0 : 0));
 
                     const recB = datesB.includes(isoB) ? getStoreSalesForDate(isoB, currentStore) : null;
-                    dataB.push(recB ? Number(recB.totalSales || 0) : (datesB.includes(isoB) ? 0 : null));
+                    dataB.push(recB ? Number(recB.totalSales || 0) : (datesB.includes(isoB) ? 0 : 0));
                 }
 
                 datasets = [
                     {
                         label: `Month A (${labelA})`,
                         data: dataA,
-                        borderColor: '#818cf8',
-                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2.5,
-                        pointRadius: 3,
-                        pointBackgroundColor: '#6366f1',
-                        pointHoverRadius: 6
+                        backgroundColor: 'rgba(99, 102, 241, 0.85)',
+                        borderColor: '#6366f1',
+                        borderWidth: 1,
+                        borderRadius: 3
                     },
                     {
                         label: `Month B (${labelB})`,
                         data: dataB,
-                        borderColor: '#34d399',
-                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 2.5,
-                        pointRadius: 3,
-                        pointBackgroundColor: '#10b981',
-                        pointHoverRadius: 6
+                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                        borderColor: '#10b981',
+                        borderWidth: 1,
+                        borderRadius: 3
                     }
                 ];
             }
@@ -8172,7 +8164,7 @@ Do not include markdown fences.`;
                     type: chartType,
                     data: { labels, datasets },
                     options: {
-                        indexAxis,
+                        indexAxis: 'x', // All charts now have categories/time on horizontal X-axis and money on vertical Y-axis
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: {
@@ -8199,6 +8191,12 @@ Do not include markdown fences.`;
                                 padding: 10,
                                 boxPadding: 4,
                                 callbacks: {
+                                    title: function(items) {
+                                        if (!items.length) return '';
+                                        if (isMonth) return 'Day ' + items[0].label;
+                                        if (isDay) return 'Hour: ' + items[0].label;
+                                        return items[0].label;
+                                    },
                                     label: function(ctx) {
                                         const val = ctx.raw !== null && ctx.raw !== undefined ? Number(ctx.raw) : 0;
                                         return ` ${ctx.dataset.label}: $${val.toFixed(2)}`;
@@ -8219,24 +8217,32 @@ Do not include markdown fences.`;
                         },
                         scales: {
                             x: {
-                                grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                                title: {
+                                    display: true,
+                                    text: isDay ? 'Time of Day (Trading Hours)' : (isWeek ? 'Day of the Week' : 'Day of the Month (1 – 31)'),
+                                    color: '#64748b',
+                                    font: { size: 10, weight: '700' }
+                                },
+                                grid: { color: 'rgba(51, 65, 85, 0.25)' },
                                 ticks: {
                                     color: '#94a3b8',
                                     font: { size: 10, weight: '600' },
-                                    callback: function(v) {
-                                        if (isDay) return '$' + v;
-                                        return this.getLabelForValue(v);
-                                    }
+                                    maxRotation: isWeek ? 30 : 0
                                 }
                             },
                             y: {
-                                grid: { color: isDay ? 'transparent' : 'rgba(51, 65, 85, 0.3)' },
+                                title: {
+                                    display: true,
+                                    text: 'Sales Revenue ($ AUD)',
+                                    color: '#64748b',
+                                    font: { size: 10, weight: '700' }
+                                },
+                                grid: { color: 'rgba(51, 65, 85, 0.3)' },
                                 ticks: {
                                     color: '#cbd5e1',
                                     font: { size: 10, weight: '600' },
                                     callback: function(v) {
-                                        if (!isDay) return '$' + v;
-                                        return this.getLabelForValue(v);
+                                        return '$' + Number(v).toLocaleString();
                                     }
                                 }
                             }
@@ -8244,7 +8250,6 @@ Do not include markdown fences.`;
                     }
                 });
             } else {
-                // Fallback SVG rendering if Chart.js is not loaded
                 renderSvgComparisonFallback(canvas, isDay, labels, dataA, dataB, labelA, labelB);
             }
         }
@@ -8254,36 +8259,32 @@ Do not include markdown fences.`;
             if (!parent) return;
             const maxVal = Math.max(...dataA, ...dataB, 100);
 
-            if (isDay) {
-                let html = '<div class="space-y-1.5 overflow-y-auto max-h-[380px] pr-1">';
-                labels.forEach((lb, i) => {
-                    const vA = dataA[i] || 0;
-                    const vB = dataB[i] || 0;
-                    const wA = Math.round((vA / maxVal) * 100);
-                    const wB = Math.round((vB / maxVal) * 100);
-                    html += `
-                        <div class="space-y-0.5 text-[10px]">
-                            <div class="font-bold text-slate-300">${lb}</div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-full bg-slate-800 rounded h-3 overflow-hidden">
-                                    <div class="bg-indigo-500 h-full rounded" style="width: ${Math.max(wA, 2)}%;"></div>
-                                </div>
-                                <span class="w-14 text-right text-indigo-300 font-bold shrink-0">$${vA.toFixed(0)}</span>
+            let html = '<div class="space-y-1.5 overflow-y-auto max-h-[380px] pr-1">';
+            labels.forEach((lb, i) => {
+                const vA = dataA[i] || 0;
+                const vB = dataB[i] || 0;
+                const wA = Math.round((vA / maxVal) * 100);
+                const wB = Math.round((vB / maxVal) * 100);
+                html += `
+                    <div class="space-y-0.5 text-[10px]">
+                        <div class="font-bold text-slate-300">${lb}</div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-full bg-slate-800 rounded h-3 overflow-hidden">
+                                <div class="bg-indigo-500 h-full rounded" style="width: ${Math.max(wA, 2)}%;"></div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <div class="w-full bg-slate-800 rounded h-3 overflow-hidden">
-                                    <div class="bg-emerald-500 h-full rounded" style="width: ${Math.max(wB, 2)}%;"></div>
-                                </div>
-                                <span class="w-14 text-right text-emerald-300 font-bold shrink-0">$${vB.toFixed(0)}</span>
-                            </div>
+                            <span class="w-14 text-right text-indigo-300 font-bold shrink-0">$${vA.toFixed(0)}</span>
                         </div>
-                    `;
-                });
-                html += '</div>';
-                parent.innerHTML = html;
-            } else {
-                parent.innerHTML = '<div class="py-12 text-center text-slate-400 text-xs">Loading chart view...</div>';
-            }
+                        <div class="flex items-center gap-2">
+                            <div class="w-full bg-slate-800 rounded h-3 overflow-hidden">
+                                <div class="bg-emerald-500 h-full rounded" style="width: ${Math.max(wB, 2)}%;"></div>
+                            </div>
+                            <span class="w-14 text-right text-emerald-300 font-bold shrink-0">$${vB.toFixed(0)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            parent.innerHTML = html;
         }
 
         function runComparison() {
@@ -8359,9 +8360,9 @@ Do not include markdown fences.`;
 
             // Chart metadata based on current mode
             let chartTitle = "Hourly Sales Comparison";
-            let chartSubtitle = "Horizontal Bars • Same Chart Comparison";
-            let chartIcon = "📊";
-            let canvasHeightClass = "h-[360px] sm:h-[420px]";
+            let chartSubtitle = "Hourly Vertical Columns (Time on Horizontal Axis) • Day vs Day";
+            let chartIcon = "📅";
+            let canvasHeightClass = "h-[320px] sm:h-[380px]";
 
             if (currentCompareMode === 'week') {
                 chartTitle = "Daily Sales Comparison";
@@ -8369,10 +8370,10 @@ Do not include markdown fences.`;
                 chartIcon = "📆";
                 canvasHeightClass = "h-[300px] sm:h-[360px]";
             } else if (currentCompareMode === 'month') {
-                chartTitle = "Daily Sales Trajectory";
-                chartSubtitle = "Daily Sales Plot of Both Months on Same Plot (Days 1 – 31)";
+                chartTitle = "Daily Sales Comparison";
+                chartSubtitle = "Daily Vertical Column Bars of Both Months (Days 1 – 31)";
                 chartIcon = "🗓️";
-                canvasHeightClass = "h-[320px] sm:h-[380px]";
+                canvasHeightClass = "h-[340px] sm:h-[400px]";
             }
 
             // Build Expense Categories Breakdown Rows (Filtered by current store)
