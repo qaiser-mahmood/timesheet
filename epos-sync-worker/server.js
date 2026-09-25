@@ -451,19 +451,23 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       return match ? match[0] : str;
     };
 
-    const logs = (rosterRows || []).map(r => ({
-      date: r.date,
-      weekCommencing: r.week_commencing || r.date,
-      name: r.name,
-      from: r.shift_from || '',
-      to: r.shift_to || '',
-      cashRate: Number(r.cash_rate) || 0,
-      taxRate: Number(r.tax_rate) || 0,
-      totalHours: Number(r.total_hours) || 0,
-      cashHours: Number(r.cash_hours) || 0,
-      taxHours: Number(r.tax_hours) || 0,
-      store_id: r.store_id || 'anatolya'
-    }));
+    const logs = (rosterRows || []).map(r => {
+      const isGj = (r.store_id === 'green_juice');
+      const totH = Number(r.total_hours) || 0;
+      return {
+        date: r.date,
+        weekCommencing: r.week_commencing || r.date,
+        name: r.name,
+        from: r.shift_from || '',
+        to: r.shift_to || '',
+        cashRate: Number(r.cash_rate) || 0,
+        taxRate: isGj ? 0 : (Number(r.tax_rate) || 0),
+        totalHours: totH,
+        cashHours: isGj ? totH : (Number(r.cash_hours) || 0),
+        taxHours: isGj ? 0 : (Number(r.tax_hours) || 0),
+        store_id: r.store_id || 'anatolya'
+      };
+    });
 
     const staff = (staffRows || []).map(s => {
       const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
@@ -577,6 +581,8 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
     if (payload.action === 'save' && payload.entry) {
       const e = payload.entry;
       const cleanD = cleanDateStr(e.date);
+      const isGj = (e.store_id === 'green_juice');
+      const totH = Number(e.totalHours) || 0;
       const row = {
         date: cleanD,
         week_commencing: e.weekCommencing || getMondayString(cleanD),
@@ -584,10 +590,10 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         shift_from: e.from || '',
         shift_to: e.to || '',
         cash_rate: Number(e.cashRate) || 0,
-        tax_rate: Number(e.taxRate) || 0,
-        total_hours: Number(e.totalHours) || 0,
-        cash_hours: Number(e.cashHours) || 0,
-        tax_hours: Number(e.taxHours) || 0,
+        tax_rate: isGj ? 0 : (Number(e.taxRate) || 0),
+        total_hours: totH,
+        cash_hours: isGj ? totH : (Number(e.cashHours) || 0),
+        tax_hours: isGj ? 0 : (Number(e.taxHours) || 0),
         store_id: e.store_id || 'anatolya',
         updated_at: new Date().toISOString()
       };
@@ -780,6 +786,9 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       }
       const copied = prevShifts.map(s => {
         const nextDate = addDaysString(s.date, 7);
+        const sStore = s.store_id || 'anatolya';
+        const isGj = (sStore === 'green_juice');
+        const totH = Number(s.total_hours) || 0;
         return {
           date: nextDate,
           week_commencing: targetMon,
@@ -787,11 +796,11 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
           shift_from: s.shift_from || '',
           shift_to: s.shift_to || '',
           cash_rate: Number(s.cash_rate) || 0,
-          tax_rate: Number(s.tax_rate) || 0,
-          total_hours: Number(s.total_hours) || 0,
-          cash_hours: Number(s.cash_hours) || 0,
-          tax_hours: Number(s.tax_hours) || 0,
-          store_id: s.store_id || 'anatolya',
+          tax_rate: isGj ? 0 : (Number(s.tax_rate) || 0),
+          total_hours: totH,
+          cash_hours: isGj ? totH : (Number(s.cash_hours) || 0),
+          tax_hours: isGj ? 0 : (Number(s.tax_hours) || 0),
+          store_id: sStore,
           updated_at: new Date().toISOString()
         };
       });

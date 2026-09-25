@@ -219,7 +219,7 @@
                 <input type="hidden" id="date" required>
             </div>
 
-            <div class="grid grid-cols-3 gap-3 items-end">
+            <div id="shiftRateInputsGrid" class="grid grid-cols-3 gap-3 items-end">
                 <div>
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Total Hours</label>
                     <input type="number" id="totalHours" step="0.1" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
@@ -228,7 +228,7 @@
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Cash Rate ($)</label>
                     <input type="number" id="payRate" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
                 </div>
-                <div>
+                <div id="taxPayRateContainer">
                     <label class="block text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-tight">Tax Rate ($)</label>
                     <input type="number" id="taxPayRate" readonly class="mt-1 block w-full bg-gray-100 rounded-md border-gray-300 px-2 py-1.5 border font-semibold text-gray-500 text-xs shadow-sm h-10">
                 </div>
@@ -270,7 +270,7 @@
             
             <div class="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
                 <table id="rosterTable" class="min-w-full divide-y divide-gray-200 text-[10px] table-fixed">
-                    <thead class="bg-gray-800 text-white">
+                    <thead id="weeklyTableHead" class="bg-gray-800 text-white">
                         <tr>
                             <th class="w-16 px-1 py-1.5 text-left font-bold tracking-tight">Staff</th>
                             <th class="w-10 text-center font-normal">Mon</th>
@@ -302,15 +302,15 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
                 <div>
                     <label class="block text-[10px] font-bold text-blue-900 uppercase tracking-tight">Staff Target</label>
-                    <select id="bulkStaffName" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-xs h-10 shadow-sm">
+                    <select id="bulkStaffName" style="font-size: 16px !important;" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-base sm:text-xs h-10 shadow-sm">
                         <option value="">Loading Staff...</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-[10px] font-bold text-blue-900 uppercase tracking-tight">Target Tax Hours</label>
-                    <input type="number" id="bulkTaxHours" step="0.1" placeholder="e.g. 24" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-xs h-10 shadow-sm">
+                    <input type="text" inputmode="decimal" id="bulkTaxHours" placeholder="e.g. 24" style="font-size: 16px !important;" class="mt-1 block w-full rounded-md border-blue-200 px-2 py-1.5 border bg-white text-base sm:text-xs h-10 shadow-sm">
                 </div>
-                <button type="button" onclick="distributeWeeklyTaxHours()" class="w-full bg-blue-700 text-white font-bold rounded-md text-xs hover:bg-blue-800 transition shadow-sm h-10 flex items-center justify-center">
+                <button type="button" onclick="distributeWeeklyTaxHours()" class="w-full bg-blue-700 text-white font-bold rounded-md text-xs hover:bg-blue-800 transition shadow-sm h-10 flex items-center justify-center cursor-pointer">
                     Apply Week Tax
                 </button>
             </div>
@@ -2146,19 +2146,23 @@
                             supabaseFetchAll("expenses?select=*&order=date.desc")
                         ]);
 
-                        const logs = (rosterRows || []).map(r => ({
-                            date: r.date,
-                            weekCommencing: r.week_commencing || r.date,
-                            store_id: r.store_id || 'anatolya',
-                            name: r.name,
-                            from: r.shift_from || "",
-                            to: r.shift_to || "",
-                            cashRate: Number(r.cash_rate) || 0,
-                            taxRate: Number(r.tax_rate) || 0,
-                            totalHours: Number(r.total_hours) || 0,
-                            cashHours: Number(r.cash_hours) || 0,
-                            taxHours: Number(r.tax_hours) || 0
-                        }));
+                        const logs = (rosterRows || []).map(r => {
+                            const isGj = (r.store_id === 'green_juice');
+                            const tot = Number(r.total_hours) || 0;
+                            return {
+                                date: r.date,
+                                weekCommencing: r.week_commencing || r.date,
+                                store_id: r.store_id || 'anatolya',
+                                name: r.name,
+                                from: r.shift_from || "",
+                                to: r.shift_to || "",
+                                cashRate: Number(r.cash_rate) || 0,
+                                taxRate: isGj ? 0 : (Number(r.tax_rate) || 0),
+                                totalHours: tot,
+                                cashHours: isGj ? tot : (Number(r.cash_hours) || 0),
+                                taxHours: isGj ? 0 : (Number(r.tax_hours) || 0)
+                            };
+                        });
 
                         const staff = (staffRows || []).map(s => {
                             const isOwner = (s.name && s.name.toString().trim().toLowerCase() === "qaiser");
@@ -2798,14 +2802,22 @@
                                 log.store_id = log.store_id || 'anatolya';
                                 
                                 const isOwner = (log.name && log.name.toLowerCase() === 'qaiser');
+                                const isGj = (log.store_id === 'green_juice');
                                 if (isOwner) {
                                     log.cashRate = 0;
+                                    log.taxRate = 0;
+                                } else if (isGj) {
                                     log.taxRate = 0;
                                 }
                                 
                                 log.totalHours = log.totalHours ? parseFloat(log.totalHours) : 0;
-                                log.cashHours = log.cashHours !== undefined ? parseFloat(log.cashHours) : 0;
-                                log.taxHours = (log.taxHours !== undefined && log.taxHours !== null && log.taxHours !== '') ? parseFloat(log.taxHours) : log.totalHours;
+                                if (isGj) {
+                                    log.cashHours = isOwner ? 0 : log.totalHours;
+                                    log.taxHours = 0;
+                                } else {
+                                    log.cashHours = log.cashHours !== undefined ? parseFloat(log.cashHours) : 0;
+                                    log.taxHours = (log.taxHours !== undefined && log.taxHours !== null && log.taxHours !== '') ? parseFloat(log.taxHours) : log.totalHours;
+                                }
                                 return log;
                             });
                         }
@@ -2901,9 +2913,12 @@
                     if (!filterWeekVal) return alert("Select a date context first.");
                     const activeMonStr = getMondayString(filterWeekVal);
                     const prevMonStr = addDaysString(activeMonStr, -7);
+                    const activeStoreKey = (currentStore === 'green_juice') ? 'green_juice' : 'anatolya';
+                    const isGJ = (activeStoreKey === 'green_juice');
 
                     const prevWeekShifts = dataStore.filter(entry => 
                         entry.date && entry.name && 
+                        (entry.store_id || 'anatolya') === activeStoreKey &&
                         (cleanDateStr(entry.weekCommencing) === prevMonStr || getMondayString(cleanDateStr(entry.date)) === prevMonStr)
                     );
 
@@ -2913,6 +2928,7 @@
 
                     const existingCurrentShifts = dataStore.filter(entry => 
                         entry.date && entry.name && 
+                        (entry.store_id || 'anatolya') === activeStoreKey &&
                         (cleanDateStr(entry.weekCommencing) === activeMonStr || getMondayString(cleanDateStr(entry.date)) === activeMonStr)
                     );
 
@@ -2928,7 +2944,7 @@
 
                     try {
                         // 1. Try server-side action first
-                        const responseObj = await callSheetApi({ action: "copy_previous_week", targetWeekMonday: activeMonStr });
+                        const responseObj = await callSheetApi({ action: "copy_previous_week", targetWeekMonday: activeMonStr, store_id: activeStoreKey });
                         if (responseObj && responseObj.status === "success") {
                             alert(`Success! Copied ${responseObj.count} shifts from previous week.`);
                         } else {
@@ -2940,20 +2956,22 @@
                         let count = 0;
                         for (let s of prevWeekShifts) {
                             const newShiftDate = addDaysString(cleanDateStr(s.date), 7);
+                            const tot = Number(s.totalHours) || 0;
                             const newEntry = {
                                 date: newShiftDate,
                                 weekCommencing: activeMonStr,
+                                store_id: activeStoreKey,
                                 name: s.name.toString().trim(),
                                 from: s.from,
                                 to: s.to,
                                 cashRate: s.cashRate,
-                                taxRate: s.taxRate,
-                                totalHours: s.totalHours,
-                                cashHours: s.cashHours,
-                                taxHours: s.taxHours
+                                taxRate: isGJ ? 0 : s.taxRate,
+                                totalHours: tot,
+                                cashHours: isGJ ? tot : s.cashHours,
+                                taxHours: isGJ ? 0 : s.taxHours
                             };
 
-                            dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === newShiftDate && entry.name.toString().trim() === newEntry.name));
+                            dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === newShiftDate && (entry.store_id || 'anatolya') === activeStoreKey && entry.name.toString().trim().toLowerCase() === newEntry.name.toLowerCase()));
                             dataStore.push(newEntry);
                             try {
                                 await callSheetApi({ action: "save", entry: newEntry });
@@ -3014,9 +3032,26 @@
                 function applyStaffRateDefaults() {
                     const currentSelected = document.getElementById('staffName').value;
                     const staffObj = staffRegistry.find(p => p.name === currentSelected);
+                    const selectedDate = document.getElementById('date').value;
+                    const storeId = (currentStore === 'green_juice') ? 'green_juice' : 'anatolya';
+
+                    if (selectedDate && currentSelected) {
+                        const existing = dataStore.find(e => 
+                            cleanDateStr(e.date) === cleanDateStr(selectedDate) && 
+                            (e.store_id || 'anatolya') === storeId && 
+                            e.name && e.name.toString().trim().toLowerCase() === currentSelected.toLowerCase()
+                        );
+                        if (existing && existing.from && existing.to) {
+                            document.getElementById('startTime').value = existing.from;
+                            document.getElementById('endTime').value = existing.to;
+                            calculateHoursFromTime();
+                        } else {
+                            applyDefaultShiftTimes();
+                        }
+                    }
+
                     if (staffObj) {
                         const isOwner = (staffObj.name && staffObj.name.toLowerCase().trim() === 'qaiser');
-                        const selectedDate = document.getElementById('date').value;
                         let isSunday = false;
                         if (selectedDate) {
                             const [y, m, d] = selectedDate.split('-').map(Number);
@@ -3086,7 +3121,22 @@
                                 "flex flex-col items-center justify-center p-1 rounded-md border text-center transition bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100";
                         }
                     }
-                    applyDefaultShiftTimes();
+                    
+                    const currentStaff = (document.getElementById('staffName').value || '').toString().trim();
+                    const storeId = (currentStore === 'green_juice') ? 'green_juice' : 'anatolya';
+                    const existing = dataStore.find(e => 
+                        cleanDateStr(e.date) === cleanDateStr(targetIsoDate) && 
+                        (e.store_id || 'anatolya') === storeId && 
+                        e.name && e.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()
+                    );
+                    if (existing && existing.from && existing.to) {
+                        document.getElementById('startTime').value = existing.from;
+                        document.getElementById('endTime').value = existing.to;
+                        calculateHoursFromTime();
+                    } else {
+                        applyDefaultShiftTimes();
+                    }
+
                     applyStaffRateDefaults();
                     renderHourlySalesView(targetIsoDate);
 
@@ -3109,7 +3159,7 @@
                 }
 
                 async function distributeWeeklyTaxHours() {
-                    if (currentStore === 'green_juice' || currentStore === 'all') return;
+                    if (currentStore === 'green_juice' || currentStore === 'all' || currentStore === 'company_shared') return;
                     const staffTarget = document.getElementById('bulkStaffName').value;
                     let targetTaxAllocation = parseFloat(document.getElementById('bulkTaxHours').value);
                     const activeWeekStart = getMondayString(document.getElementById('filterWeek').value);
@@ -3117,9 +3167,10 @@
 
                     let currentWeekShifts = dataStore.filter(entry => 
                         entry.date && entry.name && 
-                        cleanDateStr(entry.weekCommencing) === activeWeekStart && 
-                        entry.name.toString().trim() === staffTarget.trim()
-                    );
+                        (entry.store_id || 'anatolya') === 'anatolya' &&
+                        (cleanDateStr(entry.weekCommencing) === activeWeekStart || getMondayString(cleanDateStr(entry.date)) === activeWeekStart) && 
+                        entry.name.toString().trim().toLowerCase() === staffTarget.trim().toLowerCase()
+                    ).sort((a, b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date)));
                     if (currentWeekShifts.length === 0) return;
 
                     for (let shift of currentWeekShifts) {
@@ -3139,14 +3190,80 @@
                     loadCloudData();
                 }
 
+                (function initBulkTaxHoursUX() {
+                    const el = document.getElementById('bulkTaxHours');
+                    if (!el) return;
+                    let focusFromTap = false;
+
+                    function moveCursorToEnd(inputEl) {
+                        if (!inputEl) return;
+                        const len = (inputEl.value || '').length;
+                        try {
+                            inputEl.setSelectionRange(len, len);
+                        } catch (e) {}
+                    }
+
+                    el.addEventListener('mousedown', function() {
+                        if (document.activeElement !== this) {
+                            focusFromTap = true;
+                        }
+                    });
+
+                    el.addEventListener('touchstart', function() {
+                        if (document.activeElement !== this) {
+                            focusFromTap = true;
+                        }
+                    }, { passive: true });
+
+                    el.addEventListener('focus', function() {
+                        moveCursorToEnd(this);
+                        setTimeout(() => moveCursorToEnd(this), 30);
+                        setTimeout(() => moveCursorToEnd(this), 120);
+                    });
+
+                    el.addEventListener('mouseup', function(e) {
+                        if (focusFromTap) {
+                            e.preventDefault();
+                            focusFromTap = false;
+                            moveCursorToEnd(this);
+                            setTimeout(() => moveCursorToEnd(this), 30);
+                        }
+                    });
+
+                    el.addEventListener('touchend', function(e) {
+                        if (focusFromTap) {
+                            focusFromTap = false;
+                            moveCursorToEnd(this);
+                            setTimeout(() => moveCursorToEnd(this), 30);
+                        }
+                    });
+
+                    el.addEventListener('input', function() {
+                        const clean = this.value.replace(/[^0-9.]/g, '').replace(/(\..*?)\..*/g, '$1');
+                        if (clean !== this.value) {
+                            this.value = clean;
+                        }
+                    });
+                })();
+
                 function applyDefaultShiftTimes() {
                     const dateInput = document.getElementById('date').value;
                     if (!dateInput) return;
                     const [year, month, day] = dateInput.split('-').map(Number);
                     const dayOfWeek = new Date(year, month - 1, day).getDay(); 
+                    
                     let defaultStart = "09:30", defaultEnd = "17:00";
-                    if (dayOfWeek === 6) defaultStart = "09:00";
-                    if (dayOfWeek === 4) defaultEnd = "19:00";
+                    if (currentStore === 'green_juice') {
+                        // Green Juice default timings:
+                        // Start: 9am (09:00) Mon-Sat, 10:30am (10:30) Sunday
+                        // End: 6pm (18:00) every day except Thursday which is 9pm (21:00)
+                        defaultStart = (dayOfWeek === 0) ? "10:30" : "09:00";
+                        defaultEnd = (dayOfWeek === 4) ? "21:00" : "18:00";
+                    } else {
+                        // Anatolya default timings:
+                        if (dayOfWeek === 6) defaultStart = "09:00";
+                        if (dayOfWeek === 4) defaultEnd = "19:00";
+                    }
                     document.getElementById('startTime').value = defaultStart;
                     document.getElementById('endTime').value = defaultEnd;
                     calculateHoursFromTime();
@@ -3256,6 +3373,39 @@
     const startMondayStr = getMondayString(filterWeekVal);
     document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(addDaysString(startMondayStr, 6))}`;
 
+    const thead = document.getElementById('weeklyTableHead');
+    if (thead) {
+        if (currentStore === 'green_juice') {
+            thead.innerHTML = `<tr>
+                <th class="w-16 px-1 py-1.5 text-left font-bold tracking-tight">Staff</th>
+                <th class="w-10 text-center font-normal">Mon</th>
+                <th class="w-10 text-center font-normal">Tue</th>
+                <th class="w-10 text-center font-normal">Wed</th>
+                <th class="w-10 text-center font-normal">Thu</th>
+                <th class="w-10 text-center font-normal">Fri</th>
+                <th class="w-10 text-center font-normal">Sat</th>
+                <th class="w-10 text-center font-normal">Sun</th>
+                <th class="hide-on-share w-11 text-center font-bold bg-emerald-900/60">Cash H</th>
+                <th class="hide-on-share w-12 text-right pr-1 font-bold bg-slate-700">Cash</th>
+            </tr>`;
+        } else {
+            thead.innerHTML = `<tr>
+                <th class="w-16 px-1 py-1.5 text-left font-bold tracking-tight">Staff</th>
+                <th class="w-10 text-center font-normal">Mon</th>
+                <th class="w-10 text-center font-normal">Tue</th>
+                <th class="w-10 text-center font-normal">Wed</th>
+                <th class="w-10 text-center font-normal">Thu</th>
+                <th class="w-10 text-center font-normal">Fri</th>
+                <th class="w-10 text-center font-normal">Sat</th>
+                <th class="w-10 text-center font-normal">Sun</th>
+                <th class="hide-on-share w-11 text-center font-bold bg-blue-900/60">Tax H</th>
+                <th class="hide-on-share w-11 text-center font-bold bg-emerald-900/60">Cash H</th>
+                <th class="hide-on-share w-12 text-right pr-1 font-bold bg-slate-700">Cash</th>
+                <th class="hide-on-share w-12 text-right pr-1 font-bold bg-slate-700">Tax</th>
+            </tr>`;
+        }
+    }
+
     const weekLogs = dataStore.filter(e => {
         if (e.weekCommencing !== startMondayStr) return false;
         if (currentStore === 'anatolya') return (!e.store_id || e.store_id === 'anatolya');
@@ -3297,10 +3447,11 @@
             if (record) {
                 staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
                 
+                const isGJ = (currentStore === 'green_juice');
                 const recCashRate = isOwner ? 0 : Number(record.cashRate || 0);
-                const recTaxRate = isOwner ? 0 : Number(record.taxRate || 0);
-                const recCashH = isOwner ? 0 : record.cashHours;
-                const recTaxH = isOwner ? 0 : (record.totalHours - record.cashHours);
+                const recTaxRate = (isOwner || isGJ) ? 0 : Number(record.taxRate || 0);
+                const recCashH = isOwner ? 0 : (isGJ ? Number(record.totalHours || 0) : (record.cashHours !== undefined ? Number(record.cashHours) : 0));
+                const recTaxH = (isOwner || isGJ) ? 0 : (record.taxHours !== undefined ? Number(record.taxHours) : (record.totalHours - recCashH));
 
                 sCashH += recCashH;
                 sTaxH += recTaxH;
@@ -3325,16 +3476,26 @@
         }
 
         if (!isShareModeActive) {
-            if (isOwner) {
-                staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-gray-400 border-r">—</td>
-                                <td class="text-center font-semibold bg-emerald-50/70 text-gray-400 border-r">—</td>
-                                <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30 border-r">—</td>
-                                <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30">—</td>`;
+            if (currentStore === 'green_juice') {
+                if (isOwner) {
+                    staffRowHtml += `<td class="text-center font-semibold bg-emerald-50/70 text-gray-400 border-r">—</td>
+                                    <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30">—</td>`;
+                } else {
+                    staffRowHtml += `<td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${sCashH > 0 ? sCashH.toFixed(1) : '—'}</td>
+                                    <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${sCashP > 0 ? sCashP.toFixed(0) : '—'}</td>`;
+                }
             } else {
-                staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${sTaxH > 0 ? sTaxH.toFixed(1) : '—'}</td>
-                                <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${sCashH > 0 ? sCashH.toFixed(1) : '—'}</td>
-                                <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${sCashP > 0 ? sCashP.toFixed(0) : '—'}</td>
-                                <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${sTaxP > 0 ? sTaxP.toFixed(0) : '—'}</td>`;
+                if (isOwner) {
+                    staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-gray-400 border-r">—</td>
+                                    <td class="text-center font-semibold bg-emerald-50/70 text-gray-400 border-r">—</td>
+                                    <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30 border-r">—</td>
+                                    <td class="text-right pr-1 font-semibold text-gray-400 bg-slate-50/30">—</td>`;
+                } else {
+                    staffRowHtml += `<td class="text-center font-semibold bg-blue-50/70 text-blue-900 border-r">${sTaxH > 0 ? sTaxH.toFixed(1) : '—'}</td>
+                                    <td class="text-center font-semibold bg-emerald-50/70 text-emerald-900 border-r">${sCashH > 0 ? sCashH.toFixed(1) : '—'}</td>
+                                    <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30 border-r">${sCashP > 0 ? sCashP.toFixed(0) : '—'}</td>
+                                    <td class="text-right pr-1 font-semibold text-gray-800 bg-slate-50/30">${sTaxP > 0 ? sTaxP.toFixed(0) : '—'}</td>`;
+                }
             }
         }
         tbodyHtml += `<tr>${staffRowHtml}</tr>`;
@@ -3342,16 +3503,21 @@
 
     document.getElementById('weeklyTableBody').innerHTML = tbodyHtml;
     document.getElementById('grandTotalHoursHeader').innerText = macroTotals.globalHours.toFixed(1);
-    const totalPayout = macroTotals.cashPayout + macroTotals.taxPayout;
+    const totalPayout = (currentStore === 'green_juice') ? macroTotals.cashPayout : (macroTotals.cashPayout + macroTotals.taxPayout);
     const payoutEl = document.getElementById('grandTotalPayoutHeader');
     if (payoutEl) payoutEl.innerText = Math.round(totalPayout).toLocaleString();
     
     let tfootHtml = `<td class="px-1 py-1.5 text-left bg-gray-200 text-gray-900 border-r uppercase text-[9px]">Totals</td>`;
     globalDailyTotals.forEach(d => tfootHtml += `<td class="text-center text-gray-900 bg-gray-100 border-r">${d > 0 ? d.toFixed(1) : '—'}</td>`);
-    tfootHtml += `<td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
-                <td class="text-center bg-emerald-100 text-emerald-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
-                <td class="text-right pr-1 bg-slate-200 text-gray-900 border-r">${macroTotals.cashPayout.toFixed(0)}</td>
-                <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
+    if (currentStore === 'green_juice') {
+        tfootHtml += `<td class="text-center bg-emerald-100 text-emerald-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
+                    <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.cashPayout.toFixed(0)}</td>`;
+    } else {
+        tfootHtml += `<td class="text-center bg-blue-100 text-blue-950 border-r">${macroTotals.taxH.toFixed(1)}</td>
+                    <td class="text-center bg-emerald-100 text-emerald-950 border-r">${macroTotals.cashH.toFixed(1)}</td>
+                    <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.cashPayout.toFixed(0)}</td>
+                    <td class="text-right pr-1 bg-slate-200 text-gray-900">${macroTotals.taxPayout.toFixed(0)}</td>`;
+    }
     document.getElementById('weeklyTableFoot').innerHTML = tfootHtml;
     renderCurrentAnalyticsView();
 }
@@ -4323,6 +4489,9 @@
             const copyPrevWeekBtn = document.getElementById('copyPrevWeekBtn');
             const rosterStoreSummaryTitle = document.getElementById('rosterStoreSummaryTitle');
 
+            const taxPayRateContainer = document.getElementById('taxPayRateContainer');
+            const shiftRateInputsGrid = document.getElementById('shiftRateInputsGrid');
+
             if (storeKey === 'anatolya') {
                 if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = '';
                 if (payForm) payForm.style.display = '';
@@ -4330,6 +4499,8 @@
                 if (shareModeBtn) shareModeBtn.style.display = '';
                 if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = '';
                 if (rosterStoreSummaryTitle) rosterStoreSummaryTitle.innerText = "Anatolya Kebabs Summary";
+                if (taxPayRateContainer) taxPayRateContainer.style.display = '';
+                if (shiftRateInputsGrid) shiftRateInputsGrid.className = "grid grid-cols-3 gap-3 items-end";
             } else if (storeKey === 'green_juice') {
                 // User requirement: remove weekly tax limit from green juice tab
                 if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = 'none';
@@ -4338,6 +4509,8 @@
                 if (shareModeBtn) shareModeBtn.style.display = '';
                 if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = '';
                 if (rosterStoreSummaryTitle) rosterStoreSummaryTitle.innerText = "Green Juice Bar Summary";
+                if (taxPayRateContainer) taxPayRateContainer.style.display = 'none';
+                if (shiftRateInputsGrid) shiftRateInputsGrid.className = "grid grid-cols-2 gap-3 items-end";
             } else { // 'company_shared' or 'all'
                 // User requirement: remove tax limit and timers and roster from company's tab
                 if (weeklyTaxLimitSection) weeklyTaxLimitSection.style.display = 'none';
@@ -4345,6 +4518,7 @@
                 if (rosterSection) rosterSection.style.display = 'none';
                 if (shareModeBtn) shareModeBtn.style.display = 'none';
                 if (copyPrevWeekBtn) copyPrevWeekBtn.style.display = 'none';
+                if (taxPayRateContainer) taxPayRateContainer.style.display = 'none';
                 if (isShareModeActive) {
                     const app = document.getElementById('appContainer');
                     if (app) app.classList.remove('roster-share-active');
@@ -4364,6 +4538,7 @@
             // 4. Re-render UI components for active store
             populateStaffDropdowns();
             renderWeeklyTable();
+            applyDefaultShiftTimes();
             applyStaffRateDefaults();
             renderCurrentAnalyticsView();
             const activeDate = document.getElementById('date').value;
