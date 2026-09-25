@@ -532,7 +532,11 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       };
     });
 
-    const expenses = (expenseRows || []).map(x => ({
+    const expenses = (expenseRows || []).filter(x => {
+      const isGj = (x.store_id === 'green_juice');
+      if (isGj && (x.category || '').toLowerCase() === 'wages') return false;
+      return true;
+    }).map(x => ({
       id: x.id,
       date: cleanDateStr(x.date),
       category: x.category || 'Others',
@@ -633,12 +637,16 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
 
     if (payload.action === 'save_expense' && payload.expense) {
       const x = payload.expense;
+      const sId = x.store_id || 'anatolya';
+      if (sId === 'green_juice' && (x.category || '').toLowerCase() === 'wages') {
+        return res.status(400).json({ error: 'Green Juice wages are calculated from roster only; bank wages cannot be logged.' });
+      }
       const row = {
         date: cleanDateStr(x.date),
         category: x.category || 'Others',
         amount: Number(x.amount) || 0,
         notes: x.notes || '',
-        store_id: x.store_id || 'anatolya'
+        store_id: sId
       };
       let result;
       if (x.id) {

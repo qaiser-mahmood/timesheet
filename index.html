@@ -2233,7 +2233,11 @@
                             };
                         });
 
-                        const expenses = (expenseRows || []).map(x => ({
+                        const expenses = (expenseRows || []).filter(x => {
+                            const isGj = (x.store_id === 'green_juice');
+                            if (isGj && (x.category || '').toLowerCase() === 'wages') return false;
+                            return true;
+                        }).map(x => ({
                             id: x.id,
                             date: cleanDateStr(x.date),
                             store_id: x.store_id || 'anatolya',
@@ -2823,7 +2827,11 @@
                         }
                         if (responseObj.sales && Array.isArray(responseObj.sales)) {
                             if (responseObj.expenses && Array.isArray(responseObj.expenses)) {
-                                expensesStore = responseObj.expenses.map(x => ({
+                                expensesStore = responseObj.expenses.filter(x => {
+                                    const sId = x.store_id || 'anatolya';
+                                    if (sId === 'green_juice' && (x.category || '').toLowerCase() === 'wages') return false;
+                                    return true;
+                                }).map(x => ({
                                     ...x,
                                     store_id: x.store_id || 'anatolya'
                                 }));
@@ -3335,6 +3343,15 @@
                     try { await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff, store_id: storeId }); } catch (err) { console.error(err); }
                     loadCloudData();
                 }
+
+                function getLocalTodayIso() {
+                    const now = new Date();
+                    const y = now.getFullYear();
+                    const m = String(now.getMonth() + 1).padStart(2, '0');
+                    const d = String(now.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                }
+                window.getLocalTodayIso = getLocalTodayIso;
 
                 function getMondayString(dateString) {
                     const [y, m, d] = dateString.split('-').map(Number);
@@ -6003,7 +6020,6 @@
             { pattern: /tyro\s*fees/i, entity: 'green_juice', category: 'Others', label: 'Tyro Terminal Fees' },
             { pattern: /woolworths.*carousel/i, entity: 'green_juice', category: 'Consumables', label: 'Woolworths Carousel' },
             { pattern: /(juice|citrus|mango|passionfruit|oranges|apple|berries|fruit)/i, entity: 'green_juice', category: 'Fruit & Vegies', label: 'Fresh Produce' },
-            { pattern: /(jasmeen|dimple|ansa|mouni|ranjit|harman|shireesha|thet\s*htet|ahmad\s*raza|amisha|divyanshi|palak|palakpreet)/i, entity: 'green_juice', category: 'Wages', label: 'Green Juice Staff Wages' },
             
             // 2. Anatolya Kebabs
             { pattern: /balcatta\s*cash/i, entity: 'anatolya', category: 'Campbells', label: 'Balcatta Cash & Carry' },
@@ -7280,6 +7296,8 @@ Do not include markdown fences.`;
             const qExpenses = expensesStore.filter(x => {
                 if (!x.date) return false;
                 const d = cleanDateStr(x.date);
+                const isGj = (x.store_id || 'anatolya') === 'green_juice';
+                if (isGj && (x.category || '').toLowerCase() === 'wages') return false;
                 return d >= startIso && d <= endIso && isExpenseMatch(x.store_id, currentStore);
             });
 
@@ -7699,26 +7717,41 @@ Do not include markdown fences.`;
                 };
             }
 
-            // 1. Group bank wages by Monday of their week
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const currentWeekMon = getMondayString(todayIso);
+
+            // 1. Group bank wages by Monday of their week (EXCLUDING Green Juice, which is strictly roster-only!)
             const weekBankWages = {};
             expensesStore.filter(x => isExpenseMatch(x.store_id, storeKey)).forEach(x => {
                 if (x.category === 'Wages') {
+                    // In Green Juice NEVER include wages from bank transactions!
+                    if (storeKey === 'green_juice' || (x.store_id || 'anatolya') === 'green_juice') return;
                     const wMon = getMondayString(cleanDateStr(x.date));
                     weekBankWages[wMon] = (weekBankWages[wMon] || 0) + Number(x.amount || 0);
                 }
             });
 
-            // 2. Group roster tax wages by Monday of their week
+            // 2. Group roster wages by Monday of their week
             const weekRosterTaxWages = {};
+            const weekGjRosterWages = {};
+
             dataStore.filter(entry => entry.from && entry.to && isStoreMatch(entry.store_id, storeKey)).forEach(shift => {
                 const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
                 if (!isOwner) {
-                    const wMon = getMondayString(cleanDateStr(shift.date));
+                    const shiftDate = cleanDateStr(shift.date);
+                    const wMon = getMondayString(shiftDate);
+                    const sStore = shift.store_id || 'anatolya';
                     const totH = Number(shift.totalHours) || 0;
+                    const cr = Number(shift.cashRate) || 0;
                     const tr = Number(shift.taxRate) || 0;
                     const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
                     const th = Math.max(0, totH - ch);
-                    weekRosterTaxWages[wMon] = (weekRosterTaxWages[wMon] || 0) + (th * tr);
+
+                    if (sStore === 'green_juice') {
+                        weekGjRosterWages[wMon] = (weekGjRosterWages[wMon] || 0) + (totH * cr);
+                    } else {
+                        weekRosterTaxWages[wMon] = (weekRosterTaxWages[wMon] || 0) + (th * tr);
+                    }
                 }
             });
 
@@ -7727,6 +7760,9 @@ Do not include markdown fences.`;
 
             datesList.forEach(dIso => {
                 const wMon = getMondayString(dIso);
+                const isCurrentWeek = (wMon === currentWeekMon);
+                const isFutureDayInCurrentWeek = (isCurrentWeek && dIso > todayIso);
+
                 const sRec = getStoreSalesForDate(dIso, storeKey);
                 const sAmt = sRec ? Number(sRec.totalSales || 0) : 0;
                 let cAmt = 0;
@@ -7745,28 +7781,13 @@ Do not include markdown fences.`;
                         : (h._uberSales !== undefined ? Number(h._uberSales) : 0);
                 }
 
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, storeKey));
-                let dHours = 0;
-                let dCashWages = 0;
-                let dTaxWages = 0;
-                dayShifts.forEach(shift => {
-                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
-                    const totH = Number(shift.totalHours) || 0;
-                    dHours += totH;
-                    if (!isOwner) {
-                        const cr = Number(shift.cashRate) || 0;
-                        const tr = Number(shift.taxRate) || 0;
-                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
-                        const th = Math.max(0, totH - ch);
-                        dCashWages += (ch * cr);
-                        dTaxWages += (th * tr);
-                    }
-                });
-
+                // Operating Expenses (excluding bank wages for Green Juice, and excluding bank wages from op exp)
                 const dayExpList = expensesStore.filter(x => cleanDateStr(x.date) === dIso && isExpenseMatch(x.store_id, storeKey));
                 let dDayTotalExp = 0;
                 let dDayBankWages = 0;
                 dayExpList.forEach(x => {
+                    const isGj = (x.store_id || 'anatolya') === 'green_juice';
+                    if (isGj && x.category === 'Wages') return; // NEVER include GJ bank wages!
                     const amt = Number(x.amount || 0);
                     dDayTotalExp += amt;
                     const k = x.category || 'Others';
@@ -7777,17 +7798,85 @@ Do not include markdown fences.`;
                 });
                 const dDayOpExp = dDayTotalExp - dDayBankWages;
 
-                const wBank = weekBankWages[wMon] || 0;
-                const wTax = weekRosterTaxWages[wMon] || 0;
-
+                let dHours = 0;
+                let dCashWages = 0;
                 let dayTaxLabor = 0;
-                if (wBank > 0) {
-                    dayTaxLabor = wTax > 0 ? (wBank * (dTaxWages / wTax)) : (wBank / 7);
+                let dayTotalLabor = 0;
+
+                // CRITICAL USER REQUIREMENT:
+                // "while showing current week profit include the wages upto the current day not the whole week for both anatolya and green juice"
+                if (isFutureDayInCurrentWeek) {
+                    dHours = 0;
+                    dCashWages = 0;
+                    dayTaxLabor = 0;
+                    dayTotalLabor = 0;
                 } else {
-                    dayTaxLabor = dTaxWages;
+                    const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === dIso && entry.from && entry.to && isStoreMatch(entry.store_id, storeKey));
+
+                    let anaHours = 0, anaCash = 0, anaTax = 0;
+                    let gjHours = 0, gjCash = 0;
+
+                    dayShifts.forEach(shift => {
+                        const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                        if (isOwner) return;
+                        const sStore = shift.store_id || 'anatolya';
+                        const totH = Number(shift.totalHours) || 0;
+                        const cr = Number(shift.cashRate) || 0;
+                        const tr = Number(shift.taxRate) || 0;
+                        const ch = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const th = Math.max(0, totH - ch);
+
+                        if (sStore === 'green_juice') {
+                            gjHours += totH;
+                            gjCash += (totH * cr);
+                        } else {
+                            anaHours += totH;
+                            anaCash += (ch * cr);
+                            anaTax += (th * tr);
+                        }
+                    });
+
+                    // 1. Anatolya Labor
+                    const wBank = weekBankWages[wMon] || 0;
+                    const wTax = weekRosterTaxWages[wMon] || 0;
+                    let anaTaxLabor = 0;
+                    if (wBank > 0) {
+                        anaTaxLabor = wTax > 0 ? (wBank * (anaTax / wTax)) : (wBank / 7);
+                    } else {
+                        anaTaxLabor = anaTax;
+                    }
+
+                    // 2. Green Juice Labor:
+                    // "in green juice don't include wages from bank transactions only roster calculated wages if roster wage is 0 or missing then use $1100 as weekly wage."
+                    let gjDayLabor = 0;
+                    if (storeKey === 'green_juice' || storeKey === 'all') {
+                        const gjWeekTotal = weekGjRosterWages[wMon] || 0;
+                        if (gjWeekTotal > 0) {
+                            gjDayLabor = gjCash;
+                        } else {
+                            // Roster wage is 0 or missing -> fallback to $1100/week ($1100 / 7 per day)
+                            gjDayLabor = 1100 / 7;
+                        }
+                    }
+
+                    if (storeKey === 'green_juice') {
+                        dHours = gjHours;
+                        dCashWages = gjDayLabor;
+                        dayTaxLabor = 0;
+                        dayTotalLabor = gjDayLabor;
+                    } else if (storeKey === 'anatolya') {
+                        dHours = anaHours;
+                        dCashWages = anaCash;
+                        dayTaxLabor = anaTaxLabor;
+                        dayTotalLabor = anaCash + anaTaxLabor;
+                    } else { // 'all' (Consolidated)
+                        dHours = anaHours + gjHours;
+                        dCashWages = anaCash + gjDayLabor;
+                        dayTaxLabor = anaTaxLabor;
+                        dayTotalLabor = anaCash + anaTaxLabor + gjDayLabor;
+                    }
                 }
 
-                const dayTotalLabor = dCashWages + dayTaxLabor;
                 const dayNet = sAmt - dDayOpExp - dayTotalLabor;
                 const splh = dHours > 0 ? (sAmt / dHours) : 0;
 
@@ -7825,6 +7914,10 @@ Do not include markdown fences.`;
                 dayBreakdown.push(dayObj);
 
                 if (!weekBreakdownMap.has(wMon)) {
+                    const isGjStore = (storeKey === 'green_juice');
+                    const gjWk = isGjStore ? (weekGjRosterWages[wMon] || 0) : 0;
+                    const isGjFallback = isGjStore && (gjWk === 0);
+
                     weekBreakdownMap.set(wMon, {
                         wMon,
                         wSun: addDaysString(wMon, 6),
@@ -7841,8 +7934,9 @@ Do not include markdown fences.`;
                         taxLabor: 0,
                         labor: 0,
                         net: 0,
-                        hasBankWages: (wBank > 0),
-                        bankWages: wBank
+                        hasBankWages: ((weekBankWages[wMon] || 0) > 0),
+                        bankWages: (weekBankWages[wMon] || 0),
+                        isGjFallback
                     });
                 }
                 const wData = weekBreakdownMap.get(wMon);
@@ -7945,9 +8039,14 @@ Do not include markdown fences.`;
             }
             const kpiWagesSub = document.getElementById('kpiRangeWagesSub');
             if (kpiWagesSub) {
-                kpiWagesSub.innerText = hasBankWages
-                    ? `Bank: $${fin.bankWages.toFixed(0)} + Cash: $${fin.cashWages.toFixed(0)}${fin.taxWages > fin.bankWages ? ' (+ Roster)' : ''}`
-                    : 'Roster estimated';
+                if (currentStore === 'green_juice') {
+                    const anyFallback = fin.weeksBreakdown.some(w => w.isGjFallback);
+                    kpiWagesSub.innerText = anyFallback ? 'Roster / $1100 fallback' : 'Roster calculated cash';
+                } else {
+                    kpiWagesSub.innerText = hasBankWages
+                        ? `Bank: $${fin.bankWages.toFixed(0)} + Cash: $${fin.cashWages.toFixed(0)}${fin.taxWages > fin.bankWages ? ' (+ Roster)' : ''}`
+                        : 'Roster estimated';
+                }
             }
 
             if (kpiExpenses) {
@@ -7999,9 +8098,13 @@ Do not include markdown fences.`;
                     fin.weeksBreakdown.forEach((w, wIdx) => {
                         const netColor = w.net >= 0 ? 'text-emerald-400' : 'text-rose-400';
                         const netBg = w.net >= 0 ? 'bg-emerald-950/30 border-emerald-800/40' : 'bg-rose-950/30 border-rose-800/40';
-                        const laborBadge = w.hasBankWages
-                            ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 border border-sky-700/60 text-sky-300 font-semibold" title="Bank statement wages applied">🏦 Bank</span>'
-                            : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-400 font-semibold" title="Roster estimated tax wages">📋 Roster</span>';
+                        const laborBadge = (currentStore === 'green_juice')
+                            ? (w.isGjFallback 
+                                ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-950 border border-amber-700/60 text-amber-300 font-semibold" title="$1100/wk estimated fallback">$1100 Est</span>' 
+                                : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-700/60 text-emerald-300 font-semibold" title="Roster calculated cash wages">📋 Roster</span>')
+                            : (w.hasBankWages
+                                ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-sky-950 border border-sky-700/60 text-sky-300 font-semibold" title="Bank statement wages applied">🏦 Bank</span>'
+                                : '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-400 font-semibold" title="Roster estimated tax wages">📋 Roster</span>');
 
                         wCardsHtml += `
                             <div class="p-2.5 rounded-lg border ${netBg} bg-slate-800/60 flex flex-col justify-between space-y-1.5">
@@ -8921,20 +9024,53 @@ function convertHourStr(hStr) {
             const hourlyData = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
             const totalDaySales = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
 
-            const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const currentWeekMon = getMondayString(todayIso);
+            const wMon = getMondayString(targetDate);
+            const isCurWeek = (wMon === currentWeekMon);
+            const isFutureDayInCurrentWeek = (isCurWeek && targetDate > todayIso);
 
             let totalDayLaborCost = 0;
-            dayShifts.forEach(shift => {
-                const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
-                if (!isOwner) {
-                    const totH = Number(shift.totalHours) || 0;
-                    const cRate = Number(shift.cashRate) || 0;
-                    const tRate = Number(shift.taxRate) || 0;
-                    const cHours = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
-                    const tHours = Math.max(0, totH - cHours);
-                    totalDayLaborCost += (cHours * cRate) + (tHours * tRate);
+
+            if (!isFutureDayInCurrentWeek) {
+                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
+
+                let anatolyaDayLabor = 0;
+                let gjDayLabor = 0;
+
+                dayShifts.forEach(shift => {
+                    const isOwner = (shift.name && shift.name.toLowerCase().trim() === 'qaiser');
+                    if (!isOwner) {
+                        const sStore = shift.store_id || 'anatolya';
+                        const totH = Number(shift.totalHours) || 0;
+                        const cRate = Number(shift.cashRate) || 0;
+                        const tRate = Number(shift.taxRate) || 0;
+                        const cHours = Math.min(totH, Math.max(0, Number(shift.cashHours) || 0));
+                        const tHours = Math.max(0, totH - cHours);
+
+                        if (sStore === 'green_juice') {
+                            gjDayLabor += (totH * cRate);
+                        } else {
+                            anatolyaDayLabor += (cHours * cRate) + (tHours * tRate);
+                        }
+                    }
+                });
+
+                if (currentStore === 'green_juice' || currentStore === 'all') {
+                    const weekGjShifts = dataStore.filter(e => e.from && e.to && isStoreMatch(e.store_id, 'green_juice') && getMondayString(cleanDateStr(e.date)) === wMon && (!e.name || e.name.toLowerCase().trim() !== 'qaiser'));
+                    if (weekGjShifts.length === 0) {
+                        gjDayLabor = 1100 / 7;
+                    }
                 }
-            });
+
+                if (currentStore === 'green_juice') {
+                    totalDayLaborCost = gjDayLabor;
+                } else if (currentStore === 'anatolya') {
+                    totalDayLaborCost = anatolyaDayLabor;
+                } else {
+                    totalDayLaborCost = anatolyaDayLabor + gjDayLabor;
+                }
+            }
 
             const kpiSales = document.getElementById('kpiSalesTotal');
             const kpiWages = document.getElementById('kpiWagesTotal');
