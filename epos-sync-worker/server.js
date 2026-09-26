@@ -914,8 +914,8 @@ Critical Rules:
   - Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, insurance, accounting -> entity "company_shared", category "Fuel & Vehicle" or "Insurance" or "Accounting" or "Others"
 Do not include markdown fences.`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const geminiResp = await fetch(geminiUrl, {
+    let geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+    let geminiResp = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -927,6 +927,22 @@ Do not include markdown fences.`;
         }]
       })
     });
+
+    if (!geminiResp.ok && geminiResp.status === 404) {
+      geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      geminiResp = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType || 'image/png', data: fileBase64 } }
+            ]
+          }]
+        })
+      });
+    }
 
     if (!geminiResp.ok) {
       const errText = await geminiResp.text();
