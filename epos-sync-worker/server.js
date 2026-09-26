@@ -914,45 +914,57 @@ Critical Rules:
   - Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, insurance, accounting -> entity "company_shared", category "Fuel & Vehicle" or "Insurance" or "Accounting" or "Others"
 Do not include markdown fences.`;
 
-    let geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-    let geminiResp = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: mimeType || 'image/png', data: fileBase64 } }
-          ]
-        }]
-      })
-    });
+    const candidateModels = [
+      'gemini-3.1-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemini-3.8-flash',
+      'gemini-flash-latest'
+    ];
 
-    if (!geminiResp.ok && geminiResp.status === 404) {
-      geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-      geminiResp = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mimeType || 'image/png', data: fileBase64 } }
-            ]
-          }]
-        })
-      });
+    let geminiResp = null;
+    let lastErrText = '';
+    for (const model of candidateModels) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const resp = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType || 'image/png', data: fileBase64 } }
+              ]
+            }]
+          })
+        });
+
+        if (resp.ok) {
+          geminiResp = resp;
+          break;
+        } else {
+          lastErrText = await resp.text();
+          console.warn(`[Gemini Vision] Model ${model} returned ${resp.status}: ${lastErrText.slice(0, 100)}, trying next...`);
+        }
+      } catch (callErr) {
+        lastErrText = callErr.message;
+        console.warn(`[Gemini Vision] Failed trying model ${model}:`, callErr.message);
+      }
     }
 
-    if (!geminiResp.ok) {
-      const errText = await geminiResp.text();
-      return res.status(502).json({ error: 'Gemini API Error', details: errText });
+    if (!geminiResp) {
+      return res.status(502).json({ error: 'Gemini API Error', details: lastErrText });
     }
 
     const data = await geminiResp.json();
     const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const cleanJson = candidateText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
+    const startIdx = cleanJson.indexOf('[');
+    const endIdx = cleanJson.lastIndexOf(']');
+    if (startIdx === -1 || endIdx === -1) {
+      return res.status(500).json({ error: 'AI did not return a valid transaction array', raw: candidateText });
+    }
+    const parsed = JSON.parse(cleanJson.substring(startIdx, endIdx + 1));
 
     res.json({ status: 'success', rows: parsed });
   } catch (err) {

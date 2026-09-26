@@ -1302,7 +1302,7 @@
             <div class="shrink-0 flex items-center justify-between text-[11px] bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
                 <span class="text-slate-400 flex items-center gap-1.5">
                     <span>⚡ Engine:</span>
-                    <span id="smartEngineBadge" class="text-emerald-400 font-bold">Gemini 2.0 Flash Vision AI & CSV Parser</span>
+                    <span id="smartEngineBadge" class="text-emerald-400 font-bold">Gemini Vision AI & CSV Parser</span>
                 </span>
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="openLearnedRulesModal()" class="text-amber-300 hover:text-amber-200 font-bold text-[11px] flex items-center gap-1 bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded cursor-pointer" title="View remembered supplier rules">
@@ -1315,7 +1315,7 @@
             </div>
             <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
                 <div class="flex items-center justify-between">
-                    <label class="block text-[11px] font-bold text-amber-300 uppercase">Google Gemini 2.0 Flash Vision AI Key</label>
+                    <label class="block text-[11px] font-bold text-amber-300 uppercase">Google Gemini Vision AI Key</label>
                     <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-400 hover:text-sky-300 underline flex items-center gap-1 font-semibold">
                         Get Free Gemini Key ↗
                     </a>
@@ -1324,7 +1324,7 @@
                     Vision AI reads bank screenshots, multi-column banking apps, and handwritten receipts with 100% financial accuracy. You can paste your free key here, or set <code class="text-amber-300 font-mono bg-slate-900 px-1 py-0.5 rounded">GEMINI_API_KEY</code> on Render.
                 </p>
                 <div class="flex gap-2">
-                    <input type="password" id="smartGeminiApiKey" placeholder="Paste AIzaSy... key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none font-mono" />
+                    <input type="password" id="smartGeminiApiKey" placeholder="Paste Gemini API Key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none font-mono" />
                     <button type="button" onclick="saveSmartGeminiApiKey()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-1.5 rounded-lg text-xs cursor-pointer shadow">Save Key</button>
                 </div>
             </div>
@@ -6388,7 +6388,7 @@
                 if (keyInp) keyInp.value = savedKey;
                 const badge = document.getElementById('smartEngineBadge');
                 if (badge) {
-                    badge.innerText = savedKey ? "Gemini 2.0 Flash AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
+                    badge.innerText = savedKey ? "Gemini AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
                 }
             }
         }
@@ -6414,7 +6414,7 @@
             localStorage.setItem('alhamd_gemini_api_key', key);
             const badge = document.getElementById('smartEngineBadge');
             if (badge) {
-                badge.innerText = key ? "Gemini 2.0 Flash AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
+                badge.innerText = key ? "Gemini AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
             }
             showExpensesToast(key ? "Gemini AI Vision key saved!" : "Key removed. Using built-in OCR.", true);
             toggleSmartAiSettings();
@@ -6668,11 +6668,16 @@
             if (localApiKey) {
                 try {
                     const aiRows = await callGeminiVisionExpenseExtraction(file, localApiKey);
-                    if (aiRows && aiRows.length > 0) return aiRows;
+                    if (aiRows && aiRows.length > 0) {
+                        if (typeof showExpensesToast === 'function') {
+                            showExpensesToast(`✨ Gemini AI Vision successfully extracted ${aiRows.length} transactions!`, true);
+                        }
+                        return aiRows;
+                    }
                 } catch (e) {
                     console.warn("Client Gemini Vision failed, attempting backend worker:", e);
                     if (typeof showExpensesToast === 'function') {
-                        showExpensesToast(`Gemini AI Vision Notice: ${e.message}`, false);
+                        showExpensesToast(`Gemini Vision Notice: ${e.message}`, false);
                     }
                 }
             }
@@ -6698,6 +6703,9 @@
                 if (beResp.ok) {
                     const result = await beResp.json();
                     if (result.status === 'success' && Array.isArray(result.rows) && result.rows.length > 0) {
+                        if (typeof showExpensesToast === 'function') {
+                            showExpensesToast(`✨ Gemini AI Vision successfully extracted ${result.rows.length} transactions!`, true);
+                        }
                         return result.rows.map((item, idx) => ({
                             id: `ai_${Date.now()}_${idx}`,
                             date: item.date || new Date().toISOString().split('T')[0],
@@ -6722,6 +6730,9 @@
 
             // 3. Fallback: Local Tesseract OCR with Smart Banking Parsing
             try {
+                if (typeof showExpensesToast === 'function') {
+                    showExpensesToast("Falling back to built-in OCR...", false);
+                }
                 const Tesseract = await loadTesseractLibrary();
                 const worker = await Tesseract.createWorker('eng');
                 const ret = await worker.recognize(file);
@@ -6771,52 +6782,65 @@ Critical Rules:
   - Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, insurance, accounting -> entity "company_shared", category "Fuel & Vehicle" or "Insurance" or "Accounting" or "Others"
 Do not include markdown fences.`;
 
-            let resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [
-                            { text: prompt },
-                            { inline_data: { mime_type: file.type || 'image/png', data: base64Data } }
-                        ]
-                    }]
-                })
-            });
+            // Candidate models in priority order: super fast flash-lite first, then standard flash models
+            const candidateModels = [
+                'gemini-3.1-flash-lite',
+                'gemini-3.5-flash-lite',
+                'gemini-3.8-flash',
+                'gemini-flash-latest'
+            ];
 
-            if (!resp.ok && resp.status === 404) {
-                resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                { inline_data: { mime_type: file.type || 'image/png', data: base64Data } }
-                            ]
-                        }]
-                    })
-                });
+            let lastError = null;
+            for (const model of candidateModels) {
+                try {
+                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: prompt },
+                                    { inline_data: { mime_type: file.type || 'image/png', data: base64Data } }
+                                ]
+                            }]
+                        })
+                    });
+
+                    if (!resp.ok) {
+                        const errObj = await resp.json().catch(() => ({}));
+                        const errMsg = errObj?.error?.message || `HTTP ${resp.status}`;
+                        lastError = new Error(`${model}: ${errMsg}`);
+                        console.warn(`Gemini Vision model ${model} returned ${resp.status} (${errMsg}), trying next candidate...`);
+                        continue;
+                    }
+
+                    const data = await resp.json();
+                    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    const cleanJson = candidateText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+                    const startIdx = cleanJson.indexOf('[');
+                    const endIdx = cleanJson.lastIndexOf(']');
+                    if (startIdx === -1 || endIdx === -1) {
+                        throw new Error(`AI model ${model} did not return a valid transaction array.`);
+                    }
+                    const parsed = JSON.parse(cleanJson.substring(startIdx, endIdx + 1));
+                    return parsed.map((item, idx) => ({
+                        id: `ai_${Date.now()}_${idx}`,
+                        date: item.date || new Date().toISOString().split('T')[0],
+                        amount: Math.abs(Number(item.amount) || 0),
+                        notes: item.supplier || 'Receipt Item',
+                        entity: item.entity || 'anatolya',
+                        category: item.category || 'Others',
+                        matchedRule: 'Gemini AI Vision ✨',
+                        isDeposit: !!item.isDeposit,
+                        selected: !item.isDeposit
+                    }));
+                } catch (modelErr) {
+                    lastError = modelErr;
+                    console.warn(`Error attempting Gemini model ${model}:`, modelErr.message);
+                }
             }
 
-            const data = await resp.json();
-            if (!resp.ok) {
-                throw new Error(data?.error?.message || `Google API error (${resp.status})`);
-            }
-            const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const cleanJson = candidateText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
-            const parsed = JSON.parse(cleanJson);
-            return parsed.map((item, idx) => ({
-                id: `ai_${Date.now()}_${idx}`,
-                date: item.date || new Date().toISOString().split('T')[0],
-                amount: Math.abs(Number(item.amount) || 0),
-                notes: item.supplier || 'Receipt Item',
-                entity: item.entity || 'anatolya',
-                category: item.category || 'Others',
-                matchedRule: 'Gemini AI Vision ✨',
-                isDeposit: !!item.isDeposit,
-                selected: !item.isDeposit
-            }));
+            throw lastError || new Error("All Gemini Vision endpoints are temporarily unavailable.");
         }
 
         function parseRawTextToExpenses(rawText, defaultFileName = '') {
