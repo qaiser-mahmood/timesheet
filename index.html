@@ -616,8 +616,14 @@
                         <button type="button" onclick="openLearnedRulesModal()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-amber-300 font-bold px-2 sm:px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="View remembered supplier categorization rules">
                             <span>🧠</span> <span>Rules (<span id="ledgerLearnedRulesCountBadge">0</span>)</span>
                         </button>
+                        <button type="button" onclick="triggerCameraCapture()" class="flex-1 sm:flex-none bg-teal-700 hover:bg-teal-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="Snap receipt directly with your camera">
+                            <span>📸</span> <span>Snap</span>
+                        </button>
+                        <button type="button" onclick="pasteFromClipboard()" class="flex-1 sm:flex-none bg-sky-700 hover:bg-sky-600 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="Paste screenshot directly from clipboard">
+                            <span>📋</span> <span>Paste</span>
+                        </button>
                         <button type="button" onclick="openSmartExpenseModal()" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="Upload screenshot, bank statement CSV/PDF, or invoice for automated reading">
-                            <span>📷</span> <span>Upload</span>
+                            <span>📁</span> <span>Upload</span>
                         </button>
                         <button type="button" onclick="openExpenseModal()" class="flex-1 sm:flex-none bg-amber-600 hover:bg-amber-500 text-white font-bold px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs transition shadow flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer" title="Log a single expense manually">
                             <span>➕</span> <span>Log Exp</span>
@@ -1282,18 +1288,39 @@
             </div>
 
             <!-- Upload Dropzone -->
-            <div id="smartExpenseDropzone" ondragover="handleSmartExpenseDragOver(event)" ondragleave="handleSmartExpenseDragLeave(event)" ondrop="handleSmartExpenseDrop(event)" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/80 rounded-xl p-4 sm:p-5 text-center transition bg-slate-950/50 hover:bg-slate-950/80 cursor-pointer shrink-0">
+            <div id="smartExpenseDropzone" ondragover="handleSmartExpenseDragOver(event)" ondragleave="handleSmartExpenseDragLeave(event)" ondrop="handleSmartExpenseDrop(event)" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/80 rounded-xl p-4 sm:p-5 text-center transition bg-slate-950/50 hover:bg-slate-950/80 shrink-0">
                 <input type="file" id="smartExpenseFileInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*,.csv,.pdf,.txt" class="hidden" multiple />
-                <div onclick="document.getElementById('smartExpenseFileInput').click()" class="space-y-1.5">
+                <input type="file" id="smartExpenseCameraInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*" capture="environment" class="hidden" />
+                
+                <div class="space-y-3">
                     <div class="text-3xl animate-bounce">📥</div>
-                    <div class="text-xs sm:text-sm font-bold text-slate-200">
-                        Drop screenshot, bank statement CSV/PDF, or invoice here, or <span class="text-emerald-400 underline">browse files</span>
+                    <div>
+                        <div class="text-xs sm:text-sm font-bold text-slate-200">
+                            Drop screenshot, bank statement CSV/PDF, or paste directly
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">
+                            Mobile users: snap directly with camera or copy screenshot & tap Paste
+                        </p>
                     </div>
-                    <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-center gap-2 flex-wrap pt-0.5">
-                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">📸 Screenshots (.png, .jpg)</span>
-                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">📑 Bank Statements (.csv)</span>
-                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">🧾 Invoices & Statements (.pdf)</span>
-                        <span class="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">📋 Or press Ctrl+V to paste screenshot</span>
+
+                    <!-- 3 Quick Primary Action Buttons for Mobile & Desktop -->
+                    <div class="flex items-center justify-center gap-2 flex-wrap pt-0.5">
+                        <button type="button" onclick="pasteFromClipboard()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                            <span>📋</span> <span>Paste Screenshot</span>
+                        </button>
+                        <button type="button" onclick="triggerCameraCapture()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                            <span>📸</span> <span>Snap Receipt (Camera)</span>
+                        </button>
+                        <button type="button" onclick="document.getElementById('smartExpenseFileInput').click()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                            <span>📁</span> <span>Browse Files</span>
+                        </button>
+                    </div>
+
+                    <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-center gap-2 flex-wrap pt-1">
+                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">📸 Bank Screenshots</span>
+                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">📑 Bank Statements (.csv)</span>
+                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">🧾 Tax Invoices (.pdf)</span>
+                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">⌨️ Ctrl+V anywhere to paste</span>
                     </div>
                 </div>
             </div>
@@ -1826,6 +1853,8 @@
         window.showExpensesToast = showExpensesToast;
         window.openSmartExpenseModal = openSmartExpenseModal;
         window.closeSmartExpenseModal = closeSmartExpenseModal;
+        window.triggerCameraCapture = triggerCameraCapture;
+        window.pasteFromClipboard = pasteFromClipboard;
         window.handleSmartExpenseFileSelect = handleSmartExpenseFileSelect;
         window.handleSmartExpenseDrop = handleSmartExpenseDrop;
         window.handleSmartExpenseDragOver = handleSmartExpenseDragOver;
@@ -6455,19 +6484,75 @@
         }
         window.handleSmartExpenseFileSelect = handleSmartExpenseFileSelect;
 
-        // Clipboard paste listener: paste screenshot directly
+        function triggerCameraCapture() {
+            const camInp = document.getElementById('smartExpenseCameraInput');
+            if (camInp) {
+                openSmartExpenseModal();
+                camInp.click();
+            }
+        }
+        window.triggerCameraCapture = triggerCameraCapture;
+
+        async function pasteFromClipboard() {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.read) {
+                    if (typeof showExpensesToast === 'function') {
+                        showExpensesToast("Tip: Tap & hold or press Ctrl+V to paste your screenshot directly.", false);
+                    }
+                    return;
+                }
+                const clipboardItems = await navigator.clipboard.read();
+                const imageFiles = [];
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            const file = new File([blob], `clipboard_screenshot_${Date.now()}.png`, { type });
+                            imageFiles.push(file);
+                            break;
+                        }
+                    }
+                }
+                if (imageFiles.length > 0) {
+                    openSmartExpenseModal();
+                    if (typeof showExpensesToast === 'function') {
+                        showExpensesToast("📋 Processing image from clipboard with Gemini Vision...", true);
+                    }
+                    processUploadedSmartFiles(imageFiles);
+                } else {
+                    if (typeof showExpensesToast === 'function') {
+                        showExpensesToast("No image found on clipboard. Copy your screenshot or receipt first!", false);
+                    }
+                }
+            } catch (err) {
+                console.warn("Clipboard read error:", err);
+                if (typeof showExpensesToast === 'function') {
+                    showExpensesToast("Clipboard permission required. Or press Ctrl+V to paste directly.", false);
+                }
+            }
+        }
+        window.pasteFromClipboard = pasteFromClipboard;
+
+        // Clipboard paste listener: paste screenshot directly anywhere
         window.addEventListener('paste', e => {
-            const modal = document.getElementById('smartExpenseModal');
-            if (!modal || modal.classList.contains('hidden')) return;
-            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+            if (!items || items.length === 0) return;
             const imageFiles = [];
             for (let i = 0; i < items.length; i++) {
                 if (items[i].type.indexOf('image') !== -1) {
                     const blob = items[i].getAsFile();
-                    if (blob) imageFiles.push(blob);
+                    if (blob) {
+                        const file = new File([blob], `clipboard_screenshot_${Date.now()}.png`, { type: blob.type || 'image/png' });
+                        imageFiles.push(file);
+                    }
                 }
             }
             if (imageFiles.length > 0) {
+                e.preventDefault();
+                openSmartExpenseModal();
+                if (typeof showExpensesToast === 'function') {
+                    showExpensesToast("📋 Pasted screenshot detected! Ingesting with Gemini Vision...", true);
+                }
                 processUploadedSmartFiles(imageFiles);
             }
         });
