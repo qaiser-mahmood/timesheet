@@ -2413,10 +2413,10 @@
                         const cleanD = cleanDateStr(payload.date);
                         const nameEnc = encodeURIComponent(payload.name.toString().trim());
                         const storeFilter = payload.store_id ? `&store_id=eq.${payload.store_id}` : '';
-                        await supabaseFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}${storeFilter}`, {
+                        await supabaseFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}${storeFilter}`, {
                             method: "DELETE"
                         }).catch(() => {
-                            return supabaseFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+                            return supabaseFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}`, {
                                 method: "DELETE"
                             });
                         });
@@ -2487,6 +2487,10 @@
                 }
 
                 let isCloudLoading = false;
+                let cloudReloadPending = false;
+                let pendingLoadOptions = null;
+                let mutationSequence = 0;
+                let activeMutations = 0;
                 let lastCloudFetchTime = 0;
 
                 function setRefreshSpinners(spinning) {
@@ -2780,12 +2784,16 @@
                 window.updateSyncButtonUI = updateSyncButtonUI;
 
                 async function refreshCloudData(force = false) {
-                    if (isCloudLoading) return;
+                    if (activeMutations > 0 && !force) return;
+                    if (isCloudLoading) {
+                        if (force) cloudReloadPending = true;
+                        return;
+                    }
                     const now = Date.now();
                     if (!force && (now - lastCloudFetchTime < 8000)) {
                         return;
                     }
-                    await loadCloudData({ silent: !force });
+                    await loadCloudData({ silent: !force, force });
                 }
 
                 async function loadCloudData(options = {}) {
@@ -2794,14 +2802,26 @@
                         return; // Stop execution if not logged in or not authorized
                     }
                     const silent = (options && options.silent === true);
+                    const force = (options && options.force === true);
 
-                    if (isCloudLoading) return;
+                    if (isCloudLoading) {
+                        cloudReloadPending = true;
+                        pendingLoadOptions = options;
+                        return;
+                    }
                     isCloudLoading = true;
                     setRefreshSpinners(true);
+                    const fetchSeq = mutationSequence;
 
                     try {
                         const responseObj = await callSheetApi({ action: "get" });
                         lastCloudFetchTime = Date.now();
+
+                        if (fetchSeq !== mutationSequence) {
+                            console.log("Mutation detected during cloud fetch, queuing reload to ensure fresh data.");
+                            cloudReloadPending = true;
+                            return;
+                        }
                         
                         if (responseObj.staff && Array.isArray(responseObj.staff)) {
                             staffRegistry = responseObj.staff.map(s => {
@@ -2924,6 +2944,12 @@
                     } finally {
                         isCloudLoading = false;
                         setRefreshSpinners(false);
+                        if (cloudReloadPending) {
+                            cloudReloadPending = false;
+                            const nextOptions = pendingLoadOptions || { silent: true };
+                            pendingLoadOptions = null;
+                            setTimeout(() => { loadCloudData(nextOptions); }, 50);
+                        }
                     }
                     renderWeeklyTable();
                     generateDaySelectors();
@@ -3180,7 +3206,7 @@
                     const cleanTarget = cleanDateStr(targetIsoDate);
                     const hasSales = hourlySalesStore.some(s => cleanDateStr(s.date) === cleanTarget);
                     const now = Date.now();
-                    if (!hasSales || (now - lastCloudFetchTime > 15000)) {
+                    if (activeMutations === 0 && (!hasSales || (now - lastCloudFetchTime > 15000))) {
                         refreshCloudData(false);
                     }
                 }
@@ -3377,10 +3403,12 @@
                         taxHours: (isOwner || isGJ) ? 0 : (matchedPrevious && matchedPrevious.taxHours !== undefined ? Number(matchedPrevious.taxHours) : total)
                     };
 
-                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
-                    dataStore.push(newEntry);
-                    renderWeeklyTable();
-                    try { 
+                    mutationSequence++;
+                    activeMutations++;
+                    try {
+                        dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
+                        dataStore.push(newEntry);
+                        renderWeeklyTable();
                         const saveRes = await callSheetApi({ action: "save", entry: newEntry }); 
                         if (saveRes && saveRes.error) {
                             alert("Warning: Could not save shift to cloud: " + (saveRes.message || saveRes.error));
@@ -3388,19 +3416,39 @@
                     } catch (err) { 
                         console.error(err); 
                         alert("Could not save shift: " + err.message);
+                    } finally {
+                        activeMutations = Math.max(0, activeMutations - 1);
+                        lastCloudFetchTime = Date.now();
+                        await loadCloudData({ silent: true, force: true });
                     }
-                    loadCloudData();
                 });
 
                 async function deleteSelectedShift() {
                     const chosenDate = cleanDateStr(document.getElementById('date').value);
                     const currentStaff = document.getElementById('staffName').value.toString().trim();
                     const storeId = (currentStore === 'green_juice') ? 'green_juice' : 'anatolya';
-                    if (!chosenDate || !currentStaff || !confirm(`Delete record?`)) return;
-                    dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
-                    renderWeeklyTable();
-                    try { await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff, store_id: storeId }); } catch (err) { console.error(err); }
-                    loadCloudData();
+                    if (!chosenDate || !currentStaff) return;
+
+                    lastCloudFetchTime = Date.now();
+                    if (!confirm(`Delete record?`)) {
+                        lastCloudFetchTime = Date.now();
+                        return;
+                    }
+                    lastCloudFetchTime = Date.now();
+
+                    mutationSequence++;
+                    activeMutations++;
+                    try {
+                        dataStore = dataStore.filter(entry => !(cleanDateStr(entry.date) === chosenDate && (entry.store_id || 'anatolya') === storeId && entry.name && entry.name.toString().trim().toLowerCase() === currentStaff.toLowerCase()));
+                        renderWeeklyTable();
+                        await callSheetApi({ action: "delete", date: chosenDate, name: currentStaff, store_id: storeId });
+                    } catch (err) {
+                        console.error("deleteSelectedShift error:", err);
+                    } finally {
+                        activeMutations = Math.max(0, activeMutations - 1);
+                        lastCloudFetchTime = Date.now();
+                        await loadCloudData({ silent: true, force: true });
+                    }
                 }
 
                 function getLocalTodayIso() {
@@ -5274,17 +5322,28 @@
         }
 
         async function deleteExpenseItem(id) {
-            if (!confirm("Are you sure you want to delete this expense record?")) return;
-            const item = expensesStore.find(x => String(x.id) === String(id));
-            expensesStore = expensesStore.filter(x => String(x.id) !== String(id));
-            renderExpensesLedgerView();
-            showExpensesToast(`Deleted expense record: ${item ? Number(item.amount||0).toFixed(2) : ''}`, true);
+            lastCloudFetchTime = Date.now();
+            if (!confirm("Are you sure you want to delete this expense record?")) {
+                lastCloudFetchTime = Date.now();
+                return;
+            }
+            lastCloudFetchTime = Date.now();
+
+            mutationSequence++;
+            activeMutations++;
             try {
+                const item = expensesStore.find(x => String(x.id) === String(id));
+                expensesStore = expensesStore.filter(x => String(x.id) !== String(id));
+                renderExpensesLedgerView();
+                showExpensesToast(`Deleted expense record: ${item ? Number(item.amount||0).toFixed(2) : ''}`, true);
                 await callSheetApi({ action: "delete_expense", id });
             } catch (err) {
                 console.error(err);
+            } finally {
+                activeMutations = Math.max(0, activeMutations - 1);
+                lastCloudFetchTime = Date.now();
+                await loadCloudData({ silent: true, force: true });
             }
-            loadCloudData({ silent: true });
         }
 
         // ==================== LEDGER DATE FILTER & 2-CLICK CALENDAR ====================
@@ -9444,6 +9503,7 @@ function convertHourStr(hStr) {
 
         // Auto-refresh when user returns to this tab from Epos Now or another window
         document.addEventListener('visibilitychange', () => {
+            if (activeMutations > 0) return;
             if (document.visibilityState === 'visible' && auth && auth.currentUser && isAuthorizedEmail(auth.currentUser.email)) {
                 const now = Date.now();
                 if (now - lastCloudFetchTime > 8000) {
@@ -9453,6 +9513,7 @@ function convertHourStr(hStr) {
         });
 
         window.addEventListener('focus', () => {
+            if (activeMutations > 0) return;
             if (auth && auth.currentUser && isAuthorizedEmail(auth.currentUser.email)) {
                 const now = Date.now();
                 if (now - lastCloudFetchTime > 8000) {
