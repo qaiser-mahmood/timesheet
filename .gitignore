@@ -12,6 +12,11 @@ storageState.json
 scratch/
 tyro/
 *.csv
+*.xlsx
+*.xls
+test.png
+*.pdf
+*.traineddata
 
 # Environments & dependencies
 node_modules/

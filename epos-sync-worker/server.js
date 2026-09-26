@@ -711,10 +711,10 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       const cleanD = cleanDateStr(payload.date);
       const nameEnc = encodeURIComponent(payload.name.toString().trim());
       const storeFilter = payload.store_id ? `&store_id=eq.${payload.store_id}` : '';
-      await supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}${storeFilter}`, {
+      await supabaseServerFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}${storeFilter}`, {
         method: 'DELETE'
       }).catch(() => {
-        return supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${nameEnc}`, {
+        return supabaseServerFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}`, {
           method: 'DELETE'
         });
       });
@@ -865,6 +865,84 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
 // Endpoint to retrieve learned expense rules
 app.get('/api/learned-rules', requireAuthorizedManager, (req, res) => {
   res.json({ status: 'success', rules: learnedExpenseRules });
+});
+
+// Endpoint for high-accuracy Vision AI document & screenshot parser using Gemini 2.0 Flash
+app.post('/api/expenses/parse-document', async (req, res) => {
+  try {
+    const { fileBase64, mimeType, fileName } = req.body;
+    if (!fileBase64) {
+      return res.status(400).json({ error: 'Missing fileBase64' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
+    if (!apiKey) {
+      return res.status(503).json({
+        error: 'NO_API_KEY',
+        message: 'GEMINI_API_KEY is not configured on the server. Please add GEMINI_API_KEY to Render environment variables or enter it in the app settings.'
+      });
+    }
+
+    const prompt = `Extract all business expenses and transactions from this receipt, invoice, or bank screenshot.
+Return ONLY a valid JSON array of objects with the following schema:
+[
+  {
+    "date": "YYYY-MM-DD",
+    "amount": 123.45,
+    "supplier": "Supplier or description",
+    "entity": "anatolya" or "green_juice" or "company_shared",
+    "category": "Meat" or "Fruit & Vegies" or "Bread" or "Packaging" or "Campbells" or "Drinks" or "Ice Cream" or "Rent" or "Consumables" or "Fuel & Vehicle" or "R & M" or "Wages" or "Super" or "Insurance" or "Accounting" or "Others",
+    "isDeposit": false
+  }
+]
+Critical Rules:
+- For bank screenshots, extract EVERY single transaction row listed on the screen.
+- Date: Use the section date header above the transactions (e.g. "Thu 24 Sep 2026" -> "2026-09-24") unless an individual transaction date is specified.
+- Amount: Extract the debit/credit change (e.g., -$184.74 or +$650.69). DO NOT confuse it with the running account balance (e.g. $1,422.01).
+- Positive amounts with a '+' or incoming settlements (e.g. Adyen, EFTPOS settlement, customer deposit) must have "isDeposit": true. Debits/expenses with a '-' sign must have "isDeposit": false.
+- Entity & Category classification:
+  - Spudshed, Local Fresh Gourmet, Thanh Doan -> entity "green_juice", category "Fruit & Vegies"
+  - Bake Boss, Majors, Royal Foods, Gelato -> entity "green_juice", category "Ice Cream"
+  - Westfield Carousel -> entity "green_juice", category "Rent"
+  - Woolworths Carousel -> entity "green_juice", category "Consumables"
+  - Woolworths Innaloo -> entity "anatolya", category "Consumables"
+  - Balcatta Cash, Canning Vale Cash, Campbells, Wing Ki Chan -> entity "anatolya", category "Campbells"
+  - ISM Holdings, halal meat, chicken, beef -> entity "anatolya", category "Meat"
+  - Westfield Innaloo -> entity "anatolya", category "Rent"
+  - Adhiraj, Rekha, Aayush, Rawat, staff transfers -> entity "anatolya", category "Wages"
+  - SuperChoice, Sunsuper, Australian Super, superannuation -> entity "company_shared", category "Super"
+  - Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, insurance, accounting -> entity "company_shared", category "Fuel & Vehicle" or "Insurance" or "Accounting" or "Others"
+Do not include markdown fences.`;
+
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const geminiResp = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: mimeType || 'image/png', data: fileBase64 } }
+          ]
+        }]
+      })
+    });
+
+    if (!geminiResp.ok) {
+      const errText = await geminiResp.text();
+      return res.status(502).json({ error: 'Gemini API Error', details: errText });
+    }
+
+    const data = await geminiResp.json();
+    const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const cleanJson = candidateText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+    const parsed = JSON.parse(cleanJson);
+
+    res.json({ status: 'success', rows: parsed });
+  } catch (err) {
+    console.error('Error in /api/expenses/parse-document:', err);
+    res.status(500).json({ error: 'Parsing failed', message: err.message });
+  }
 });
 
 // Endpoint for browser bookmarklet sync (e.g. past months or custom ranges scraped directly by user in browser)

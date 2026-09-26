@@ -1302,22 +1302,30 @@
             <div class="shrink-0 flex items-center justify-between text-[11px] bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
                 <span class="text-slate-400 flex items-center gap-1.5">
                     <span>⚡ Engine:</span>
-                    <span id="smartEngineBadge" class="text-emerald-400 font-bold">Built-in Fast OCR & Bank CSV Parser</span>
+                    <span id="smartEngineBadge" class="text-emerald-400 font-bold">Gemini 2.0 Flash Vision AI & CSV Parser</span>
                 </span>
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="openLearnedRulesModal()" class="text-amber-300 hover:text-amber-200 font-bold text-[11px] flex items-center gap-1 bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded cursor-pointer" title="View remembered supplier rules">
                         <span>🧠 Learned Rules</span> <span id="smartLearnedRulesCountBadge" class="bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full text-[10px] font-black">0</span>
                     </button>
-                    <button type="button" onclick="toggleSmartAiSettings()" class="text-slate-400 hover:text-white underline text-[10px] cursor-pointer">
-                        Optional Gemini AI Vision Key ⚙️
+                    <button type="button" onclick="toggleSmartAiSettings()" class="text-amber-400 hover:text-amber-300 underline font-bold text-[11px] cursor-pointer flex items-center gap-1">
+                        <span>✨ Gemini Vision AI Key</span> <span>⚙️</span>
                     </button>
                 </div>
             </div>
-            <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
-                <label class="block text-[10px] font-bold text-slate-300 uppercase">Google Gemini API Key (Optional for complex handwritten receipts)</label>
+            <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="block text-[11px] font-bold text-amber-300 uppercase">Google Gemini 2.0 Flash Vision AI Key</label>
+                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-400 hover:text-sky-300 underline flex items-center gap-1 font-semibold">
+                        Get Free Gemini Key ↗
+                    </a>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    Vision AI reads bank screenshots, multi-column banking apps, and handwritten receipts with 100% financial accuracy. You can paste your free key here, or set <code class="text-amber-300 font-mono bg-slate-900 px-1 py-0.5 rounded">GEMINI_API_KEY</code> on Render.
+                </p>
                 <div class="flex gap-2">
-                    <input type="password" id="smartGeminiApiKey" placeholder="AIzaSy..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white" />
-                    <button type="button" onclick="saveSmartGeminiApiKey()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-1 rounded-lg text-xs cursor-pointer">Save Key</button>
+                    <input type="password" id="smartGeminiApiKey" placeholder="Paste AIzaSy... key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none font-mono" />
+                    <button type="button" onclick="saveSmartGeminiApiKey()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-1.5 rounded-lg text-xs cursor-pointer shadow">Save Key</button>
                 </div>
             </div>
 
@@ -6655,21 +6663,71 @@
         }
 
         async function parseImageExpenseDocument(file) {
-            const apiKey = localStorage.getItem('alhamd_gemini_api_key');
-            if (apiKey) {
+            // 1. Check for User's Local Gemini API Key
+            const localApiKey = localStorage.getItem('alhamd_gemini_api_key');
+            if (localApiKey) {
                 try {
-                    const aiRows = await callGeminiVisionExpenseExtraction(file, apiKey);
+                    const aiRows = await callGeminiVisionExpenseExtraction(file, localApiKey);
                     if (aiRows && aiRows.length > 0) return aiRows;
                 } catch (e) {
-                    console.warn("Gemini vision fallback to Tesseract:", e);
+                    console.warn("Client Gemini Vision failed, attempting backend worker:", e);
                 }
             }
 
-            const Tesseract = await loadTesseractLibrary();
-            const worker = await Tesseract.createWorker('eng');
-            const ret = await worker.recognize(file);
-            await worker.terminate();
-            return parseRawTextToExpenses(ret.data.text, file.name);
+            // 2. Route through Render Backend Worker (uses server-side GEMINI_API_KEY)
+            try {
+                const base64Data = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+
+                const beResp = await fetch(`${EPOS_WORKER_URL}/api/expenses/parse-document`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileBase64: base64Data,
+                        mimeType: file.type || 'image/png',
+                        fileName: file.name
+                    })
+                });
+
+                if (beResp.ok) {
+                    const result = await beResp.json();
+                    if (result.status === 'success' && Array.isArray(result.rows) && result.rows.length > 0) {
+                        return result.rows.map((item, idx) => ({
+                            id: `ai_${Date.now()}_${idx}`,
+                            date: item.date || new Date().toISOString().split('T')[0],
+                            amount: Math.abs(Number(item.amount) || 0),
+                            notes: item.supplier || 'Receipt Item',
+                            entity: item.entity || 'anatolya',
+                            category: item.category || 'Others',
+                            matchedRule: 'Gemini AI Vision ✨',
+                            isDeposit: !!item.isDeposit,
+                            selected: !item.isDeposit
+                        }));
+                    }
+                } else if (beResp.status === 503) {
+                    const errObj = await beResp.json().catch(() => ({}));
+                    if (errObj.error === 'NO_API_KEY') {
+                        showExpensesToast("Tip: Add a free Gemini API key in Settings (or Render) for 100% Vision AI accuracy.", false);
+                    }
+                }
+            } catch (beErr) {
+                console.warn("Backend Vision AI call failed:", beErr);
+            }
+
+            // 3. Fallback: Local Tesseract OCR with Smart Banking Parsing
+            try {
+                const Tesseract = await loadTesseractLibrary();
+                const worker = await Tesseract.createWorker('eng');
+                const ret = await worker.recognize(file);
+                await worker.terminate();
+                return parseRawTextToExpenses(ret.data.text, file.name);
+            } catch (ocrErr) {
+                console.error("Local OCR failed:", ocrErr);
+                return [];
+            }
         }
 
         async function callGeminiVisionExpenseExtraction(file, apiKey) {
@@ -6679,7 +6737,7 @@
                 reader.readAsDataURL(file);
             });
 
-            const prompt = `Extract all business expenses from this receipt, invoice, or bank screenshot.
+            const prompt = `Extract all business expenses and transactions from this receipt, invoice, or bank screenshot.
 Return ONLY a valid JSON array of objects with the following schema:
 [
   {
@@ -6687,18 +6745,27 @@ Return ONLY a valid JSON array of objects with the following schema:
     "amount": 123.45,
     "supplier": "Supplier or description",
     "entity": "anatolya" or "green_juice" or "company_shared",
-    "category": "Meat" or "Fruit & Vegies" or "Bread" or "Packaging" or "Campbells" or "Drinks" or "Ice Cream" or "Rent" or "Others",
+    "category": "Meat" or "Fruit & Vegies" or "Bread" or "Packaging" or "Campbells" or "Drinks" or "Ice Cream" or "Rent" or "Consumables" or "Fuel & Vehicle" or "R & M" or "Wages" or "Super" or "Insurance" or "Accounting" or "Others",
     "isDeposit": false
   }
 ]
-Rules:
-- Spudshed, Local Fresh Gourmet, Thanh Doan -> entity "green_juice", category "Fruit & Vegies"
-- Bake Boss, Majors, Royal Foods, Gelato -> entity "green_juice", category "Ice Cream"
-- Westfield Carousel -> entity "green_juice", category "Rent"
-- Balcatta Cash, Canning Vale Cash, Campbells, Wing Ki Chan -> entity "anatolya", category "Campbells"
-- ISM Holdings, halal meat, chicken, beef -> entity "anatolya", category "Meat"
-- Westfield Innaloo -> entity "anatolya", category "Rent"
-- Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, superannuation, insurance, accounting -> entity "company_shared", category "Others"
+Critical Rules:
+- For bank screenshots, extract EVERY single transaction row listed on the screen.
+- Date: Use the section date header above the transactions (e.g. "Thu 24 Sep 2026" -> "2026-09-24") unless an individual transaction date is specified.
+- Amount: Extract the debit/credit change (e.g., -$184.74 or +$650.69). DO NOT confuse it with the running account balance (e.g. $1,422.01).
+- Positive amounts with a '+' or incoming settlements (e.g. Adyen, EFTPOS settlement, customer deposit) must have "isDeposit": true. Debits/expenses with a '-' sign must have "isDeposit": false.
+- Entity & Category classification:
+  - Spudshed, Local Fresh Gourmet, Thanh Doan -> entity "green_juice", category "Fruit & Vegies"
+  - Bake Boss, Majors, Royal Foods, Gelato -> entity "green_juice", category "Ice Cream"
+  - Westfield Carousel -> entity "green_juice", category "Rent"
+  - Woolworths Carousel -> entity "green_juice", category "Consumables"
+  - Woolworths Innaloo -> entity "anatolya", category "Consumables"
+  - Balcatta Cash, Canning Vale Cash, Campbells, Wing Ki Chan -> entity "anatolya", category "Campbells"
+  - ISM Holdings, halal meat, chicken, beef -> entity "anatolya", category "Meat"
+  - Westfield Innaloo -> entity "anatolya", category "Rent"
+  - Adhiraj, Rekha, Aayush, Rawat, staff transfers -> entity "anatolya", category "Wages"
+  - SuperChoice, Sunsuper, Australian Super, superannuation -> entity "company_shared", category "Super"
+  - Car, fuel, BP, Ampol, Vibe Petroleum, ATO, tax, insurance, accounting -> entity "company_shared", category "Fuel & Vehicle" or "Insurance" or "Accounting" or "Others"
 Do not include markdown fences.`;
 
             const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
@@ -6715,7 +6782,7 @@ Do not include markdown fences.`;
             });
             const data = await resp.json();
             const candidateText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            const cleanJson = candidateText.replace(/```json/g, '').replace(/```/g, '').trim();
+            const cleanJson = candidateText.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
             const parsed = JSON.parse(cleanJson);
             return parsed.map((item, idx) => ({
                 id: `ai_${Date.now()}_${idx}`,
@@ -6724,7 +6791,7 @@ Do not include markdown fences.`;
                 notes: item.supplier || 'Receipt Item',
                 entity: item.entity || 'anatolya',
                 category: item.category || 'Others',
-                matchedRule: 'Gemini AI ✨',
+                matchedRule: 'Gemini AI Vision ✨',
                 isDeposit: !!item.isDeposit,
                 selected: !item.isDeposit
             }));
@@ -6733,35 +6800,89 @@ Do not include markdown fences.`;
         function parseRawTextToExpenses(rawText, defaultFileName = '') {
             const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
             const dateRegex = /\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i;
-            const amountRegex = /(?:TOTAL|AMOUNT|SUBTOTAL|AUD|DUE)?\s*[\$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2}))\b/i;
+            const dateHeaderRegex = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)?\s*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4}|\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})\b/i;
+            const amountExtractRegex = /([+-]?)\s*[\$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})|\b[0-9]+(?:\.[0-9]{2})\b|\b[0-9]{3,}\b)/g;
 
             const detectedTransactions = [];
+            let activeDateIso = '';
 
-            // Case A: Look for lines with both date and amount (transaction log)
-            lines.forEach((l, idx) => {
-                const dm = l.match(dateRegex);
-                const am = l.match(amountRegex);
-                if (dm && am) {
-                    const amt = parseFloat(am[1].replace(/,/g, ''));
-                    const cleanDesc = l.replace(dm[0], '').replace(am[0], '').replace(/\$|Value Date:|Card xx\d+/gi, '').trim();
-                    if (amt > 0) {
-                        const cls = classifyExpenseTransaction(cleanDesc || defaultFileName);
+            // Pass 1: Parse multi-row banking transactions with date headers
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // Check for Section Date Header (e.g. "Thu 24 Sep 2026")
+                const dhMatch = line.match(dateHeaderRegex);
+                if (dhMatch && !line.includes('$')) {
+                    activeDateIso = normalizeDateStringToIso(dhMatch[1]);
+                    continue;
+                }
+
+                // Extract all currency amounts on this line
+                const amounts = [];
+                let m;
+                const re = new RegExp(amountExtractRegex);
+                while ((m = re.exec(line)) !== null) {
+                    amounts.push({
+                        full: m[0],
+                        sign: m[1] || '',
+                        rawNum: m[2],
+                        index: m.index
+                    });
+                }
+
+                if (amounts.length > 0) {
+                    // Check for inline date (e.g. Value Date: 22/09/2026)
+                    let txDateIso = activeDateIso;
+                    const inlineDateMatch = line.match(dateRegex);
+                    if (inlineDateMatch && !line.toLowerCase().includes('ending') && !line.toLowerCase().includes('week ending')) {
+                        txDateIso = normalizeDateStringToIso(inlineDateMatch[0]) || activeDateIso;
+                    }
+
+                    // In banking layouts, first amount is transaction, last is running balance
+                    const txAmtObj = amounts[0];
+                    const hasMultipleAmounts = amounts.length > 1;
+
+                    let desc = line.slice(0, txAmtObj.index).replace(/^[\+\-\*\•\s]+/, '').trim();
+                    if (!desc && i > 0 && !lines[i-1].match(dateHeaderRegex)) {
+                        desc = lines[i-1].replace(/^[\+\-\*\•\s]+/, '').trim();
+                    }
+
+                    // Check for reference / invoice code on next line
+                    if (i + 1 < lines.length) {
+                        const nextLine = lines[i+1];
+                        if (!nextLine.includes('$') && !nextLine.match(dateHeaderRegex) && nextLine.length < 50) {
+                            if (nextLine.toLowerCase().includes('inv') || nextLine.toLowerCase().includes('epos') || nextLine.toLowerCase().includes('value date')) {
+                                desc = desc ? `${desc} - ${nextLine}` : nextLine;
+                            }
+                        }
+                    }
+
+                    let num = parseFloat(txAmtObj.rawNum.replace(/,/g, ''));
+                    // OCR dropped decimal fix if balance exists and number has 3+ digits with no dot
+                    if (hasMultipleAmounts && !txAmtObj.rawNum.includes('.')) {
+                        num = num / 100;
+                    }
+
+                    if (num > 0) {
+                        const isDeposit = (txAmtObj.sign === '+') || desc.toLowerCase().includes('fast transfer from adyen') || desc.toLowerCase().includes('deposit');
+                        const cls = classifyExpenseTransaction(desc || defaultFileName);
+
                         detectedTransactions.push({
-                            id: `tx_${Date.now()}_${idx}`,
-                            date: normalizeDateStringToIso(dm[0]),
-                            amount: amt,
-                            notes: cleanDesc || defaultFileName,
+                            id: `tx_${Date.now()}_${i}`,
+                            date: txDateIso || new Date().toISOString().split('T')[0],
+                            amount: num,
+                            notes: desc || defaultFileName,
                             entity: cls.entity,
                             category: cls.category,
                             matchedRule: cls.matchedRule,
-                            isDeposit: false,
-                            selected: true
+                            isDeposit: isDeposit,
+                            selected: !isDeposit
                         });
                     }
                 }
-            });
+            }
 
-            // Case B: Single invoice / receipt (has total amount & doc date)
+            // Pass 2: Fallback to Single Receipt / Invoice if no multi-row transactions were found
             if (detectedTransactions.length === 0) {
                 let docDate = '';
                 for (const l of lines) {
@@ -6771,14 +6892,13 @@ Do not include markdown fences.`;
 
                 let maxAmt = 0;
                 for (const l of lines) {
-                    const am = l.match(amountRegex);
+                    const am = l.match(/(?:TOTAL|AMOUNT|SUBTOTAL|AUD|DUE)?\s*[\$]?\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2}))\b/i);
                     if (am) {
                         const v = parseFloat(am[1].replace(/,/g, ''));
                         if (v > maxAmt) maxAmt = v;
                     }
                 }
 
-                // Pick supplier from header lines
                 let supplier = defaultFileName.replace(/\.[^/.]+$/, '');
                 for (const l of lines) {
                     const t = l.trim();
