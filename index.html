@@ -2442,12 +2442,16 @@
                     if (payload.action === "copy_previous_week") {
                         const targetMon = payload.targetWeekMonday;
                         const prevMon = addDaysString(targetMon, -7);
-                        const prevShifts = await supabaseFetch(`roster?week_commencing=eq.${prevMon}`);
+                        const storeId = payload.store_id || (currentStore === 'green_juice' ? 'green_juice' : 'anatolya');
+                        const storeFilter = `&store_id=eq.${storeId}`;
+                        const prevShifts = await supabaseFetch(`roster?week_commencing=eq.${prevMon}${storeFilter}`);
                         if (!prevShifts || prevShifts.length === 0) {
                             return { status: "success", count: 0 };
                         }
+                        const isGj = (storeId === 'green_juice');
                         const copied = prevShifts.map(s => {
-                            const nextDate = addDaysString(s.date, 7);
+                            const nextDate = addDaysString(cleanDateStr(s.date), 7);
+                            const tot = Number(s.total_hours) || 0;
                             return {
                                 date: nextDate,
                                 week_commencing: targetMon,
@@ -2455,18 +2459,27 @@
                                 shift_from: s.shift_from || "",
                                 shift_to: s.shift_to || "",
                                 cash_rate: Number(s.cash_rate) || 0,
-                                tax_rate: Number(s.tax_rate) || 0,
-                                total_hours: Number(s.total_hours) || 0,
-                                cash_hours: Number(s.cash_hours) || 0,
-                                tax_hours: Number(s.tax_hours) || 0,
+                                tax_rate: isGj ? 0 : (Number(s.tax_rate) || 0),
+                                total_hours: tot,
+                                cash_hours: isGj ? tot : (Number(s.cash_hours) || 0),
+                                tax_hours: isGj ? 0 : (Number(s.tax_hours) || 0),
+                                store_id: storeId,
                                 updated_at: new Date().toISOString()
                             };
                         });
-                        await supabaseFetch("roster?on_conflict=date,name", {
-                            method: "POST",
-                            headers: { "Prefer": "resolution=merge-duplicates" },
-                            body: JSON.stringify(copied)
-                        });
+                        try {
+                            await supabaseFetch("roster?on_conflict=date,name,store_id", {
+                                method: "POST",
+                                headers: { "Prefer": "resolution=merge-duplicates" },
+                                body: JSON.stringify(copied)
+                            });
+                        } catch (upsertErr) {
+                            await supabaseFetch("roster?on_conflict=date,name", {
+                                method: "POST",
+                                headers: { "Prefer": "resolution=merge-duplicates" },
+                                body: JSON.stringify(copied)
+                            });
+                        }
                         return { status: "success", count: copied.length };
                     }
 
