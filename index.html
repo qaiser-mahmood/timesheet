@@ -1270,89 +1270,97 @@
 
     <!-- SMART EXPENSE INGESTION MODAL (Screenshots, Bank Statements, Invoices) -->
     <div id="smartExpenseModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4 hidden overflow-y-auto">
-        <div class="bg-slate-900 text-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden p-3.5 sm:p-5 space-y-3.5 border border-slate-700 max-h-[92vh] flex flex-col">
+        <div class="bg-slate-900 text-white rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden p-3 sm:p-5 border border-slate-700 max-h-[94vh] sm:max-h-[92vh] flex flex-col">
             <!-- Modal Header -->
             <div class="flex items-center justify-between border-b border-slate-800 pb-2.5 shrink-0">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl">📸</span>
-                    <div>
-                        <h3 class="text-sm sm:text-base font-extrabold text-white flex items-center gap-1.5">
+                <div class="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                    <span id="smartModalIcon" class="text-xl sm:text-2xl shrink-0">📸</span>
+                    <div class="min-w-0">
+                        <h3 id="smartModalTitle" class="text-xs sm:text-base font-extrabold text-white flex items-center gap-1.5 truncate">
                             Smart Expense Ingestion & Auto-Reader
                         </h3>
-                        <p class="text-[11px] text-slate-400">
+                        <p id="smartModalSubtitle" class="text-[10px] sm:text-[11px] text-slate-400 truncate">
                             Drop a bank statement CSV/PDF, screenshot of receipts/transactions, or supplier invoice.
                         </p>
                     </div>
                 </div>
-                <button type="button" onclick="closeSmartExpenseModal()" class="text-slate-400 hover:text-white text-xl font-bold p-1 cursor-pointer">✕</button>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <button type="button" id="smartHeaderClearBtn" onclick="clearSmartStaging()" class="hidden text-[11px] sm:text-xs bg-slate-800 hover:bg-rose-900/60 border border-slate-700 hover:border-rose-500/50 text-slate-300 hover:text-rose-200 font-bold px-2 py-1 rounded-lg transition cursor-pointer flex items-center gap-1" title="Clear all and start fresh">
+                        <span>🗑️</span> <span class="hidden sm:inline">Clear Memory</span>
+                    </button>
+                    <button type="button" onclick="closeSmartExpenseModal()" class="text-slate-400 hover:text-white text-lg sm:text-xl font-bold p-1 cursor-pointer">✕</button>
+                </div>
             </div>
 
-            <!-- Upload Dropzone -->
-            <div id="smartExpenseDropzone" ondragover="handleSmartExpenseDragOver(event)" ondragleave="handleSmartExpenseDragLeave(event)" ondrop="handleSmartExpenseDrop(event)" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/80 rounded-xl p-4 sm:p-5 text-center transition bg-slate-950/50 hover:bg-slate-950/80 shrink-0">
-                <input type="file" id="smartExpenseFileInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*,.csv,.pdf,.txt" class="hidden" multiple />
-                <input type="file" id="smartExpenseCameraInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*" capture="environment" class="hidden" />
-                
-                <div class="space-y-3">
-                    <div class="text-3xl animate-bounce">📥</div>
-                    <div>
-                        <div class="text-xs sm:text-sm font-bold text-slate-200">
-                            Drop screenshot, bank statement CSV/PDF, or paste directly
+            <!-- VIEW 1: UPLOAD STAGE (Hidden once parsed to free up 100% of screen) -->
+            <div id="smartUploadView" class="space-y-3 shrink-0 pt-1">
+                <!-- Upload Dropzone -->
+                <div id="smartExpenseDropzone" ondragover="handleSmartExpenseDragOver(event)" ondragleave="handleSmartExpenseDragLeave(event)" ondrop="handleSmartExpenseDrop(event)" class="border-2 border-dashed border-slate-700 hover:border-emerald-500/80 rounded-xl p-4 sm:p-5 text-center transition bg-slate-950/50 hover:bg-slate-950/80 shrink-0">
+                    <input type="file" id="smartExpenseFileInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*,.csv,.pdf,.txt" class="hidden" multiple />
+                    <input type="file" id="smartExpenseCameraInput" onchange="handleSmartExpenseFileSelect(event)" accept="image/*" capture="environment" class="hidden" />
+                    
+                    <div class="space-y-3">
+                        <div class="text-3xl animate-bounce">📥</div>
+                        <div>
+                            <div class="text-xs sm:text-sm font-bold text-slate-200">
+                                Drop screenshot, bank statement CSV/PDF, or paste directly
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-0.5">
+                                Mobile users: snap directly with camera or copy screenshot & tap Paste
+                            </p>
                         </div>
-                        <p class="text-[11px] text-slate-400 mt-0.5">
-                            Mobile users: snap directly with camera or copy screenshot & tap Paste
-                        </p>
-                    </div>
 
-                    <!-- 3 Quick Primary Action Buttons for Mobile & Desktop -->
-                    <div class="flex items-center justify-center gap-2 flex-wrap pt-0.5">
-                        <button type="button" onclick="pasteFromClipboard()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
-                            <span>📋</span> <span>Paste Screenshot</span>
-                        </button>
-                        <button type="button" onclick="triggerCameraCapture()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
-                            <span>📸</span> <span>Snap Receipt (Camera)</span>
-                        </button>
-                        <button type="button" onclick="document.getElementById('smartExpenseFileInput').click()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
-                            <span>📁</span> <span>Browse Files</span>
-                        </button>
-                    </div>
+                        <!-- 3 Quick Primary Action Buttons for Mobile & Desktop -->
+                        <div class="flex items-center justify-center gap-2 flex-wrap pt-0.5">
+                            <button type="button" onclick="pasteFromClipboard()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                                <span>📋</span> <span>Paste Screenshot</span>
+                            </button>
+                            <button type="button" onclick="triggerCameraCapture()" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                                <span>📸</span> <span>Snap Receipt (Camera)</span>
+                            </button>
+                            <button type="button" onclick="document.getElementById('smartExpenseFileInput').click()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                                <span>📁</span> <span>Browse Files</span>
+                            </button>
+                        </div>
 
-                    <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-center gap-2 flex-wrap pt-1">
-                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">📸 Bank Screenshots</span>
-                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">📑 Bank Statements (.csv)</span>
-                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">🧾 Tax Invoices (.pdf)</span>
-                        <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">⌨️ Ctrl+V anywhere to paste</span>
+                        <div class="text-[10px] sm:text-[11px] text-slate-400 flex items-center justify-center gap-2 flex-wrap pt-1">
+                            <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">📸 Bank Screenshots</span>
+                            <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">📑 Bank Statements (.csv)</span>
+                            <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">🧾 Tax Invoices (.pdf)</span>
+                            <span class="bg-slate-900 px-2 py-0.5 rounded border border-slate-800">⌨️ Ctrl+V anywhere to paste</span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Engine & AI Setting Bar -->
-            <div class="shrink-0 flex items-center justify-between text-[11px] bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
-                <span class="text-slate-400 flex items-center gap-1.5">
-                    <span>⚡ Engine:</span>
-                    <span id="smartEngineBadge" class="text-emerald-400 font-bold">Gemini Vision AI & CSV Parser</span>
-                </span>
-                <div class="flex items-center gap-2">
-                    <button type="button" onclick="openLearnedRulesModal()" class="text-amber-300 hover:text-amber-200 font-bold text-[11px] flex items-center gap-1 bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded cursor-pointer" title="View remembered supplier rules">
-                        <span>🧠 Learned Rules</span> <span id="smartLearnedRulesCountBadge" class="bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full text-[10px] font-black">0</span>
-                    </button>
-                    <button type="button" onclick="toggleSmartAiSettings()" class="text-amber-400 hover:text-amber-300 underline font-bold text-[11px] cursor-pointer flex items-center gap-1">
-                        <span>✨ Gemini Vision AI Key</span> <span>⚙️</span>
-                    </button>
+                <!-- Engine & AI Setting Bar -->
+                <div class="shrink-0 flex items-center justify-between text-[11px] bg-slate-950/80 px-3 py-1.5 rounded-lg border border-slate-800">
+                    <span class="text-slate-400 flex items-center gap-1.5">
+                        <span>⚡ Engine:</span>
+                        <span id="smartEngineBadge" class="text-emerald-400 font-bold">Gemini Vision AI & CSV Parser</span>
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="openLearnedRulesModal()" class="text-amber-300 hover:text-amber-200 font-bold text-[11px] flex items-center gap-1 bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded cursor-pointer" title="View remembered supplier rules">
+                            <span>🧠 Learned Rules</span> <span id="smartLearnedRulesCountBadge" class="bg-amber-500 text-slate-950 px-1 py-0.2 rounded-full text-[10px] font-black">0</span>
+                        </button>
+                        <button type="button" onclick="toggleSmartAiSettings()" class="text-amber-400 hover:text-amber-300 underline font-bold text-[11px] cursor-pointer flex items-center gap-1">
+                            <span>✨ Gemini Vision AI Key</span> <span>⚙️</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
-                <div class="flex items-center justify-between">
-                    <label class="block text-[11px] font-bold text-amber-300 uppercase">Google Gemini Vision AI Key</label>
-                    <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-400 hover:text-sky-300 underline flex items-center gap-1 font-semibold">
-                        Get Free Gemini Key ↗
-                    </a>
-                </div>
-                <p class="text-[11px] text-slate-400 leading-relaxed">
-                    Vision AI reads bank screenshots, multi-column banking apps, and handwritten receipts with 100% financial accuracy. You can paste your free key here, or set <code class="text-amber-300 font-mono bg-slate-900 px-1 py-0.5 rounded">GEMINI_API_KEY</code> on Render.
-                </p>
-                <div class="flex gap-2">
-                    <input type="password" id="smartGeminiApiKey" placeholder="Paste Gemini API Key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none font-mono" />
-                    <button type="button" onclick="saveSmartGeminiApiKey()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-1.5 rounded-lg text-xs cursor-pointer shadow">Save Key</button>
+                <div id="smartAiSettingsContainer" class="hidden shrink-0 bg-slate-950 p-3 rounded-xl border border-amber-500/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-[11px] font-bold text-amber-300 uppercase">Google Gemini Vision AI Key</label>
+                        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-400 hover:text-sky-300 underline flex items-center gap-1 font-semibold">
+                            Get Free Gemini Key ↗
+                        </a>
+                    </div>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        Vision AI reads bank screenshots, multi-column banking apps, and handwritten receipts with 100% financial accuracy. You can paste your free key here, or set <code class="text-amber-300 font-mono bg-slate-900 px-1 py-0.5 rounded">GEMINI_API_KEY</code> on Render.
+                    </p>
+                    <div class="flex gap-2">
+                        <input type="password" id="smartGeminiApiKey" placeholder="Paste Gemini API Key here" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:border-amber-400 focus:outline-none font-mono" />
+                        <button type="button" onclick="saveSmartGeminiApiKey()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-4 py-1.5 rounded-lg text-xs cursor-pointer shadow">Save Key</button>
+                    </div>
                 </div>
             </div>
 
@@ -1366,77 +1374,103 @@
                 </div>
             </div>
 
-            <!-- Staging Review Container -->
-            <div id="smartExpenseStagingContainer" class="hidden flex-1 overflow-hidden flex flex-col space-y-2 min-h-[220px]">
-                <!-- Staging Toolbar & Summaries -->
-                <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/80 p-2 rounded-xl border border-slate-800 shrink-0 text-xs">
-                    <div class="flex items-center gap-2 flex-wrap">
+            <!-- VIEW 2: FULL-SCREEN STAGING REVIEW CONTAINER (Takes 100% of modal height on mobile & desktop) -->
+            <div id="smartExpenseStagingContainer" class="hidden flex-1 overflow-hidden flex flex-col space-y-2 min-h-0 pt-1">
+                <!-- Staging Toolbar & Filter Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-1.5 bg-slate-950/90 p-2 sm:p-2.5 rounded-xl border border-slate-800 shrink-0 text-xs">
+                    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         <span class="font-extrabold text-white flex items-center gap-1">
                             <span>🔍 Detected:</span>
                             <span id="smartStagingCountBadge" class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0 rows</span>
                         </span>
-                        <div class="flex items-center gap-1 text-[11px] bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+                        <div class="flex items-center gap-1 text-[10px] sm:text-[11px] bg-slate-900 p-0.5 rounded-lg border border-slate-800">
                             <button type="button" id="smartFilterExpensesBtn" onclick="setSmartStagingFilter('expenses')" class="px-2 py-0.5 rounded font-bold bg-emerald-600 text-white shadow-xs cursor-pointer">Expenses Only</button>
                             <button type="button" id="smartFilterAllBtn" onclick="setSmartStagingFilter('all')" class="px-2 py-0.5 rounded font-bold text-slate-400 hover:text-white cursor-pointer">All (incl. Deposits)</button>
                         </div>
                     </div>
 
-                    <!-- Entity Breakdown Totals -->
-                    <div class="flex items-center gap-1.5 text-[10px] font-bold flex-wrap">
-                        <span id="smartTotalSelectedBadge" class="bg-slate-900 text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/40">Total: $0.00</span>
-                        <span id="smartAnatolyaTotalBadge" class="bg-amber-950/80 text-amber-300 px-2 py-0.5 rounded-md border border-amber-800/60">🥙 $0.00</span>
-                        <span id="smartGjTotalBadge" class="bg-emerald-950/80 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-800/60">🥤 $0.00</span>
-                        <span id="smartCoTotalBadge" class="bg-purple-950/80 text-purple-300 px-2 py-0.5 rounded-md border border-purple-800/60">🏢 $0.00</span>
+                    <!-- Append More & Clear Actions -->
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="triggerCameraCapture()" class="bg-teal-700/80 hover:bg-teal-600 text-white font-bold px-2 py-1 rounded-lg text-[10px] sm:text-[11px] transition flex items-center gap-1 cursor-pointer" title="Snap another receipt">
+                            <span>📸</span> <span class="hidden sm:inline">Add Snap</span>
+                        </button>
+                        <button type="button" onclick="pasteFromClipboard()" class="bg-sky-700/80 hover:bg-sky-600 text-white font-bold px-2 py-1 rounded-lg text-[10px] sm:text-[11px] transition flex items-center gap-1 cursor-pointer" title="Paste another screenshot">
+                            <span>📋</span> <span class="hidden sm:inline">Add Paste</span>
+                        </button>
+                        <button type="button" onclick="document.getElementById('smartExpenseFileInput').click()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-2 py-1 rounded-lg text-[10px] sm:text-[11px] transition flex items-center gap-1 cursor-pointer" title="Upload another file">
+                            <span>📁</span> <span class="hidden sm:inline">Add File</span>
+                        </button>
+                        <button type="button" onclick="clearSmartStaging()" class="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/60 text-rose-300 font-bold px-2 py-1 rounded-lg text-[10px] sm:text-[11px] transition flex items-center gap-1 cursor-pointer" title="Wipe uploader memory and start fresh">
+                            <span>🗑️</span> <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Entity Breakdown Totals Bar -->
+                <div class="flex items-center justify-between gap-1.5 bg-slate-900/80 px-2.5 py-1.5 rounded-lg border border-slate-800/80 text-[10px] sm:text-xs font-bold overflow-x-auto scrollbar-none shrink-0">
+                    <span id="smartTotalSelectedBadge" class="bg-slate-950 text-amber-300 px-2 py-0.5 rounded border border-amber-500/40 whitespace-nowrap">Total: $0.00</span>
+                    <div class="flex items-center gap-1.5 whitespace-nowrap">
+                        <span id="smartAnatolyaTotalBadge" class="text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/50">🥙 $0.00</span>
+                        <span id="smartGjTotalBadge" class="text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/50">🥤 $0.00</span>
+                        <span id="smartCoTotalBadge" class="text-purple-300 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/50">🏢 $0.00</span>
                     </div>
                 </div>
 
                 <!-- Duplicates Alert Banner -->
-                <div id="smartDuplicatesBanner" class="hidden shrink-0 bg-amber-950/70 border border-amber-500/50 rounded-xl p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-md">
-                    <div class="flex items-center gap-2 text-amber-300 font-bold">
+                <div id="smartDuplicatesBanner" class="hidden shrink-0 bg-amber-950/70 border border-amber-500/50 rounded-xl p-2 sm:p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-md">
+                    <div class="flex items-center gap-2 text-amber-300 font-bold text-[11px] sm:text-xs">
                         <span class="text-base animate-pulse">⚠️</span>
                         <span id="smartDuplicatesCountText">0 potential duplicate(s) detected (unselected by default).</span>
                     </div>
                     <div class="flex items-center gap-1.5 self-end sm:self-auto">
-                        <button type="button" onclick="discardAllDuplicateRows()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition shadow cursor-pointer flex items-center gap-1 whitespace-nowrap">
-                            <span>🗑️</span> <span>Discard All Duplicates</span>
+                        <button type="button" onclick="discardAllDuplicateRows()" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs transition shadow cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                            <span>🗑️</span> <span>Discard Duplicates</span>
                         </button>
-                        <button type="button" onclick="keepAllDuplicateRows()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-2.5 py-1 rounded-lg text-xs transition shadow cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                        <button type="button" onclick="keepAllDuplicateRows()" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-xs transition shadow cursor-pointer flex items-center gap-1 whitespace-nowrap">
                             <span>✓</span> <span>Keep All</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Staging Table -->
-                <div class="flex-1 overflow-y-auto overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 shadow">
-                    <table class="w-full text-xs text-left border-collapse min-w-[700px]">
-                        <thead class="sticky top-0 z-10 bg-slate-900 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-800">
-                            <tr>
-                                <th class="p-2 w-10 text-center">
-                                    <input type="checkbox" id="smartSelectAllCheckbox" onchange="toggleSelectAllSmartRows(this.checked)" checked class="rounded border-slate-700 text-emerald-600 focus:ring-0 cursor-pointer" />
-                                </th>
-                                <th class="p-2 w-28">Date</th>
-                                <th class="p-2 w-36">Assigned Entity</th>
-                                <th class="p-2 w-32">Category</th>
-                                <th class="p-2">Supplier / Notes</th>
-                                <th class="p-2 w-24 text-right">Amount ($)</th>
-                                <th class="p-2 w-24 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="smartStagingTableBody" class="divide-y divide-slate-800/60 text-slate-200">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
+                <!-- Scrollable Staging View: High-density Table for Desktop (>=sm), Responsive Touch Cards for Mobile (<sm) -->
+                <div class="flex-1 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60 shadow min-h-0">
+                    <!-- Desktop Table View (>=sm) -->
+                    <div class="hidden sm:block overflow-x-auto">
+                        <table class="w-full text-xs text-left border-collapse min-w-[700px]">
+                            <thead class="sticky top-0 z-10 bg-slate-900 text-[10px] uppercase font-bold text-slate-400 border-b border-slate-800">
+                                <tr>
+                                    <th class="p-2 w-10 text-center">
+                                        <input type="checkbox" id="smartSelectAllCheckbox" onchange="toggleSelectAllSmartRows(this.checked)" checked class="rounded border-slate-700 text-emerald-600 focus:ring-0 cursor-pointer" />
+                                    </th>
+                                    <th class="p-2 w-28">Date</th>
+                                    <th class="p-2 w-36">Assigned Entity</th>
+                                    <th class="p-2 w-32">Category</th>
+                                    <th class="p-2">Supplier / Notes</th>
+                                    <th class="p-2 w-24 text-right">Amount ($)</th>
+                                    <th class="p-2 w-20 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="smartStagingTableBody" class="divide-y divide-slate-800/60 text-slate-200">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Mobile Card List View (<sm) -->
+                    <div id="smartStagingMobileCards" class="sm:hidden p-2 space-y-2">
+                        <!-- Populated dynamically on mobile -->
+                    </div>
                 </div>
 
                 <!-- Staging Bottom Toolbar -->
                 <div class="flex items-center justify-between gap-2 pt-1 shrink-0">
                     <button type="button" onclick="addManualStagingRow()" class="text-slate-400 hover:text-white text-xs font-bold flex items-center gap-1 cursor-pointer">
-                        <span>➕</span> <span>Add Manual Row</span>
+                        <span>➕</span> <span>Add Row</span>
                     </button>
                     <div class="flex items-center gap-2">
                         <button type="button" onclick="closeSmartExpenseModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer">Cancel</button>
-                        <button type="button" id="confirmSmartImportBtn" onclick="confirmBatchExpenseImport()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
-                            <span>💾</span> <span>Confirm & Add to Ledger</span>
+                        <button type="button" id="confirmSmartImportBtn" onclick="confirmBatchExpenseImport()" class="px-3 sm:px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shadow flex items-center gap-1.5 cursor-pointer">
+                            <span>💾</span> <span class="truncate">Confirm & Add to Ledger</span>
                         </button>
                     </div>
                 </div>
@@ -1853,6 +1887,8 @@
         window.showExpensesToast = showExpensesToast;
         window.openSmartExpenseModal = openSmartExpenseModal;
         window.closeSmartExpenseModal = closeSmartExpenseModal;
+        window.clearSmartStaging = clearSmartStaging;
+        window.switchSmartModalView = switchSmartModalView;
         window.triggerCameraCapture = triggerCameraCapture;
         window.pasteFromClipboard = pasteFromClipboard;
         window.handleSmartExpenseFileSelect = handleSmartExpenseFileSelect;
@@ -6407,6 +6443,39 @@
             });
         }
 
+        function switchSmartModalView(view) {
+            const uploadView = document.getElementById('smartUploadView');
+            const stagingCont = document.getElementById('smartExpenseStagingContainer');
+            const modalTitle = document.getElementById('smartModalTitle');
+            const modalSubtitle = document.getElementById('smartModalSubtitle');
+            const headerClearBtn = document.getElementById('smartHeaderClearBtn');
+
+            if (view === 'review' && smartStagingRows.length > 0) {
+                if (uploadView) uploadView.classList.add('hidden');
+                if (stagingCont) stagingCont.classList.remove('hidden');
+                if (headerClearBtn) headerClearBtn.classList.remove('hidden');
+                if (modalTitle) modalTitle.innerText = "Review & Confirm Transactions";
+                if (modalSubtitle) modalSubtitle.innerText = `${smartStagingRows.length} transaction(s) extracted. Review, edit, or adjust before adding.`;
+            } else {
+                if (uploadView) uploadView.classList.remove('hidden');
+                if (stagingCont) stagingCont.classList.add('hidden');
+                if (headerClearBtn) headerClearBtn.classList.add('hidden');
+                if (modalTitle) modalTitle.innerText = "Smart Expense Ingestion & Auto-Reader";
+                if (modalSubtitle) modalSubtitle.innerText = "Drop a bank statement CSV/PDF, screenshot of receipts/transactions, or supplier invoice.";
+            }
+        }
+        window.switchSmartModalView = switchSmartModalView;
+
+        function clearSmartStaging() {
+            smartStagingRows = [];
+            renderSmartStagingTable();
+            switchSmartModalView('upload');
+            if (typeof showExpensesToast === 'function') {
+                showExpensesToast("Uploader memory cleared. Ready for fresh upload.", true);
+            }
+        }
+        window.clearSmartStaging = clearSmartStaging;
+
         function openSmartExpenseModal() {
             const modal = document.getElementById('smartExpenseModal');
             if (modal) {
@@ -6419,6 +6488,7 @@
                 if (badge) {
                     badge.innerText = savedKey ? "Gemini AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
                 }
+                switchSmartModalView(smartStagingRows.length > 0 ? 'review' : 'upload');
             }
         }
         window.openSmartExpenseModal = openSmartExpenseModal;
@@ -6428,6 +6498,10 @@
             if (modal) modal.classList.add('hidden');
             const loadEl = document.getElementById('smartExpenseLoading');
             if (loadEl) loadEl.classList.add('hidden');
+            // Clear memory when cancelled or closed so it starts fresh next time
+            smartStagingRows = [];
+            renderSmartStagingTable();
+            switchSmartModalView('upload');
         }
         window.closeSmartExpenseModal = closeSmartExpenseModal;
 
@@ -6595,9 +6669,14 @@
             setTimeout(() => {
                 if (loadEl) loadEl.classList.add('hidden');
                 if (allParsed.length > 0) {
-                    smartStagingRows = allParsed;
+                    if (smartStagingRows.length > 0) {
+                        smartStagingRows.push(...allParsed);
+                    } else {
+                        smartStagingRows = allParsed;
+                    }
                     detectDuplicatesInStaging();
                     renderSmartStagingTable();
+                    switchSmartModalView('review');
                     const dupeCount = smartStagingRows.filter(r => r.isDuplicate).length;
                     showExpensesToast(`Extracted ${allParsed.length} transaction(s)${dupeCount > 0 ? ` (${dupeCount} potential duplicate(s) flagged)` : ''}! Review below.`, true);
                 } else {
@@ -7314,17 +7393,22 @@ Do not include markdown fences.`;
 
             if (rowsToShow.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-500 italic">No rows detected in this view.</td></tr>`;
+                const mobileCardsEl = document.getElementById('smartStagingMobileCards');
+                if (mobileCardsEl) mobileCardsEl.innerHTML = `<div class="p-6 text-center text-slate-500 italic text-xs">No rows detected in this view.</div>`;
                 updateSmartStagingTotals();
                 return;
             }
 
             let html = '';
+            let mobileHtml = '';
             rowsToShow.forEach(r => {
                 const isDupe = !!r.isDuplicate;
                 const isKept = r.duplicateStatus === 'kept';
                 const rowBorderBg = isDupe ? (isKept ? 'bg-emerald-950/20 border-l-4 border-emerald-500' : 'bg-amber-950/30 border-l-4 border-amber-500') : '';
+                const cardBorderBg = isDupe ? (isKept ? 'border-emerald-500/80 bg-slate-900/90' : 'border-amber-500/80 bg-amber-950/20') : 'border-slate-800 bg-slate-900/80';
                 const safeNotes = (r.notes || '').replace(/"/g, '&quot;');
 
+                // Desktop Table Row
                 html += `
                     <tr class="hover:bg-slate-800/40 transition ${r.selected ? '' : 'opacity-50'} ${rowBorderBg}">
                         <td class="p-2 text-center">
@@ -7372,8 +7456,59 @@ Do not include markdown fences.`;
                         </td>
                     </tr>
                 `;
+
+                // Mobile Card View
+                mobileHtml += `
+                    <div class="rounded-xl border ${cardBorderBg} p-2.5 space-y-2 transition shadow-sm ${r.selected ? '' : 'opacity-50'}">
+                        <!-- Top Row: Checkbox, Date, Amount -->
+                        <div class="flex items-center justify-between gap-2">
+                            <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                                <input type="checkbox" onchange="updateSmartRowField('${r.id}', 'selected', this.checked)" ${r.selected ? 'checked' : ''} class="w-4 h-4 rounded border-slate-700 text-emerald-600 focus:ring-0 cursor-pointer" />
+                                <span class="text-xs font-bold text-slate-300">Include</span>
+                            </label>
+                            <input type="date" value="${cleanDateStr(r.date)}" onchange="updateSmartRowField('${r.id}', 'date', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white" />
+                            <div class="flex items-center gap-1">
+                                <span class="text-xs text-amber-400 font-bold">$</span>
+                                <input type="number" step="0.01" min="0" value="${Number(r.amount || 0).toFixed(2)}" onchange="updateSmartRowField('${r.id}', 'amount', this.value)" class="w-20 bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-xs text-right font-black text-amber-300" />
+                            </div>
+                        </div>
+
+                        <!-- Middle Row: Entity & Category -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <select onchange="updateSmartRowField('${r.id}', 'entity', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-[11px] font-bold text-slate-200">
+                                <option value="anatolya" ${r.entity === 'anatolya' ? 'selected' : ''}>🥙 Anatolya</option>
+                                <option value="green_juice" ${r.entity === 'green_juice' ? 'selected' : ''}>🥤 Green Juice</option>
+                                <option value="company_shared" ${r.entity === 'company_shared' ? 'selected' : ''}>🏢 Company Shared</option>
+                            </select>
+                            <select onchange="updateSmartRowField('${r.id}', 'category', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-200">
+                                ${EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, r.entity || 'anatolya')).map(c => `<option value="${c.key}" ${r.category === c.key ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <!-- Bottom Row: Supplier Notes + Action -->
+                        <div class="flex items-center gap-2">
+                            <input type="text" value="${safeNotes}" onchange="updateSmartRowField('${r.id}', 'notes', this.value)" class="flex-1 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500" placeholder="Supplier / Notes" />
+                            ${isDupe && !isKept ? `
+                                <div class="inline-flex items-center gap-1 shrink-0">
+                                    <button type="button" onclick="keepSmartRow('${r.id}')" class="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-2 py-1 rounded text-[10px] cursor-pointer">Keep</button>
+                                    <button type="button" onclick="discardSmartRow('${r.id}')" class="bg-rose-700 hover:bg-rose-600 text-white font-bold px-2 py-1 rounded text-[10px] cursor-pointer">Drop</button>
+                                </div>
+                            ` : `
+                                <button type="button" onclick="removeSmartStagingRow('${r.id}')" class="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg bg-rose-950/40 border border-rose-900/60 text-xs shrink-0 cursor-pointer" title="Remove row">🗑️</button>
+                            `}
+                        </div>
+                        ${isDupe ? `
+                            <div class="text-[10px] ${isKept ? 'text-emerald-400' : 'text-amber-400'} font-medium flex items-center gap-1">
+                                <span>${isKept ? '✓ Kept' : '⚠️ Potential Duplicate'}</span>
+                                <span class="text-slate-400">(${r.duplicateReason || 'Matched existing record'})</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
             });
             tbody.innerHTML = html;
+            const mobileCardsEl = document.getElementById('smartStagingMobileCards');
+            if (mobileCardsEl) mobileCardsEl.innerHTML = mobileHtml;
             updateSmartStagingTotals();
         }
 
