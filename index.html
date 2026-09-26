@@ -727,40 +727,18 @@
                     </div>
                 </div>
 
-                <!-- Search & Category Filter Toolbar -->
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-slate-800/60 p-2 rounded-xl border border-slate-700/60">
+                <!-- Search Toolbar -->
+                <div class="flex items-center gap-2 bg-slate-800/60 p-2 rounded-xl border border-slate-700/60">
                     <div class="relative flex-1">
                         <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
                         <input type="text" id="expenseSearchInput" oninput="handleExpenseSearchInput(this.value)" placeholder="Search supplier, notes, amount, or keyword (e.g. Spudshed, Campbells, Rent, 150)..." class="w-full pl-8 pr-8 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 shadow-inner" />
                         <button type="button" id="clearExpenseSearchBtn" onclick="clearExpenseSearch()" class="hidden absolute inset-y-0 right-0 pr-2.5 flex items-center text-slate-400 hover:text-white text-xs font-bold cursor-pointer" title="Clear search">✕</button>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        <select id="expenseCategoryFilter" onchange="handleExpenseCategoryFilterChange(this.value)" class="bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500 shadow-inner cursor-pointer">
-                            <option value="all">All Categories</option>
-                            <option value="Meat">🥩 Meat</option>
-                            <option value="Vegies">🥗 Fruit & Vegies</option>
-                            <option value="Bread">🍞 Bread</option>
-                            <option value="Packaging">📦 Packaging</option>
-                            <option value="Campbells">🥫 Campbells</option>
-                            <option value="Drinks">🥤 Drinks</option>
-                            <option value="Ice Cream">🍦 Ice Cream</option>
-                            <option value="Consumables">🛒 Consumables</option>
-                            <option value="Rent">🏢 Rent</option>
-                            <option value="Utilities">💡 Utilities</option>
-                            <option value="Fuel & Vehicle">⛽ Fuel & Vehicle</option>
-                            <option value="R & M">🛠️ R & M</option>
-                            <option value="Wages">👥 Wages</option>
-                            <option value="Super">🏛️ Super</option>
-                            <option value="Insurance">🛡️ Insurance</option>
-                            <option value="Accounting">📊 Accounting</option>
-                            <option value="Others">🔧 Others</option>
-                        </select>
-                    </div>
                 </div>
 
-                <!-- Category Breakdown Summary Grid -->
+                <!-- Category Breakdown Filter Tabs Grid -->
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 text-xs" id="expenseCategorySummaryGrid">
-                    <!-- Populated dynamically -->
+                    <!-- Populated dynamically as interactive filter tabs -->
                 </div>
 
                 <!-- Expenses Table -->
@@ -776,38 +754,11 @@
                                         </button>
                                     </div>
                                 </th>
-                                <th class="p-2.5 w-36 align-top">
-                                    <div class="space-y-1">
-                                        <div>Entity / Shop</div>
-                                        <select id="ledgerHeaderEntitySelect" onchange="onLedgerHeaderEntityChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 text-[10px] font-bold rounded px-1.5 py-1 focus:outline-none focus:border-amber-500 cursor-pointer shadow-xs">
-                                            <option value="all">🏢 All Entities</option>
-                                            <option value="anatolya">🥙 Anatolya</option>
-                                            <option value="green_juice">🥤 Green Juice</option>
-                                            <option value="company_shared">🏢 Shared</option>
-                                        </select>
-                                    </div>
+                                <th class="p-2.5 w-32 align-middle font-bold text-slate-400">
+                                    <span>Entity / Shop</span>
                                 </th>
-                                <th class="p-2.5 w-44 align-top">
-                                    <div class="space-y-1 relative" id="ledgerHeaderCatDropdownWrapper">
-                                        <div class="flex items-center justify-between">
-                                            <span>Category</span>
-                                            <span id="ledgerHeaderCatActiveCount" class="text-[9px] text-amber-400 font-bold"></span>
-                                        </div>
-                                        <button type="button" id="ledgerHeaderCatButton" onclick="toggleLedgerCategoryDropdown(event)" class="w-full bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 text-[10px] font-bold rounded px-2 py-1 flex items-center justify-between transition cursor-pointer shadow-xs">
-                                            <span id="ledgerHeaderCatButtonLabel" class="truncate">📂 All Categories</span>
-                                            <span class="text-[8px] text-slate-400 ml-1">▼</span>
-                                        </button>
-                                        <!-- Multi-select Dropdown Popover -->
-                                        <div id="ledgerHeaderCatMenu" class="hidden absolute left-0 top-full mt-1 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 space-y-1.5 max-h-64 overflow-y-auto">
-                                            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5 px-1 text-[10px]">
-                                                <button type="button" onclick="selectAllLedgerCategories(event)" class="text-amber-400 hover:text-amber-300 font-bold cursor-pointer">Select All</button>
-                                                <button type="button" onclick="clearAllLedgerCategories(event)" class="text-slate-400 hover:text-slate-200 font-bold cursor-pointer">Clear</button>
-                                            </div>
-                                            <div id="ledgerHeaderCatCheckboxes" class="space-y-0.5">
-                                                <!-- Populated dynamically with store-specific categories -->
-                                            </div>
-                                        </div>
-                                    </div>
+                                <th class="p-2.5 w-36 align-middle font-bold text-slate-400">
+                                    <span>Category</span>
                                 </th>
                                 <th class="p-2.5 align-top">
                                     <div class="space-y-1">
@@ -1497,7 +1448,6 @@
                         <option value="Ice Cream">🍦 Ice Cream</option>
                         <option value="Consumables">🛒 Consumables</option>
                         <option value="Rent">🏢 Rent</option>
-                        <option value="Utilities">💡 Utilities</option>
                         <option value="Fuel & Vehicle">⛽ Fuel & Vehicle</option>
                         <option value="R & M">🛠️ R & M</option>
                         <option value="Wages">👥 Wages</option>
@@ -4341,16 +4291,6 @@
                     closeLedgerCalendarPopover();
                 }
             }
-
-            const cWrapper = document.getElementById('ledgerHeaderCatDropdownWrapper');
-            const cMenu = document.getElementById('ledgerHeaderCatMenu');
-            if (cMenu && !cMenu.classList.contains('hidden')) {
-                if (cWrapper && (cWrapper.contains(e.target) || (e.target && e.target.closest && e.target.closest('#ledgerHeaderCatDropdownWrapper')))) {
-                    // inside
-                } else {
-                    cMenu.classList.add('hidden');
-                }
-            }
         });
 
         function applyCustomDateRange() {
@@ -4386,7 +4326,6 @@
             { key: 'Ice Cream', label: 'Ice Cream', icon: '🍦', color: 'text-pink-400 bg-pink-950/70 border-pink-800' },
             { key: 'Consumables', label: 'Consumables', icon: '🛒', color: 'text-teal-400 bg-teal-950/70 border-teal-800' },
             { key: 'Rent', label: 'Rent', icon: '🏢', color: 'text-blue-400 bg-blue-950/70 border-blue-800' },
-            { key: 'Utilities', label: 'Utilities', icon: '💡', color: 'text-yellow-400 bg-yellow-950/70 border-yellow-800' },
             { key: 'Fuel & Vehicle', label: 'Fuel & Vehicle', icon: '⛽', color: 'text-emerald-300 bg-emerald-950/70 border-emerald-800' },
             { key: 'R & M', label: 'R & M', icon: '🛠️', color: 'text-amber-300 bg-amber-950/70 border-amber-800' },
             { key: 'Wages', label: 'Wages', icon: '👥', color: 'text-cyan-400 bg-cyan-950/70 border-cyan-800' },
@@ -4419,8 +4358,8 @@
             }
 
             if (storeKey === 'green_juice') {
-                // Green Juice Bar does not buy meat, bread, or campbells
-                return !['Meat', 'Bread', 'Campbells'].includes(catKey);
+                // Green Juice Bar does not buy meat, bread, campbells, or separate drinks (drinks are included in consumables)
+                return !['Meat', 'Bread', 'Campbells', 'Drinks'].includes(catKey);
             }
 
             return true;
@@ -5855,44 +5794,17 @@
         }
         window.toggleLedgerAmountSort = toggleLedgerAmountSort;
 
-        function onLedgerHeaderEntityChange(val) {
-            filterExpensesByEntity(val);
-        }
-        window.onLedgerHeaderEntityChange = onLedgerHeaderEntityChange;
-
-        function toggleLedgerCategoryDropdown(e) {
-            if (e) {
-                e.stopPropagation();
-                e.preventDefault();
-            }
-            const menu = document.getElementById('ledgerHeaderCatMenu');
-            if (menu) menu.classList.toggle('hidden');
-        }
-        window.toggleLedgerCategoryDropdown = toggleLedgerCategoryDropdown;
-
-        function toggleLedgerCategoryFilter(catKey) {
-            if (ledgerCategoryFilters.has(catKey)) {
-                ledgerCategoryFilters.delete(catKey);
+        function filterLedgerByCategory(catKey) {
+            if (!catKey || catKey === 'all') {
+                ledgerCategoryFilter = 'all';
+            } else if (ledgerCategoryFilter.toLowerCase() === catKey.toLowerCase()) {
+                ledgerCategoryFilter = 'all'; // toggle off back to all
             } else {
-                ledgerCategoryFilters.add(catKey);
+                ledgerCategoryFilter = catKey;
             }
             renderExpensesLedgerView();
         }
-        window.toggleLedgerCategoryFilter = toggleLedgerCategoryFilter;
-
-        function selectAllLedgerCategories(e) {
-            if (e) e.stopPropagation();
-            ledgerCategoryFilters.clear();
-            renderExpensesLedgerView();
-        }
-        window.selectAllLedgerCategories = selectAllLedgerCategories;
-
-        function clearAllLedgerCategories(e) {
-            if (e) e.stopPropagation();
-            ledgerCategoryFilters = new Set(['__none__']);
-            renderExpensesLedgerView();
-        }
-        window.clearAllLedgerCategories = clearAllLedgerCategories;
+        window.filterLedgerByCategory = filterLedgerByCategory;
 
         function onLedgerHeaderNotesInput(val) {
             ledgerNotesQuery = (val || '').trim();
@@ -5913,7 +5825,7 @@
         window.clearLedgerNotesFilter = clearLedgerNotesFilter;
 
         function resetAllLedgerHeaderFilters() {
-            ledgerCategoryFilters.clear();
+            ledgerCategoryFilter = 'all';
             ledgerNotesQuery = '';
             ledgerDateSort = 'desc';
             ledgerAmountSort = null;
@@ -5986,62 +5898,15 @@
             if (btnGj) btnGj.className = (activeFilter === 'green_juice' ? activeBtnCls + "bg-emerald-600 text-white border-emerald-400" : inactiveBtnCls);
             if (btnCo) btnCo.className = (activeFilter === 'company_shared' ? activeBtnCls + "bg-purple-600 text-white border-purple-400" : inactiveBtnCls);
 
-            // Sync Header Entity Select dropdown
-            const headerEntitySel = document.getElementById('ledgerHeaderEntitySelect');
-            if (headerEntitySel && headerEntitySel.value !== activeFilter) {
-                headerEntitySel.value = activeFilter;
+            // If active category filter is not valid for currently selected entity, reset to 'all'
+            if (ledgerCategoryFilter !== 'all' && !isCategoryForStore(ledgerCategoryFilter, activeFilter)) {
+                ledgerCategoryFilter = 'all';
             }
 
-            // Sync Header Category Multi-select checkboxes (filtered by active entity!)
-            const validStoreCats = EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, activeFilter));
-            const cbCont = document.getElementById('ledgerHeaderCatCheckboxes');
-            if (cbCont) {
-                let cbHtml = '';
-                validStoreCats.forEach(c => {
-                    const checked = (ledgerCategoryFilters.size === 0) || ledgerCategoryFilters.has(c.key);
-                    cbHtml += `
-                        <label class="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-800 text-slate-200 text-[10px] cursor-pointer">
-                            <input type="checkbox" value="${c.key}" ${checked ? 'checked' : ''} onchange="toggleLedgerCategoryFilter('${c.key}')" class="rounded text-amber-500 bg-slate-950 border-slate-700">
-                            <span>${c.icon}</span> <span class="font-bold flex-1 truncate">${c.key}</span>
-                        </label>
-                    `;
-                });
-                cbCont.innerHTML = cbHtml;
-            }
-
-            const catBtnLabel = document.getElementById('ledgerHeaderCatButtonLabel');
-            const catActiveCount = document.getElementById('ledgerHeaderCatActiveCount');
-            if (catBtnLabel) {
-                if (ledgerCategoryFilters.size === 0) {
-                    catBtnLabel.innerText = "📂 All Categories";
-                    if (catActiveCount) catActiveCount.innerText = "";
-                } else if (ledgerCategoryFilters.has('__none__')) {
-                    catBtnLabel.innerText = "None Selected";
-                    if (catActiveCount) catActiveCount.innerText = "(0)";
-                } else if (ledgerCategoryFilters.size === 1) {
-                    const onlyKey = Array.from(ledgerCategoryFilters)[0];
-                    const meta = getCategoryMeta(onlyKey);
-                    catBtnLabel.innerText = `${meta.icon} ${onlyKey}`;
-                    if (catActiveCount) catActiveCount.innerText = "(1)";
-                } else {
-                    catBtnLabel.innerText = `✓ ${ledgerCategoryFilters.size} Categories`;
-                    if (catActiveCount) catActiveCount.innerText = `(${ledgerCategoryFilters.size})`;
-                }
-            }
-
-            // 2. Filter expenses by date, entity, multi-category, notes, and search query
-            let filteredExpenses = inDateExpenses.filter(x => {
+            // 2. Filter expenses by date, entity, notes, and search query (Category filter applied after calculating tab totals)
+            const entityAndSearchScoped = inDateExpenses.filter(x => {
                 const s = x.store_id || 'anatolya';
                 if (activeFilter !== 'all' && s !== activeFilter) return false;
-
-                const cat = x.category || 'Others';
-                // Multi-category filter check
-                if (ledgerCategoryFilters && ledgerCategoryFilters.size > 0) {
-                    if (ledgerCategoryFilters.has('__none__')) return false;
-                    if (!ledgerCategoryFilters.has(cat)) return false;
-                } else if (ledgerCategoryFilter !== 'all' && cat.toLowerCase() !== ledgerCategoryFilter.toLowerCase()) {
-                    return false;
-                }
 
                 // Inline header notes filter
                 if (ledgerNotesQuery) {
@@ -6057,7 +5922,75 @@
                 return true;
             });
 
-            // Apply Sorting
+            // 3. Compute totals and record counts per category across the entity-scoped expenses
+            const catTotals = {};
+            const catCounts = {};
+            EXPENSE_CATEGORIES.forEach(c => {
+                catTotals[c.key] = 0;
+                catCounts[c.key] = 0;
+            });
+            let grandTotal = 0;
+            let grandCount = 0;
+
+            entityAndSearchScoped.forEach(x => {
+                const k = x.category || 'Others';
+                const amt = Number(x.amount || 0);
+                catTotals[k] = (catTotals[k] || 0) + amt;
+                catCounts[k] = (catCounts[k] || 0) + 1;
+                grandTotal += amt;
+                grandCount += 1;
+            });
+
+            // 4. Render category tabs (summary cards) as interactive filter buttons
+            const grid = document.getElementById('expenseCategorySummaryGrid');
+            if (grid) {
+                const isAllActive = (ledgerCategoryFilter === 'all');
+                let cards = `
+                    <button type="button" onclick="filterLedgerByCategory('all')"
+                        class="p-2.5 rounded-xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between ${isAllActive ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400 shadow-md text-white' : 'bg-slate-800/80 border-slate-700/60 hover:bg-slate-700/70 hover:border-slate-500 text-slate-300'}">
+                        <div class="flex items-center justify-between text-[11px] font-bold gap-1">
+                            <span class="flex items-center gap-1.5 truncate">
+                                <span>📂</span>
+                                <span class="truncate">All</span>
+                            </span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${isAllActive ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-700 text-slate-300 font-semibold'}">${grandCount}</span>
+                        </div>
+                        <div class="text-sm font-black mt-1.5 ${isAllActive ? 'text-amber-300' : 'text-slate-100'}">$${grandTotal.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </button>
+                `;
+
+                const validCats = EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, activeFilter));
+                validCats.forEach(c => {
+                    const isActive = (ledgerCategoryFilter.toLowerCase() === c.key.toLowerCase());
+                    const amt = catTotals[c.key] || 0;
+                    const count = catCounts[c.key] || 0;
+                    cards += `
+                        <button type="button" onclick="filterLedgerByCategory('${c.key}')"
+                            class="p-2.5 rounded-xl border text-left transition-all duration-150 cursor-pointer flex flex-col justify-between ${isActive ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400 shadow-md text-white' : 'bg-slate-800/80 border-slate-700/60 hover:bg-slate-700/70 hover:border-slate-500 text-slate-300'}">
+                            <div class="flex items-center justify-between text-[11px] font-bold gap-1 truncate">
+                                <span class="flex items-center gap-1.5 truncate">
+                                    <span>${c.icon}</span>
+                                    <span class="truncate">${c.key}</span>
+                                </span>
+                                <span class="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-700 text-slate-300 font-semibold'}">${count}</span>
+                            </div>
+                            <div class="text-sm font-black mt-1.5 ${isActive ? 'text-amber-300' : 'text-slate-100'}">$${amt.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        </button>
+                    `;
+                });
+                grid.innerHTML = cards;
+            }
+
+            // 5. Filter expenses for the table by selected category filter
+            let filteredExpenses = entityAndSearchScoped.filter(x => {
+                if (ledgerCategoryFilter !== 'all') {
+                    const cat = x.category || 'Others';
+                    if (cat.toLowerCase() !== ledgerCategoryFilter.toLowerCase()) return false;
+                }
+                return true;
+            });
+
+            // 6. Apply Sorting
             filteredExpenses.sort((a, b) => {
                 if (ledgerAmountSort === 'asc') return Number(a.amount || 0) - Number(b.amount || 0);
                 if (ledgerAmountSort === 'desc') return Number(b.amount || 0) - Number(a.amount || 0);
@@ -6065,7 +5998,7 @@
                 return (b.date || '').localeCompare(a.date || '');
             });
 
-            // Update Sort Icons & Reset Button
+            // 7. Update Sort Icons & Reset Button
             const dSortIcon = document.getElementById('ledgerDateSortIcon');
             if (dSortIcon) dSortIcon.innerText = (ledgerDateSort === 'desc' ? '▼ New' : '▲ Old');
 
@@ -6075,7 +6008,7 @@
                 aSortIcon.className = ledgerAmountSort ? "text-amber-400 font-bold" : "text-slate-400";
             }
 
-            const hasActiveFilter = (ledgerCategoryFilters.size > 0) || !!ledgerNotesQuery || (ledgerAmountSort !== null) || (ledgerDateSort !== 'desc');
+            const hasActiveFilter = (ledgerCategoryFilter !== 'all') || !!ledgerNotesQuery || (ledgerAmountSort !== null) || (ledgerDateSort !== 'desc');
             const resetBtn = document.getElementById('ledgerHeaderResetBtn');
             if (resetBtn) resetBtn.classList.toggle('hidden', !hasActiveFilter);
 
@@ -6092,40 +6025,16 @@
                 }
             }
 
-            const countBadge = document.getElementById('expenseLedgerCountBadge');
-            const totalBadge = document.getElementById('expenseLedgerTotalBadge');
-
-            // 3. Calculate totals per category
-            const catTotals = {};
-            EXPENSE_CATEGORIES.forEach(c => catTotals[c.key] = 0);
-            let grandTotal = 0;
-
+            // 8. Update table counts and totals
+            let tableTotal = 0;
             filteredExpenses.forEach(x => {
-                const k = x.category || 'Others';
-                catTotals[k] = (catTotals[k] || 0) + Number(x.amount || 0);
-                grandTotal += Number(x.amount || 0);
+                tableTotal += Number(x.amount || 0);
             });
 
-            if (countBadge) countBadge.innerText = `${filteredExpenses.length} record(s)`;
-            if (totalBadge) totalBadge.innerText = `${grandTotal.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-            const grid = document.getElementById('expenseCategorySummaryGrid');
-            if (grid) {
-                let cards = '';
-                EXPENSE_CATEGORIES.forEach(c => {
-                    if (activeFilter !== 'all' && !isCategoryForStore(c.key, activeFilter)) return;
-                    const amt = catTotals[c.key] || 0;
-                    cards += `
-                        <div class="bg-slate-800/80 border border-slate-700/60 p-2.5 rounded-xl space-y-1">
-                            <div class="text-[10px] font-bold text-slate-300 flex items-center gap-1 truncate">
-                                <span>${c.icon}</span> ${c.key}
-                            </div>
-                            <div class="text-sm font-black text-amber-300">${amt.toFixed(2)}</div>
-                        </div>
-                    `;
-                });
-                grid.innerHTML = cards;
-            }
+            const countBadge = document.getElementById('expenseLedgerCountBadge');
+            const totalBadge = document.getElementById('expenseLedgerTotalBadge');
+            if (countBadge) countBadge.innerText = `${filteredExpenses.length} record(s)${ledgerCategoryFilter !== 'all' ? ` (${ledgerCategoryFilter})` : ''}`;
+            if (totalBadge) totalBadge.innerText = `$${tableTotal.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             // 4. Render expenses table with inline entity reassignment dropdown
             const tbody = document.getElementById('expenseLedgerTableBody');
@@ -6213,7 +6122,7 @@
 
             // 3. Operational Overheads & Specialized Business Categories
             { pattern: /(woolworths|coles|iga|supermarket|quality\s*indian\s*grocer|asian\s*grocer|sp\s*nutrition|chemist\s*warehouse|reject\s*shop|kmart|red\s*dot|daiso|smart\s*dollar)/i, category: 'Consumables', label: 'Consumables' },
-            { pattern: /(water\s*corp|water\s*corporation|synergy|alinta|trade\s*waste|telstra|optus|tpg|electricity|power|gas|internet|broadband)/i, category: 'Utilities', label: 'Utilities' },
+            { pattern: /(water\s*corp|water\s*corporation|synergy|alinta|trade\s*waste|telstra|optus|tpg|electricity|power|gas|internet|broadband)/i, category: 'Others', label: 'Utilities / Overheads' },
             { pattern: /(vibe\s*petroleum|ampol|bp\s*connect|caltex|7-eleven.*fuel|united\s*petroleum|fuel|petrol|diesel|transport\s*wa|your\s*car|toyota\s*finance|car\s*lease|parking)/i, entity: 'company_shared', category: 'Fuel & Vehicle', label: 'Fuel & Vehicle' },
             { pattern: /(bunnings|johns\s*refrigeration|refrigeration|multifix|the\s*good\s*guys|hardware|repairs|maintenance|equipment\s*repair)/i, category: 'R & M', label: 'R & M' },
             { pattern: /(superchoice|superannuation|sunsuper|australian\s*super|hostplus|cbus|rest\s*super)/i, entity: 'company_shared', category: 'Super', label: 'Super' },
@@ -7277,7 +7186,6 @@ Do not include markdown fences.`;
             'Ice Cream': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Gelato / Ice Cream)' },
             'Consumables': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Daily Consumables & Groceries)' },
             'Rent': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Commercial Lease & Power)' },
-            'Utilities': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Water, Power & Telecom)' },
             'Fuel & Vehicle': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Petrol, Diesel & Vehicle)' },
             'R & M': { taxable: true, rate: 1/11, label: 'Taxable (10% GST - Repairs & Maintenance)' },
             'Wages': { taxable: false, rate: 0, label: 'GST-Free / No GST (Wages & Salaries)' },
