@@ -367,7 +367,7 @@
                     <button type="button" onclick="refreshCloudData(true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="Quick reload from Supabase database">
                         <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>Refresh</span>
                     </button>
-                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses')" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="View business expenses ledger">
+                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses', true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="View business expenses ledger">
                         📋 Expenses
                     </button>
                 </div>
@@ -506,7 +506,7 @@
                     </div>
 
                     <!-- Expenses (2 Cols on Desktop, 1 Col on Mobile) -->
-                    <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm cursor-pointer hover:border-amber-500 transition flex flex-col justify-between" onclick="switchAnalyticsTab('expenses')" title="Click to view expense ledger">
+                    <div class="col-span-1 md:col-span-2 bg-slate-800/70 border border-slate-700/60 p-2.5 rounded-xl shadow-sm cursor-pointer hover:border-amber-500 transition flex flex-col justify-between" onclick="switchAnalyticsTab('expenses', true)" title="Click to view expense ledger">
                         <div class="text-[9px] uppercase tracking-wider text-amber-400 font-bold flex items-center justify-between">
                             <span class="truncate">Operating Expenses</span> <span class="text-[8px] underline shrink-0">➔</span>
                         </div>
@@ -3915,7 +3915,12 @@
             return "9:30 AM – 5:00 PM";
         }
 
-        function switchAnalyticsTab(tabName) {
+        function switchAnalyticsTab(tabName, syncRange = false) {
+            if (tabName === 'expenses' && (syncRange || currentAnalyticsTab === 'range')) {
+                if (typeof syncHomeDateRangeToLedger === 'function') {
+                    syncHomeDateRangeToLedger();
+                }
+            }
             currentAnalyticsTab = tabName;
             if (typeof activeMainTab !== 'undefined' && activeMainTab !== 'sales_expenses' && typeof switchMainAppTab === 'function') {
                 switchMainAppTab('sales_expenses');
@@ -5658,6 +5663,52 @@
                 displayEl.innerText = `${formatDisplayDateStr(ledgerDateFrom)} – ${formatDisplayDateStr(ledgerDateTo)}`;
             }
         }
+
+        function syncHomeDateRangeToLedger() {
+            if (typeof initDateRangeDefaults === 'function') {
+                initDateRangeDefaults();
+            }
+            const fromInput = document.getElementById('chartRangeFrom');
+            const toInput = document.getElementById('chartRangeTo');
+            let startIso = fromInput ? fromInput.value : '';
+            let endIso = toInput ? toInput.value : '';
+
+            if (!startIso || !endIso) return;
+            if (startIso > endIso) {
+                const tmp = startIso;
+                startIso = endIso;
+                endIso = tmp;
+            }
+
+            ledgerDateFrom = startIso;
+            ledgerDateTo = endIso;
+
+            const refDate = (typeof presetRefDate !== 'undefined' && presetRefDate instanceof Date && !isNaN(presetRefDate.getTime()))
+                ? new Date(presetRefDate.getTime())
+                : new Date(startIso + 'T00:00:00');
+
+            if (typeof currentPresetType !== 'undefined' && currentPresetType === 'day') {
+                currentLedgerPresetType = 'day';
+                ledgerPresetRefDate = refDate;
+            } else if (typeof currentPresetType !== 'undefined' && currentPresetType === 'week') {
+                currentLedgerPresetType = 'week';
+                ledgerPresetRefDate = refDate;
+            } else if (typeof currentPresetType !== 'undefined' && currentPresetType === 'month') {
+                currentLedgerPresetType = 'month';
+                ledgerPresetRefDate = refDate;
+            } else {
+                currentLedgerPresetType = 'custom';
+                ledgerPresetRefDate = refDate;
+            }
+
+            if (typeof updateLedgerPresetButtonsUI === 'function') {
+                updateLedgerPresetButtonsUI();
+            }
+            if (typeof updateLedgerCalendarDisplay === 'function') {
+                updateLedgerCalendarDisplay();
+            }
+        }
+        window.syncHomeDateRangeToLedger = syncHomeDateRangeToLedger;
 
         // ==================== EXPENSES LEDGER MANAGEMENT & REASSIGNMENT ====================
         let ledgerEntityFilter = 'active'; // 'active' (matches currentStore) | 'anatolya' | 'green_juice' | 'company_shared' | 'all'
