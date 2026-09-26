@@ -3119,7 +3119,9 @@
                         button.onclick = () => selectDayInline(currentDayIso);
                         gridContainer.appendChild(button);
                     });
-                    if (!currentSelectedDate || getMondayString(currentSelectedDate) !== startMonday) selectDayInline(startMonday);
+                    if (!currentSelectedDate || getMondayString(currentSelectedDate) !== startMonday) {
+                        try { selectDayInline(startMonday); } catch(err) { console.error("selectDayInline error:", err); }
+                    }
                 }
 
                 function selectDayInline(targetIsoDate) {
@@ -3155,7 +3157,11 @@
                     }
 
                     applyStaffRateDefaults();
-                    renderHourlySalesView(targetIsoDate);
+                    try {
+                        renderHourlySalesView(targetIsoDate);
+                    } catch(err) {
+                        console.error("renderHourlySalesView error:", err);
+                    }
 
                     // If sales data for this date is not yet loaded or last fetch > 15s, refresh cloud data in background
                     const cleanTarget = cleanDateStr(targetIsoDate);
@@ -3170,7 +3176,7 @@
                     const input = document.getElementById('filterWeek');
                     let currentVal = input ? input.value : '';
                     if (!currentVal) currentVal = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
-                    const currentMon = getMondayString(currentVal);
+                    const currentMon = getMondayString(cleanDateStr(currentVal));
                     const targetMon = addDaysString(currentMon, delta * 7);
                     if (input) input.value = targetMon;
                     syncDashboardWeekFilter();
@@ -3180,7 +3186,8 @@
                 function jumpRosterToCurrentWeek() {
                     const input = document.getElementById('filterWeek');
                     const today = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
-                    if (input) input.value = today;
+                    const curMon = getMondayString(cleanDateStr(today));
+                    if (input) input.value = curMon;
                     syncDashboardWeekFilter();
                 }
                 window.jumpRosterToCurrentWeek = jumpRosterToCurrentWeek;
@@ -3188,8 +3195,16 @@
                 function syncDashboardWeekFilter() {
                     const input = document.getElementById('filterWeek');
                     if (!input || !input.value) return;
-                    generateDaySelectors();
-                    renderWeeklyTable();
+                    try {
+                        renderWeeklyTable();
+                    } catch (err) {
+                        console.error("renderWeeklyTable error:", err);
+                    }
+                    try {
+                        generateDaySelectors();
+                    } catch (err) {
+                        console.error("generateDaySelectors error:", err);
+                    }
                     const now = Date.now();
                     if (now - lastCloudFetchTime > 30000) {
                         refreshCloudData(false);
@@ -3418,7 +3433,7 @@
     }
     const filterWeekVal = document.getElementById('filterWeek').value;
     if (!filterWeekVal) return;
-    const startMondayStr = getMondayString(filterWeekVal);
+    const startMondayStr = getMondayString(cleanDateStr(filterWeekVal));
     document.getElementById('weekRangeDisplay').innerText = `${formatDisplayDateStr(startMondayStr)} – ${formatDisplayDateStr(addDaysString(startMondayStr, 6))}`;
 
     const thead = document.getElementById('weeklyTableHead');
@@ -3477,8 +3492,8 @@
         return true;
     });
 
-    let targetRenderList = isHistoric ? 
-        [...new Set(weekLogs.map(e => e.name))] : 
+    let targetRenderList = (isHistoric && weekLogs.length > 0) ? 
+        [...new Set(weekLogs.map(e => e.name))].filter(Boolean) : 
         [...new Set([...storeStaffPool.map(s => s.name), ...weekLogs.map(e => e.name)])].filter(Boolean);
     
     let globalDailyTotals = [0, 0, 0, 0, 0, 0, 0]; 
@@ -4057,8 +4072,7 @@
                 const rInput = document.getElementById('filterWeek');
                 if (rInput && rInput.value !== mon) {
                     rInput.value = mon;
-                    generateDaySelectors();
-                    renderWeeklyTable();
+                    syncDashboardWeekFilter();
                 }
             } else if (currentPresetType === 'month') {
                 const y = presetRefDate.getFullYear();
@@ -9070,9 +9084,10 @@ function convertHourStr(hStr) {
             const isFutureDayInCurrentWeek = (isCurWeek && targetDate > todayIso);
 
             let totalDayLaborCost = 0;
+            let dayShifts = [];
 
             if (!isFutureDayInCurrentWeek) {
-                const dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
+                dayShifts = dataStore.filter(entry => cleanDateStr(entry.date) === targetDate && entry.from && entry.to && isStoreMatch(entry.store_id, currentStore));
 
                 let anatolyaDayLabor = 0;
                 let gjDayLabor = 0;
