@@ -1292,6 +1292,19 @@
                 </div>
             </div>
 
+            <!-- IN-MODAL NOTICE / WARNING BANNER (For Fallbacks, API Notices, Parsing Errors) -->
+            <div id="smartModalNoticeBanner" class="hidden my-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs flex items-start gap-2.5 shrink-0 transition-all border shadow-lg">
+                <span id="smartModalNoticeIcon" class="text-base sm:text-lg shrink-0 mt-0.5">⚠️</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between gap-2">
+                        <div id="smartModalNoticeTitle" class="font-extrabold text-xs sm:text-sm text-slate-100">Notice</div>
+                        <button type="button" id="smartModalNoticeActionBtn" onclick="toggleSmartAiSettings()" class="hidden text-[11px] underline font-bold text-amber-300 hover:text-amber-200 cursor-pointer">⚙️ Check API Key</button>
+                    </div>
+                    <div id="smartModalNoticeMsg" class="text-[11px] text-slate-200 mt-1 break-words whitespace-pre-line leading-relaxed"></div>
+                </div>
+                <button type="button" onclick="hideSmartModalNotice()" class="text-slate-400 hover:text-white font-bold text-base px-1.5 py-0.5 -mr-1 -mt-1 rounded cursor-pointer transition hover:bg-white/10 shrink-0" title="Dismiss notice">✕</button>
+            </div>
+
             <!-- VIEW 1: UPLOAD STAGE (Hidden once parsed to free up 100% of screen) -->
             <div id="smartUploadView" class="space-y-3 shrink-0 pt-1">
                 <!-- Upload Dropzone -->
@@ -1903,6 +1916,8 @@
         window.confirmBatchExpenseImport = confirmBatchExpenseImport;
         window.toggleSmartAiSettings = toggleSmartAiSettings;
         window.saveSmartGeminiApiKey = saveSmartGeminiApiKey;
+        window.showSmartModalNotice = showSmartModalNotice;
+        window.hideSmartModalNotice = hideSmartModalNotice;
         window.openLearnedRulesModal = openLearnedRulesModal;
         window.closeLearnedRulesModal = closeLearnedRulesModal;
         window.renderLearnedRulesList = renderLearnedRulesList;
@@ -5219,27 +5234,54 @@
         }
 
         // ==================== EXPENSE MANAGEMENT ====================
-        function showExpensesToast(msg, isSuccess = true) {
+        function showExpensesToast(msg, isSuccess = true, durationMs = null) {
             let container = document.getElementById('expensesToastContainer');
             if (!container) {
                 container = document.createElement('div');
                 container.id = 'expensesToastContainer';
-                container.className = 'fixed bottom-5 right-5 z-[9999] pointer-events-none flex flex-col gap-2 max-w-sm';
+                container.className = 'fixed bottom-4 sm:bottom-5 right-4 sm:right-5 left-4 sm:left-auto z-[9999] pointer-events-none flex flex-col gap-2.5 sm:max-w-md max-w-full';
                 document.body.appendChild(container);
             }
             const toast = document.createElement('div');
-            toast.className = `pointer-events-auto flex items-center gap-2 px-3.5 py-2.5 rounded-xl shadow-2xl text-xs font-bold text-white transition-all transform duration-300 translate-y-4 opacity-0 border ${
-                isSuccess ? 'bg-slate-900/95 border-emerald-500/80 text-emerald-200' : 'bg-rose-950/95 border-rose-500/80 text-rose-200'
+            toast.className = `pointer-events-auto flex items-start gap-2.5 px-3.5 py-3 rounded-xl shadow-2xl text-xs font-semibold text-white transition-all transform duration-300 translate-y-4 opacity-0 border backdrop-blur-md cursor-pointer ${
+                isSuccess 
+                    ? 'bg-slate-900/95 border-emerald-500/80 text-emerald-100 shadow-emerald-950/40' 
+                    : 'bg-rose-950/95 border-rose-500/80 text-rose-100 shadow-rose-950/60'
             }`;
-            toast.innerHTML = `<span>${isSuccess ? '✅' : '⚠️'}</span> <span class="flex-1">${msg}</span>`;
+            const icon = isSuccess ? '✅' : '⚠️';
+            toast.innerHTML = `
+                <span class="text-sm shrink-0 mt-0.5">${icon}</span>
+                <span class="flex-1 break-words whitespace-pre-line leading-relaxed">${msg}</span>
+                <button type="button" class="text-slate-400 hover:text-white font-bold text-sm px-1.5 py-0.5 -mr-1 -mt-0.5 rounded cursor-pointer transition hover:bg-white/10 shrink-0" title="Dismiss">✕</button>
+            `;
+
+            let isDismissed = false;
+            const dismissToast = () => {
+                if (isDismissed) return;
+                isDismissed = true;
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            };
+
+            const dismissBtn = toast.querySelector('button');
+            if (dismissBtn) {
+                dismissBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    dismissToast();
+                };
+            }
+            toast.onclick = () => dismissToast();
+
             container.appendChild(toast);
             requestAnimationFrame(() => {
                 toast.classList.remove('translate-y-4', 'opacity-0');
             });
-            setTimeout(() => {
-                toast.classList.add('translate-y-4', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
-            }, 3200);
+
+            // Warnings and errors stay for 12 seconds so users can easily read them. Success toasts stay for 4 seconds.
+            const timeout = durationMs !== null ? durationMs : (isSuccess ? 4000 : 12000);
+            if (timeout > 0) {
+                setTimeout(dismissToast, timeout);
+            }
         }
         window.showExpensesToast = showExpensesToast;
 
@@ -6466,10 +6508,48 @@
         }
         window.switchSmartModalView = switchSmartModalView;
 
+        function showSmartModalNotice(msg, title = "Notice", isError = true, showKeyAction = false) {
+            const banner = document.getElementById('smartModalNoticeBanner');
+            if (!banner) return;
+            const iconEl = document.getElementById('smartModalNoticeIcon');
+            const titleEl = document.getElementById('smartModalNoticeTitle');
+            const msgEl = document.getElementById('smartModalNoticeMsg');
+            const actionBtn = document.getElementById('smartModalNoticeActionBtn');
+
+            if (titleEl) titleEl.innerText = title;
+            if (msgEl) msgEl.innerText = msg;
+            if (iconEl) iconEl.innerText = isError ? '⚠️' : 'ℹ️';
+
+            banner.className = `my-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs flex items-start gap-2.5 shrink-0 transition-all border shadow-lg ${
+                isError 
+                    ? 'bg-rose-950/95 border-rose-500/70 text-rose-100 shadow-rose-950/50' 
+                    : 'bg-amber-950/95 border-amber-500/70 text-amber-100 shadow-amber-950/50'
+            }`;
+
+            if (actionBtn) {
+                const isKeyRelated = showKeyAction || /api\s*key|400|403|quota|invalid/i.test(msg);
+                if (isKeyRelated) {
+                    actionBtn.classList.remove('hidden');
+                } else {
+                    actionBtn.classList.add('hidden');
+                }
+            }
+
+            banner.classList.remove('hidden');
+        }
+        window.showSmartModalNotice = showSmartModalNotice;
+
+        function hideSmartModalNotice() {
+            const banner = document.getElementById('smartModalNoticeBanner');
+            if (banner) banner.classList.add('hidden');
+        }
+        window.hideSmartModalNotice = hideSmartModalNotice;
+
         function clearSmartStaging() {
             smartStagingRows = [];
             renderSmartStagingTable();
             switchSmartModalView('upload');
+            hideSmartModalNotice();
             if (typeof showExpensesToast === 'function') {
                 showExpensesToast("Uploader memory cleared. Ready for fresh upload.", true);
             }
@@ -6498,10 +6578,11 @@
             if (modal) modal.classList.add('hidden');
             const loadEl = document.getElementById('smartExpenseLoading');
             if (loadEl) loadEl.classList.add('hidden');
-            // Clear memory when cancelled or closed so it starts fresh next time
+            // Clear memory and notice banner when cancelled or closed so it starts fresh next time
             smartStagingRows = [];
             renderSmartStagingTable();
             switchSmartModalView('upload');
+            hideSmartModalNotice();
         }
         window.closeSmartExpenseModal = closeSmartExpenseModal;
 
@@ -6518,6 +6599,9 @@
             const badge = document.getElementById('smartEngineBadge');
             if (badge) {
                 badge.innerText = key ? "Gemini AI Vision Enabled ✨" : "Built-in Fast OCR & Bank CSV Parser";
+            }
+            if (key) {
+                hideSmartModalNotice();
             }
             showExpensesToast(key ? "Gemini AI Vision key saved!" : "Key removed. Using built-in OCR.", true);
             toggleSmartAiSettings();
@@ -6636,6 +6720,9 @@
             const loadTxt = document.getElementById('smartExpenseLoadingText');
             const pBar = document.getElementById('smartExpenseProgressBar');
             if (loadEl) loadEl.classList.remove('hidden');
+            if (typeof hideSmartModalNotice === 'function') {
+                hideSmartModalNotice();
+            }
 
             const allParsed = [];
 
@@ -6661,7 +6748,10 @@
                     }
                 } catch (err) {
                     console.error("Error parsing file:", file.name, err);
-                    showExpensesToast(`Error reading ${file.name}: ${err.message}`, false);
+                    showExpensesToast(`Error reading ${file.name}: ${err.message}`, false, 12000);
+                    if (typeof showSmartModalNotice === 'function') {
+                        showSmartModalNotice(`Error reading ${file.name}: ${err.message}`, "File Processing Error", true);
+                    }
                 }
             }
 
@@ -6680,7 +6770,11 @@
                     const dupeCount = smartStagingRows.filter(r => r.isDuplicate).length;
                     showExpensesToast(`Extracted ${allParsed.length} transaction(s)${dupeCount > 0 ? ` (${dupeCount} potential duplicate(s) flagged)` : ''}! Review below.`, true);
                 } else {
-                    showExpensesToast("No transactions found in the uploaded file(s).", false);
+                    const emptyNotice = "No transactions could be detected from the uploaded document or image.\n\nTip: If uploading a bank screenshot, ensure amounts and dates are clear, or check your Gemini Vision API key in Settings.";
+                    showExpensesToast(emptyNotice, false, 12000);
+                    if (typeof showSmartModalNotice === 'function') {
+                        showSmartModalNotice(emptyNotice, "No Transactions Detected", true, true);
+                    }
                 }
             }, 300);
         }
@@ -6827,6 +6921,8 @@
         }
 
         async function parseImageExpenseDocument(file) {
+            let geminiFailureReason = null;
+
             // 1. Check for User's Local Gemini API Key
             const localApiKey = localStorage.getItem('alhamd_gemini_api_key');
             if (localApiKey) {
@@ -6840,9 +6936,7 @@
                     }
                 } catch (e) {
                     console.warn("Client Gemini Vision failed, attempting backend worker:", e);
-                    if (typeof showExpensesToast === 'function') {
-                        showExpensesToast(`Gemini Vision Notice: ${e.message}`, false);
-                    }
+                    geminiFailureReason = e.message || String(e);
                 }
             }
 
@@ -6884,19 +6978,46 @@
                     }
                 } else if (beResp.status === 503) {
                     const errObj = await beResp.json().catch(() => ({}));
-                    if (errObj.error === 'NO_API_KEY') {
-                        showExpensesToast("Tip: Add a free Gemini API key in Settings (or Render) for 100% Vision AI accuracy.", false);
+                    if (errObj.error === 'NO_API_KEY' && !geminiFailureReason) {
+                        geminiFailureReason = "No Gemini API key configured on server or client";
+                    }
+                } else {
+                    const errObj = await beResp.json().catch(() => ({}));
+                    if (!geminiFailureReason && errObj.message) {
+                        geminiFailureReason = errObj.message;
                     }
                 }
             } catch (beErr) {
                 console.warn("Backend Vision AI call failed:", beErr);
+                if (!geminiFailureReason) {
+                    geminiFailureReason = beErr.message || "Failed to reach backend Vision AI worker";
+                }
             }
 
             // 3. Fallback: Local Tesseract OCR with Smart Banking Parsing
             try {
-                if (typeof showExpensesToast === 'function') {
-                    showExpensesToast("Falling back to built-in OCR...", false);
+                const loadTxt = document.getElementById('smartExpenseLoadingText');
+                if (loadTxt) {
+                    loadTxt.innerText = "Gemini unavailable. Running built-in OCR fallback...";
                 }
+
+                let fallbackMsg = "Falling back to built-in OCR (Tesseract).";
+                let isKeyError = false;
+                if (geminiFailureReason) {
+                    fallbackMsg = `Gemini Vision Notice: ${geminiFailureReason}.\n\nFalling back to built-in OCR (Tesseract). Results may require manual review or category adjustment.`;
+                    isKeyError = /api\s*key|400|403|quota|invalid/i.test(geminiFailureReason);
+                } else if (!localApiKey) {
+                    fallbackMsg = "No Gemini API key provided. Falling back to built-in OCR (Tesseract). Add a free Gemini key in Settings for 100% Vision AI accuracy.";
+                    isKeyError = true;
+                }
+
+                if (typeof showSmartModalNotice === 'function') {
+                    showSmartModalNotice(fallbackMsg, "Built-in OCR Fallback Notice", true, isKeyError);
+                }
+                if (typeof showExpensesToast === 'function') {
+                    showExpensesToast(fallbackMsg, false, 12000);
+                }
+
                 const Tesseract = await loadTesseractLibrary();
                 const worker = await Tesseract.createWorker('eng');
                 const ret = await worker.recognize(file);
@@ -6904,6 +7025,9 @@
                 return parseRawTextToExpenses(ret.data.text, file.name);
             } catch (ocrErr) {
                 console.error("Local OCR failed:", ocrErr);
+                if (typeof showSmartModalNotice === 'function') {
+                    showSmartModalNotice(`Local OCR extraction failed: ${ocrErr.message}`, "OCR Extraction Error", true);
+                }
                 return [];
             }
         }
