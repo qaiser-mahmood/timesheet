@@ -252,17 +252,26 @@
             </div>
 
             <!-- Normal mode store summary & week selector (hidden in View Roster mode) -->
-            <div class="hide-on-share flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2">
+            <div class="hide-on-share flex flex-row items-center justify-between gap-2 border-l-4 border-gray-800 pl-2 flex-wrap sm:flex-nowrap">
                 <h2 id="rosterStoreSummaryTitle" class="text-xs font-bold text-gray-700 uppercase tracking-wide">Anatolya Kebabs Summary</h2>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap">
                     <label class="text-[10px] font-bold text-gray-500 uppercase">Week:</label>
-                    <input type="date" id="filterWeek" onchange="syncDashboardWeekFilter()" class="rounded-md border-gray-300 p-1 border text-xs bg-white">
+                    <div class="inline-flex items-center rounded-lg bg-gray-100 border border-gray-300 p-0.5 shadow-xs">
+                        <button type="button" onclick="navigateRosterWeek(-1)" title="Previous Week" class="px-2 py-1 text-gray-700 hover:text-black hover:bg-white rounded transition text-xs font-black cursor-pointer">◀</button>
+                        <input type="date" id="filterWeek" onchange="syncDashboardWeekFilter()" oninput="syncDashboardWeekFilter()" class="rounded border-0 p-1 text-xs bg-white font-semibold text-gray-800 focus:ring-0">
+                        <button type="button" onclick="navigateRosterWeek(1)" title="Next Week" class="px-2 py-1 text-gray-700 hover:text-black hover:bg-white rounded transition text-xs font-black cursor-pointer">▶</button>
+                    </div>
+                    <button type="button" onclick="jumpRosterToCurrentWeek()" class="px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded text-[10px] font-bold transition cursor-pointer" title="Jump to current week">This Week</button>
                 </div>
             </div>
 
-            <div id="weekRangeContainer" class="text-center bg-blue-50 border border-blue-100 py-1 px-2.5 rounded-md flex justify-between items-center text-[11px] flex-wrap gap-1.5">
-                <span id="weekRangeDisplay" class="font-bold text-blue-950 mx-auto">-</span>
-                <div class="hide-on-share flex items-center gap-1.5 flex-wrap">
+            <div id="weekRangeContainer" class="text-center bg-blue-50 border border-blue-100 py-1 px-2 sm:px-2.5 rounded-md flex justify-between items-center text-[11px] flex-wrap gap-1.5">
+                <div class="flex items-center gap-1.5 mx-auto sm:mx-0">
+                    <button type="button" onclick="navigateRosterWeek(-1)" title="Previous Week" class="hide-on-share text-blue-700 hover:text-blue-900 font-black px-1.5 py-0.5 rounded hover:bg-blue-100 text-xs cursor-pointer">◀</button>
+                    <span id="weekRangeDisplay" class="font-bold text-blue-950">-</span>
+                    <button type="button" onclick="navigateRosterWeek(1)" title="Next Week" class="hide-on-share text-blue-700 hover:text-blue-900 font-black px-1.5 py-0.5 rounded hover:bg-blue-100 text-xs cursor-pointer">▶</button>
+                </div>
+                <div class="hide-on-share flex items-center gap-1.5 flex-wrap mx-auto sm:mx-0">
                     <span class="bg-blue-600 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Pool: <span id="grandTotalHoursHeader">0.0</span>h</span>
                     <span class="bg-emerald-700 text-white font-extrabold px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">Paid: $<span id="grandTotalPayoutHeader">0</span></span>
                 </div>
@@ -3157,14 +3166,36 @@
                     }
                 }
 
+                function navigateRosterWeek(delta) {
+                    const input = document.getElementById('filterWeek');
+                    let currentVal = input ? input.value : '';
+                    if (!currentVal) currentVal = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+                    const currentMon = getMondayString(currentVal);
+                    const targetMon = addDaysString(currentMon, delta * 7);
+                    if (input) input.value = targetMon;
+                    syncDashboardWeekFilter();
+                }
+                window.navigateRosterWeek = navigateRosterWeek;
+
+                function jumpRosterToCurrentWeek() {
+                    const input = document.getElementById('filterWeek');
+                    const today = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+                    if (input) input.value = today;
+                    syncDashboardWeekFilter();
+                }
+                window.jumpRosterToCurrentWeek = jumpRosterToCurrentWeek;
+
                 function syncDashboardWeekFilter() {
+                    const input = document.getElementById('filterWeek');
+                    if (!input || !input.value) return;
                     generateDaySelectors();
                     renderWeeklyTable();
                     const now = Date.now();
-                    if (now - lastCloudFetchTime > 15000) {
+                    if (now - lastCloudFetchTime > 30000) {
                         refreshCloudData(false);
                     }
                 }
+                window.syncDashboardWeekFilter = syncDashboardWeekFilter;
 
                 async function distributeWeeklyTaxHours() {
                     if (currentStore === 'green_juice' || currentStore === 'all' || currentStore === 'company_shared') return;
@@ -3424,7 +3455,9 @@
     }
 
     const weekLogs = dataStore.filter(e => {
-        if (e.weekCommencing !== startMondayStr) return false;
+        const eDate = cleanDateStr(e.date);
+        const eMon = (e.weekCommencing ? cleanDateStr(e.weekCommencing) : '') || getMondayString(eDate);
+        if (eMon !== startMondayStr && getMondayString(eDate) !== startMondayStr) return false;
         if (currentStore === 'anatolya') return (!e.store_id || e.store_id === 'anatolya');
         if (currentStore === 'green_juice') return (e.store_id === 'green_juice');
         return true;
@@ -3459,7 +3492,7 @@
 
         for (let i = 0; i < 7; i++) {
             const currentTargetDate = addDaysString(startMondayStr, i);
-            const record = weekLogs.find(e => e.date === currentTargetDate && e.name === staffName);
+            const record = weekLogs.find(e => cleanDateStr(e.date) === currentTargetDate && e.name && e.name.toString().trim().toLowerCase() === staffName.trim().toLowerCase());
             
             if (record) {
                 staffRowHtml += `<td class="p-0.5 text-center text-[9px] text-gray-600 leading-none border-r">${convertTimeStr(record.from)}<br>${convertTimeStr(record.to)}</td>`;
@@ -4021,6 +4054,12 @@
                 const mon = getMondayString(refIso);
                 const sun = addDaysString(mon, 6);
                 setDateRange(mon, sun, 'week');
+                const rInput = document.getElementById('filterWeek');
+                if (rInput && rInput.value !== mon) {
+                    rInput.value = mon;
+                    generateDaySelectors();
+                    renderWeeklyTable();
+                }
             } else if (currentPresetType === 'month') {
                 const y = presetRefDate.getFullYear();
                 const m = presetRefDate.getMonth();
