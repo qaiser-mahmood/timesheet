@@ -1825,36 +1825,50 @@ async function ensureLoggedIn(force = false, isManual = false) {
       // Check "Remember this device" if present
       try {
         const trustDevice = page.locator('input[type="checkbox"], input[id*="remember" i], input[id*="trust" i]');
-        if (await trustDevice.count() > 0) await trustDevice.first().check();
+        if (await trustDevice.count().catch(() => 0) > 0) {
+          await trustDevice.first().check().catch(() => {});
+        }
       } catch (_) {}
 
-      // Press Enter in case form submits on Enter
-      await page.keyboard.press('Enter').catch(() => {});
-
-      // Click verify / submit button and wait for redirect
-      const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue"), button:has-text("Log in"), button:has-text("Next")');
-      if (await verifyBtn.count() > 0) {
-        await Promise.all([
-          page.waitForNavigation({ waitUntil: 'load', timeout: 35000 }).catch(() => {}),
-          verifyBtn.first().click().catch(() => {})
-        ]);
-      } else {
-        await page.waitForNavigation({ waitUntil: 'load', timeout: 20000 }).catch(() => {});
+      // Submit 2FA code: Click verify button or press Enter, safely handling immediate navigation
+      try {
+        const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue"), button:has-text("Log in"), button:has-text("Next")');
+        const btnExists = (await verifyBtn.count().catch(() => 0)) > 0;
+        
+        if (btnExists) {
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+            verifyBtn.first().click().catch(() => {})
+          ]);
+        } else {
+          await Promise.all([
+            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
+            page.keyboard.press('Enter').catch(() => {})
+          ]);
+        }
+      } catch (submitErr) {
+        console.log('Notice during 2FA submit trigger (page likely already navigating):', submitErr.message);
       }
 
-      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+      // Safely wait for navigation and network to settle
+      try {
+        await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+      } catch (_) {}
       await page.waitForTimeout(3000);
 
-      // Verify post-2FA state
+      // Verify post-2FA state safely
       let after2faUrl = '';
       let after2faText = '';
-      for (let attempt = 0; attempt < 5; attempt++) {
+      for (let attempt = 0; attempt < 6; attempt++) {
         try {
+          await page.waitForLoadState('domcontentloaded').catch(() => {});
           after2faUrl = page.url();
           after2faText = await page.innerText('body');
           break;
         } catch (_) {
-          await page.waitForTimeout(1000);
+          console.log(`Waiting for post-2FA page to settle (attempt ${attempt + 1})...`);
+          await page.waitForTimeout(1500);
         }
       }
 
