@@ -551,39 +551,97 @@
 
             <!-- VIEW 2: Multi-Period Comparison Tool -->
             <div id="analyticsCompareContainer" class="hidden space-y-4">
-                <!-- Comparison Controls & Mode Selector -->
+                <!-- Comparison Controls & Presets -->
                 <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700/70 space-y-3">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-2">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-xs font-bold text-slate-300">Compare By:</span>
-                            <button type="button" id="btnCompModeDay" onclick="switchCompareMode('day')" class="px-3 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition">
-                                📅 Day vs Day
-                            </button>
-                            <button type="button" id="btnCompModeWeek" onclick="switchCompareMode('week')" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-700 text-slate-300 hover:text-white transition">
-                                📆 Week vs Week
-                            </button>
-                            <button type="button" id="btnCompModeMonth" onclick="switchCompareMode('month')" class="px-3 py-1 rounded-lg text-xs font-bold bg-slate-700 text-slate-300 hover:text-white transition">
-                                🗓️ Month vs Month
-                            </button>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-2.5">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-xs font-bold text-slate-300">Quick Presets:</span>
+                            <button type="button" id="btnCompPresetThisVsLastWeek" onclick="setComparePreset('this_vs_last_week')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-600 text-white shadow transition border border-purple-500/50 cursor-pointer">This Week vs Last Week</button>
+                            <button type="button" id="btnCompPreset7d" onclick="setComparePreset('last_7_vs_prior_7')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white transition border border-slate-600 cursor-pointer">Last 7d vs Prior 7d</button>
+                            <button type="button" id="btnCompPresetThisVsLastMonth" onclick="setComparePreset('this_vs_last_month')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white transition border border-slate-600 cursor-pointer">This Month vs Last Month</button>
+                            <button type="button" id="btnCompPreset14d" onclick="setComparePreset('last_14_vs_prior_14')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white transition border border-slate-600 cursor-pointer">Last 14d vs Prior 14d</button>
+                            <button type="button" id="btnCompPreset30d" onclick="setComparePreset('last_30_vs_prior_30')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white transition border border-slate-600 cursor-pointer">Last 30d vs Prior 30d</button>
                         </div>
                     </div>
 
                     <!-- Period Selectors Container -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
                         <!-- Period A Picker -->
-                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-indigo-900/60 space-y-1">
-                            <div class="text-[10px] uppercase font-bold text-indigo-400 flex items-center gap-1">
-                                <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Period A (Baseline)
+                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-indigo-900/60 space-y-1.5 relative" id="compCalendarWrapperA">
+                            <div class="flex items-center justify-between">
+                                <div class="text-[10px] uppercase font-bold text-indigo-400 flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-xs"></span>
+                                    <span>Period A (Baseline Range)</span>
+                                </div>
+                                <span id="compDaysBadgeA" class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/60 font-semibold">7 days</span>
                             </div>
-                            <div id="compPickerAContainer"></div>
+
+                            <button type="button" id="compCalendarTriggerBtnA" onclick="toggleCompCalendar('A', event)" class="w-full bg-slate-950 hover:bg-slate-900 border border-slate-700 hover:border-indigo-500 text-white rounded-lg px-3 py-2 text-xs font-bold flex items-center justify-between gap-2 transition shadow-sm cursor-pointer">
+                                <span class="flex items-center gap-2 truncate">
+                                    <span class="text-indigo-400 text-sm shrink-0">📅</span>
+                                    <span id="compCalendarDisplayA" class="truncate tracking-wide text-slate-200">Select Date Range</span>
+                                </span>
+                                <span class="text-slate-400 text-[9px] shrink-0">▼</span>
+                            </button>
+
+                            <!-- Popover Calendar A -->
+                            <div id="compCalendarPopoverA" class="hidden absolute left-0 top-full mt-2 z-50 bg-slate-900 border border-indigo-900/80 rounded-2xl p-3.5 shadow-2xl w-[310px] max-w-[calc(100vw-2rem)] text-white space-y-2.5">
+                                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                                    <button type="button" onclick="changeCompCalMonth('A', -1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs cursor-pointer">◀</button>
+                                    <span id="compCalMonthYearHeaderA" class="text-xs font-black text-white tracking-wide">September 2026</span>
+                                    <button type="button" onclick="changeCompCalMonth('A', 1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs cursor-pointer">▶</button>
+                                </div>
+                                <div id="compCalHintA" class="text-[10px] text-center text-indigo-300 font-semibold bg-indigo-950/40 border border-indigo-900/50 py-1 px-2 rounded-lg">
+                                    Click start date
+                                </div>
+                                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                                </div>
+                                <div id="compCalDaysGridA" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+                                <div class="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800">
+                                    <span class="italic">2 clicks to select range</span>
+                                    <button type="button" onclick="closeCompCalendar('A')" class="text-slate-400 hover:text-white font-bold cursor-pointer">Close ✕</button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Period B Picker -->
-                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-emerald-900/60 space-y-1">
-                            <div class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
-                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Period B (Comparison)
+                        <div class="bg-slate-900/80 p-2.5 rounded-xl border border-emerald-900/60 space-y-1.5 relative" id="compCalendarWrapperB">
+                            <div class="flex items-center justify-between">
+                                <div class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs"></span>
+                                    <span>Period B (Comparison Range)</span>
+                                </div>
+                                <span id="compDaysBadgeB" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-semibold">7 days</span>
                             </div>
-                            <div id="compPickerBContainer"></div>
+
+                            <button type="button" id="compCalendarTriggerBtnB" onclick="toggleCompCalendar('B', event)" class="w-full bg-slate-950 hover:bg-slate-900 border border-slate-700 hover:border-emerald-500 text-white rounded-lg px-3 py-2 text-xs font-bold flex items-center justify-between gap-2 transition shadow-sm cursor-pointer">
+                                <span class="flex items-center gap-2 truncate">
+                                    <span class="text-emerald-400 text-sm shrink-0">📅</span>
+                                    <span id="compCalendarDisplayB" class="truncate tracking-wide text-slate-200">Select Date Range</span>
+                                </span>
+                                <span class="text-slate-400 text-[9px] shrink-0">▼</span>
+                            </button>
+
+                            <!-- Popover Calendar B -->
+                            <div id="compCalendarPopoverB" class="hidden absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-50 bg-slate-900 border border-emerald-900/80 rounded-2xl p-3.5 shadow-2xl w-[310px] max-w-[calc(100vw-2rem)] text-white space-y-2.5">
+                                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                                    <button type="button" onclick="changeCompCalMonth('B', -1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs cursor-pointer">◀</button>
+                                    <span id="compCalMonthYearHeaderB" class="text-xs font-black text-white tracking-wide">September 2026</span>
+                                    <button type="button" onclick="changeCompCalMonth('B', 1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs cursor-pointer">▶</button>
+                                </div>
+                                <div id="compCalHintB" class="text-[10px] text-center text-emerald-300 font-semibold bg-emerald-950/40 border border-emerald-900/50 py-1 px-2 rounded-lg">
+                                    Click start date
+                                </div>
+                                <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400">
+                                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                                </div>
+                                <div id="compCalDaysGridB" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+                                <div class="pt-1 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800">
+                                    <span class="italic">2 clicks to select range</span>
+                                    <button type="button" onclick="closeCompCalendar('B')" class="text-slate-400 hover:text-white font-bold cursor-pointer">Close ✕</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1163,8 +1221,8 @@
 
             <!-- VIEW 4: Single Day Breakdown -->
             <div id="analyticsDailyContainer" class="hidden space-y-3">
-                <!-- Summary KPI Cards (3 Clean Cards, Labor % removed) -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <!-- Summary KPI Cards (2 Clean Cards) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
                         <div class="flex items-center justify-between">
                             <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Day's Net Sales</span>
@@ -1175,10 +1233,6 @@
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
                         <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Staff Labor Cost</div>
                         <div id="kpiWagesTotal" class="text-sm sm:text-base font-extrabold text-blue-400">$0.00</div>
-                    </div>
-                    <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
-                        <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Peak Sales Hour</div>
-                        <div id="kpiPeakHour" class="text-sm sm:text-base font-extrabold text-purple-300">—</div>
                     </div>
                 </div>
 
@@ -1875,6 +1929,11 @@
         window.applyCustomDateRange = applyCustomDateRange;
         window.setChartRangePreset = setChartRangePreset;
         window.switchCompareMode = switchCompareMode;
+        window.setComparePreset = setComparePreset;
+        window.toggleCompCalendar = toggleCompCalendar;
+        window.closeCompCalendar = closeCompCalendar;
+        window.changeCompCalMonth = changeCompCalMonth;
+        window.handleCompCalDayClick = handleCompCalDayClick;
         window.runComparison = runComparison;
         window.selectPreset = selectPreset;
         window.navigatePreset = navigatePreset;
@@ -4377,6 +4436,28 @@
                     // inside
                 } else {
                     closeLedgerCalendarPopover();
+                }
+            }
+
+            // Period A Compare Popover
+            const cWrapA = document.getElementById('compCalendarWrapperA');
+            const cPopA = document.getElementById('compCalendarPopoverA');
+            if (cPopA && !cPopA.classList.contains('hidden')) {
+                if (cWrapA && (cWrapA.contains(e.target) || (e.target && e.target.closest && e.target.closest('#compCalendarWrapperA')))) {
+                    // inside
+                } else {
+                    if (typeof closeCompCalendar === 'function') closeCompCalendar('A');
+                }
+            }
+
+            // Period B Compare Popover
+            const cWrapB = document.getElementById('compCalendarWrapperB');
+            const cPopB = document.getElementById('compCalendarPopoverB');
+            if (cPopB && !cPopB.classList.contains('hidden')) {
+                if (cWrapB && (cWrapB.contains(e.target) || (e.target && e.target.closest && e.target.closest('#compCalendarWrapperB')))) {
+                    // inside
+                } else {
+                    if (typeof closeCompCalendar === 'function') closeCompCalendar('B');
                 }
             }
         });
@@ -8808,76 +8889,353 @@ Do not include markdown fences.`;
         }
 
         // ==================== COMPARISON TOOL VIEW ====================
-        function switchCompareMode(mode) {
-            currentCompareMode = mode;
-            const btnDay = document.getElementById('btnCompModeDay');
-            const btnWeek = document.getElementById('btnCompModeWeek');
-            const btnMonth = document.getElementById('btnCompModeMonth');
+        currentCompareMode = 'custom';
+        let activeCompPreset = 'this_vs_last_week';
 
-            const activeClass = "px-3 py-1 rounded-lg text-xs font-bold bg-purple-600 text-white shadow transition";
-            const inactiveClass = "px-3 py-1 rounded-lg text-xs font-bold bg-slate-700 text-slate-300 hover:text-white transition";
+        let compRangeStartA = '';
+        let compRangeEndA = '';
+        let compRangeStartB = '';
+        let compRangeEndB = '';
 
-            if (btnDay) btnDay.className = (mode === 'day' ? activeClass : inactiveClass);
-            if (btnWeek) btnWeek.className = (mode === 'week' ? activeClass : inactiveClass);
-            if (btnMonth) btnMonth.className = (mode === 'month' ? activeClass : inactiveClass);
+        let compCalViewYearA = 2026;
+        let compCalViewMonthA = 8;
+        let compCalSelectionStepA = 0;
+        let tempCompRangeStartA = null;
+        let tempCompRangeEndA = null;
 
-            renderComparisonPickers();
+        let compCalViewYearB = 2026;
+        let compCalViewMonthB = 8;
+        let compCalSelectionStepB = 0;
+        let tempCompRangeStartB = null;
+        let tempCompRangeEndB = null;
+
+        function setComparePreset(presetType) {
+            activeCompPreset = presetType;
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+
+            if (presetType === 'this_vs_last_week') {
+                const monB = getMondayString(todayIso);
+                const sunB = addDaysString(monB, 6);
+                const monA = addDaysString(monB, -7);
+                const sunA = addDaysString(monA, 6);
+                compRangeStartA = monA;
+                compRangeEndA = sunA;
+                compRangeStartB = monB;
+                compRangeEndB = sunB;
+            } else if (presetType === 'last_7_vs_prior_7') {
+                compRangeEndB = todayIso;
+                compRangeStartB = addDaysString(todayIso, -6);
+                compRangeEndA = addDaysString(todayIso, -7);
+                compRangeStartA = addDaysString(todayIso, -13);
+            } else if (presetType === 'this_vs_last_month') {
+                const now = new Date();
+                const yB = now.getFullYear();
+                const mB = now.getMonth();
+                compRangeStartB = `${yB}-${String(mB + 1).padStart(2, '0')}-01`;
+                compRangeEndB = todayIso;
+
+                const prevMonthDate = new Date(yB, mB - 1, 1);
+                const yA = prevMonthDate.getFullYear();
+                const mA = prevMonthDate.getMonth();
+                const daysInA = new Date(yA, mA + 1, 0).getDate();
+                compRangeStartA = `${yA}-${String(mA + 1).padStart(2, '0')}-01`;
+                compRangeEndA = `${yA}-${String(mA + 1).padStart(2, '0')}-${String(daysInA).padStart(2, '0')}`;
+            } else if (presetType === 'last_14_vs_prior_14') {
+                compRangeEndB = todayIso;
+                compRangeStartB = addDaysString(todayIso, -13);
+                compRangeEndA = addDaysString(todayIso, -14);
+                compRangeStartA = addDaysString(todayIso, -27);
+            } else if (presetType === 'last_30_vs_prior_30') {
+                compRangeEndB = todayIso;
+                compRangeStartB = addDaysString(todayIso, -29);
+                compRangeEndA = addDaysString(todayIso, -30);
+                compRangeStartA = addDaysString(todayIso, -59);
+            }
+
+            updateCompPresetButtonsUI();
+            updateCompCalendarDisplay('A');
+            updateCompCalendarDisplay('B');
             runComparison();
         }
 
-        function getIsoWeekString(dateOrStr) {
-            const d = new Date(dateOrStr + (typeof dateOrStr === 'string' && !dateOrStr.includes('T') ? 'T00:00:00' : ''));
-            const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            const dayNr = (target.getUTCDay() + 6) % 7;
-            target.setUTCDate(target.getUTCDate() - dayNr + 3);
-            const firstThursday = target.valueOf();
-            target.setUTCMonth(0, 1);
-            if (target.getUTCDay() !== 4) {
-                target.setUTCMonth(0, 1 + ((4 - target.getUTCDay()) + 7) % 7);
-            }
-            const weekNr = 1 + Math.ceil((firstThursday - target) / 604800000);
-            return `${target.getUTCFullYear()}-W${String(weekNr).padStart(2, '0')}`;
+        function updateCompPresetButtonsUI() {
+            const presets = [
+                { id: 'btnCompPresetThisVsLastWeek', key: 'this_vs_last_week' },
+                { id: 'btnCompPreset7d', key: 'last_7_vs_prior_7' },
+                { id: 'btnCompPresetThisVsLastMonth', key: 'this_vs_last_month' },
+                { id: 'btnCompPreset14d', key: 'last_14_vs_prior_14' },
+                { id: 'btnCompPreset30d', key: 'last_30_vs_prior_30' }
+            ];
+
+            const activeCls = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-purple-600 text-white shadow transition border border-purple-500/50 cursor-pointer";
+            const inactiveCls = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 hover:text-white transition border border-slate-600 cursor-pointer";
+
+            presets.forEach(p => {
+                const btn = document.getElementById(p.id);
+                if (btn) {
+                    btn.className = (activeCompPreset === p.key ? activeCls : inactiveCls);
+                }
+            });
         }
 
-        function getMondayFromWeekInput(weekVal) {
-            if (!weekVal) return '';
-            if (weekVal.includes('-W')) {
-                const parts = weekVal.split('-W');
-                const year = parseInt(parts[0], 10);
-                const week = parseInt(parts[1], 10);
-                const jan4 = new Date(Date.UTC(year, 0, 4));
-                const dayOfWeek = jan4.getUTCDay() || 7;
-                const monWeek1 = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
-                const targetMon = new Date(monWeek1.getTime() + (week - 1) * 7 * 86400000);
-                return targetMon.toISOString().split('T')[0];
+        function updateCompCalendarDisplay(period) {
+            const isA = (period === 'A');
+            const start = isA ? compRangeStartA : compRangeStartB;
+            const end = isA ? compRangeEndA : compRangeEndB;
+            const displayEl = document.getElementById(`compCalendarDisplay${period}`);
+            const badgeEl = document.getElementById(`compDaysBadge${period}`);
+
+            if (!start || !end) {
+                if (displayEl) displayEl.innerText = "Select Date Range";
+                if (badgeEl) badgeEl.innerText = "0 days";
+                return;
             }
-            return getMondayString(weekVal);
+
+            const dates = getDatesInRange(start, end);
+            const count = dates.length;
+            const dayLabel = count === 1 ? '1 day' : `${count} days`;
+
+            if (displayEl) {
+                if (start === end) {
+                    displayEl.innerText = formatDisplayDateStr(start);
+                } else {
+                    displayEl.innerText = `${formatDisplayDateStr(start)} – ${formatDisplayDateStr(end)}`;
+                }
+            }
+            if (badgeEl) {
+                badgeEl.innerText = dayLabel;
+            }
         }
 
-        function renderComparisonPickers() {
-            const pA = document.getElementById('compPickerAContainer');
-            const pB = document.getElementById('compPickerBContainer');
-            if (!pA || !pB) return;
+        function initCompareDefaults() {
+            if (!compRangeStartA || !compRangeEndA || !compRangeStartB || !compRangeEndB) {
+                setComparePreset('this_vs_last_week');
+            } else {
+                updateCompPresetButtonsUI();
+                updateCompCalendarDisplay('A');
+                updateCompCalendarDisplay('B');
+            }
+        }
 
-            const todayIso = new Date().toISOString().split('T')[0];
-            const prevIso = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+        function switchCompareMode(mode) {
+            if (mode === 'day') setComparePreset('last_7_vs_prior_7');
+            else if (mode === 'week') setComparePreset('this_vs_last_week');
+            else if (mode === 'month') setComparePreset('this_vs_last_month');
+            else setComparePreset('this_vs_last_week');
+        }
 
-            if (currentCompareMode === 'day') {
-                pA.innerHTML = `<input type="date" id="compDateA" value="${prevIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
-                pB.innerHTML = `<input type="date" id="compDateB" value="${todayIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
-            } else if (currentCompareMode === 'week') {
-                // Use native week picker (<input type="week">) just like monthly picker on mobile!
-                const curWeekIso = getIsoWeekString(todayIso);
-                const prevWeekIso = getIsoWeekString(addDaysString(todayIso, -7));
-                pA.innerHTML = `<div class="space-y-1"><input type="week" id="compDateA" value="${prevWeekIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm"><div id="compDateASpan" class="text-[10px] text-indigo-300 font-bold"></div></div>`;
-                pB.innerHTML = `<div class="space-y-1"><input type="week" id="compDateB" value="${curWeekIso}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm"><div id="compDateBSpan" class="text-[10px] text-emerald-300 font-bold"></div></div>`;
-            } else if (currentCompareMode === 'month') {
-                const curMonthStr = todayIso.substring(0, 7); // YYYY-MM
-                const d = new Date();
-                d.setMonth(d.getMonth() - 1);
-                const prevMonthStr = d.toISOString().substring(0, 7);
-                pA.innerHTML = `<input type="month" id="compDateA" value="${prevMonthStr}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-500 shadow-sm">`;
-                pB.innerHTML = `<input type="month" id="compDateB" value="${curMonthStr}" oninput="runComparison()" onchange="runComparison()" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:border-emerald-500 shadow-sm">`;
+        function toggleCompCalendar(period, e) {
+            if (e) e.stopPropagation();
+            const popover = document.getElementById(`compCalendarPopover${period}`);
+            if (!popover) return;
+            if (popover.classList.contains('hidden')) {
+                openCompCalendar(period);
+            } else {
+                closeCompCalendar(period);
+            }
+        }
+
+        function openCompCalendar(period) {
+            const other = (period === 'A' ? 'B' : 'A');
+            closeCompCalendar(other);
+
+            const isA = (period === 'A');
+            const curStart = isA ? compRangeStartA : compRangeStartB;
+            const curEnd = isA ? compRangeEndA : compRangeEndB;
+
+            if (curStart) {
+                const parts = curStart.split('-');
+                if (isA) {
+                    compCalViewYearA = parseInt(parts[0], 10);
+                    compCalViewMonthA = parseInt(parts[1], 10) - 1;
+                    tempCompRangeStartA = curStart;
+                    tempCompRangeEndA = curEnd || curStart;
+                    compCalSelectionStepA = 0;
+                } else {
+                    compCalViewYearB = parseInt(parts[0], 10);
+                    compCalViewMonthB = parseInt(parts[1], 10) - 1;
+                    tempCompRangeStartB = curStart;
+                    tempCompRangeEndB = curEnd || curStart;
+                    compCalSelectionStepB = 0;
+                }
+            } else {
+                const now = new Date();
+                if (isA) {
+                    compCalViewYearA = now.getFullYear();
+                    compCalViewMonthA = now.getMonth();
+                    tempCompRangeStartA = null;
+                    tempCompRangeEndA = null;
+                    compCalSelectionStepA = 0;
+                } else {
+                    compCalViewYearB = now.getFullYear();
+                    compCalViewMonthB = now.getMonth();
+                    tempCompRangeStartB = null;
+                    tempCompRangeEndB = null;
+                    compCalSelectionStepB = 0;
+                }
+            }
+
+            renderCompCalendarGrid(period);
+            const popover = document.getElementById(`compCalendarPopover${period}`);
+            if (popover) popover.classList.remove('hidden');
+        }
+
+        function closeCompCalendar(period) {
+            const popover = document.getElementById(`compCalendarPopover${period}`);
+            if (popover) popover.classList.add('hidden');
+        }
+
+        function changeCompCalMonth(period, delta) {
+            const isA = (period === 'A');
+            let m = isA ? compCalViewMonthA : compCalViewMonthB;
+            let y = isA ? compCalViewYearA : compCalViewYearB;
+
+            m += delta;
+            if (m < 0) {
+                m = 11;
+                y--;
+            } else if (m > 11) {
+                m = 0;
+                y++;
+            }
+
+            if (isA) {
+                compCalViewMonthA = m;
+                compCalViewYearA = y;
+            } else {
+                compCalViewMonthB = m;
+                compCalViewYearB = y;
+            }
+
+            renderCompCalendarGrid(period);
+        }
+
+        function renderCompCalendarGrid(period) {
+            const isA = (period === 'A');
+            const viewYear = isA ? compCalViewYearA : compCalViewYearB;
+            const viewMonth = isA ? compCalViewMonthA : compCalViewMonthB;
+            const step = isA ? compCalSelectionStepA : compCalSelectionStepB;
+            const tempStart = isA ? tempCompRangeStartA : tempCompRangeStartB;
+            const tempEnd = isA ? tempCompRangeEndA : tempCompRangeEndB;
+
+            const headerEl = document.getElementById(`compCalMonthYearHeader${period}`);
+            const gridEl = document.getElementById(`compCalDaysGrid${period}`);
+            const hintEl = document.getElementById(`compCalHint${period}`);
+            if (!gridEl) return;
+
+            if (headerEl) {
+                headerEl.innerText = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+            }
+
+            if (hintEl) {
+                if (step === 0) {
+                    hintEl.innerText = "Click start date";
+                    hintEl.className = isA
+                        ? "text-[10px] text-center text-indigo-300 font-semibold bg-indigo-950/40 border border-indigo-900/50 py-1 px-2 rounded-lg"
+                        : "text-[10px] text-center text-emerald-300 font-semibold bg-emerald-950/40 border border-emerald-900/50 py-1 px-2 rounded-lg";
+                } else {
+                    hintEl.innerText = "Click end date (or same day)";
+                    hintEl.className = "text-[10px] text-center text-amber-300 font-semibold bg-amber-950/40 border border-amber-900/50 py-1 px-2 rounded-lg animate-pulse";
+                }
+            }
+
+            const firstDay = new Date(viewYear, viewMonth, 1);
+            const lastDay = new Date(viewYear, viewMonth + 1, 0);
+            const numDays = lastDay.getDate();
+            const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Mon=0, Sun=6
+
+            let html = '';
+            for (let i = 0; i < startDayOfWeek; i++) {
+                html += '<div class="p-1.5"></div>';
+            }
+
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const primaryBg = isA ? "bg-indigo-600" : "bg-emerald-600";
+            const rangeBg = isA ? "bg-indigo-900/50 text-indigo-200" : "bg-emerald-900/50 text-emerald-200";
+            const todayBorder = isA ? "border border-indigo-500 text-white" : "border border-emerald-500 text-white";
+
+            for (let d = 1; d <= numDays; d++) {
+                const dStr = String(d).padStart(2, '0');
+                const mStr = String(viewMonth + 1).padStart(2, '0');
+                const iso = `${viewYear}-${mStr}-${dStr}`;
+
+                let btnCls = "w-full py-1.5 rounded-lg text-xs font-bold transition hover:bg-slate-700 ";
+                let isStart = (iso === tempStart);
+                let isEnd = (iso === tempEnd);
+                let isInRange = (tempStart && tempEnd && iso > tempStart && iso < tempEnd);
+
+                if (isStart && isEnd) {
+                    btnCls += `${primaryBg} text-white font-black shadow `;
+                } else if (isStart) {
+                    btnCls += `${primaryBg} text-white font-black rounded-r-none `;
+                } else if (isEnd) {
+                    btnCls += `${primaryBg} text-white font-black rounded-l-none `;
+                } else if (isInRange) {
+                    btnCls += `${rangeBg} rounded-none `;
+                } else if (iso === todayIso) {
+                    btnCls += `${todayBorder} `;
+                } else {
+                    btnCls += "text-slate-300 ";
+                }
+
+                html += `<button type="button" onclick="handleCompCalDayClick('${period}', event, '${iso}')" class="${btnCls}">${d}</button>`;
+            }
+
+            gridEl.innerHTML = html;
+        }
+
+        function handleCompCalDayClick(period, e, isoDate) {
+            if (e) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+
+            const isA = (period === 'A');
+            const step = isA ? compCalSelectionStepA : compCalSelectionStepB;
+
+            if (step === 0) {
+                if (isA) {
+                    tempCompRangeStartA = isoDate;
+                    tempCompRangeEndA = null;
+                    compCalSelectionStepA = 1;
+                } else {
+                    tempCompRangeStartB = isoDate;
+                    tempCompRangeEndB = null;
+                    compCalSelectionStepB = 1;
+                }
+                renderCompCalendarGrid(period);
+            } else {
+                let s = isA ? tempCompRangeStartA : tempCompRangeStartB;
+                let end = isoDate;
+                if (end < s) {
+                    const tmp = s;
+                    s = end;
+                    end = tmp;
+                }
+
+                if (isA) {
+                    tempCompRangeStartA = s;
+                    tempCompRangeEndA = end;
+                    compRangeStartA = s;
+                    compRangeEndA = end;
+                    compCalSelectionStepA = 0;
+                } else {
+                    tempCompRangeStartB = s;
+                    tempCompRangeEndB = end;
+                    compRangeStartB = s;
+                    compRangeEndB = end;
+                    compCalSelectionStepB = 0;
+                }
+
+                activeCompPreset = 'custom';
+                updateCompPresetButtonsUI();
+                updateCompCalendarDisplay(period);
+                renderCompCalendarGrid(period);
+
+                setTimeout(() => {
+                    closeCompCalendar(period);
+                    runComparison();
+                }, 220);
             }
         }
 
@@ -8885,7 +9243,7 @@ Do not include markdown fences.`;
             return computePeriodFinancials(dates, currentStore);
         }
 
-        function renderComparisonChart(mode, datesA, datesB, labelA, labelB, valA, valB) {
+        function renderComparisonChart(datesA, datesB, labelA, labelB) {
             if (window.compChartInstance) {
                 try { window.compChartInstance.destroy(); } catch (e) {}
                 window.compChartInstance = null;
@@ -8894,9 +9252,9 @@ Do not include markdown fences.`;
             const canvas = document.getElementById('compChartCanvas');
             if (!canvas) return;
 
-            const isDay = (mode === 'day');
-            const isWeek = (mode === 'week');
-            const isMonth = (mode === 'month');
+            const lenA = (datesA && datesA.length) || 0;
+            const lenB = (datesB && datesB.length) || 0;
+            const isSingleDayBoth = (lenA === 1 && lenB === 1);
 
             let labels = [];
             let dataA = [];
@@ -8904,10 +9262,7 @@ Do not include markdown fences.`;
             let chartType = 'bar';
             let datasets = [];
 
-            if (isDay) {
-                // User requirement: Day vs Day with time on horizontal axis and money on vertical axis
-                chartType = 'bar';
-
+            if (isSingleDayBoth) {
                 const recA = getStoreSalesForDate(datesA[0], currentStore);
                 const recB = getStoreSalesForDate(datesB[0], currentStore);
                 const hDataA = (recA && recA.hourly) ? recA.hourly : {};
@@ -8954,78 +9309,41 @@ Do not include markdown fences.`;
                         borderRadius: 4
                     }
                 ];
-            } else if (isWeek) {
-                // User requirement: Daily sale bar chart for both weeks on same plot
-                chartType = 'bar';
+            } else {
+                const maxLen = Math.max(lenA, lenB, 1);
                 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-                labels = dayNames.map((dName, i) => {
-                    const dtA = datesA[i] ? formatDisplayDateStr(datesA[i]) : '';
-                    const dtB = datesB[i] ? formatDisplayDateStr(datesB[i]) : '';
-                    return `${dName} (${dtA} vs ${dtB})`;
-                });
+                for (let i = 0; i < maxLen; i++) {
+                    const dtA = datesA[i];
+                    const dtB = datesB[i];
+                    const valA = dtA ? Number(getStoreSalesForDate(dtA, currentStore)?.totalSales || 0) : null;
+                    const valB = dtB ? Number(getStoreSalesForDate(dtB, currentStore)?.totalSales || 0) : null;
+                    dataA.push(valA);
+                    dataB.push(valB);
 
-                dataA = datesA.map(dIso => {
-                    const rec = getStoreSalesForDate(dIso, currentStore);
-                    return rec ? Number(rec.totalSales || 0) : 0;
-                });
-
-                dataB = datesB.map(dIso => {
-                    const rec = getStoreSalesForDate(dIso, currentStore);
-                    return rec ? Number(rec.totalSales || 0) : 0;
-                });
-
-                datasets = [
-                    {
-                        label: `Week A (${labelA})`,
-                        data: dataA,
-                        backgroundColor: 'rgba(99, 102, 241, 0.85)',
-                        borderColor: '#6366f1',
-                        borderWidth: 1,
-                        borderRadius: 6
-                    },
-                    {
-                        label: `Week B (${labelB})`,
-                        data: dataB,
-                        backgroundColor: 'rgba(16, 185, 129, 0.85)',
-                        borderColor: '#10b981',
-                        borderWidth: 1,
-                        borderRadius: 6
+                    let lbl = `Day ${i + 1}`;
+                    if (lenA === 7 && lenB === 7) {
+                        lbl = dayNames[i % 7];
                     }
-                ];
-            } else if (isMonth) {
-                // User requirement: Vertical column bar chart instead of continuous line for Month vs Month
-                chartType = 'bar';
-                labels = Array.from({ length: 31 }, (_, i) => String(i + 1));
-
-                for (let d = 1; d <= 31; d++) {
-                    const dStr = String(d).padStart(2, '0');
-                    const isoA = `${valA}-${dStr}`;
-                    const isoB = `${valB}-${dStr}`;
-
-                    const recA = datesA.includes(isoA) ? getStoreSalesForDate(isoA, currentStore) : null;
-                    dataA.push(recA ? Number(recA.totalSales || 0) : (datesA.includes(isoA) ? 0 : 0));
-
-                    const recB = datesB.includes(isoB) ? getStoreSalesForDate(isoB, currentStore) : null;
-                    dataB.push(recB ? Number(recB.totalSales || 0) : (datesB.includes(isoB) ? 0 : 0));
+                    labels.push(lbl);
                 }
 
                 datasets = [
                     {
-                        label: `Month A (${labelA})`,
+                        label: `Period A (${labelA})`,
                         data: dataA,
                         backgroundColor: 'rgba(99, 102, 241, 0.85)',
                         borderColor: '#6366f1',
                         borderWidth: 1,
-                        borderRadius: 3
+                        borderRadius: 4
                     },
                     {
-                        label: `Month B (${labelB})`,
+                        label: `Period B (${labelB})`,
                         data: dataB,
                         backgroundColor: 'rgba(16, 185, 129, 0.85)',
                         borderColor: '#10b981',
                         borderWidth: 1,
-                        borderRadius: 3
+                        borderRadius: 4
                     }
                 ];
             }
@@ -9036,7 +9354,7 @@ Do not include markdown fences.`;
                     type: chartType,
                     data: { labels, datasets },
                     options: {
-                        indexAxis: 'x', // All charts now have categories/time on horizontal X-axis and money on vertical Y-axis
+                        indexAxis: 'x',
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: {
@@ -9065,16 +9383,19 @@ Do not include markdown fences.`;
                                 callbacks: {
                                     title: function(items) {
                                         if (!items.length) return '';
-                                        if (isMonth) return 'Day ' + items[0].label;
-                                        if (isDay) return 'Hour: ' + items[0].label;
-                                        return items[0].label;
+                                        if (isSingleDayBoth) return 'Hour: ' + items[0].label;
+                                        const idx = items[0].dataIndex;
+                                        const dtA = datesA[idx] ? formatDisplayDateStr(datesA[idx]) : '—';
+                                        const dtB = datesB[idx] ? formatDisplayDateStr(datesB[idx]) : '—';
+                                        return `Day ${idx + 1} (${dtA} vs ${dtB})`;
                                     },
                                     label: function(ctx) {
-                                        const val = ctx.raw !== null && ctx.raw !== undefined ? Number(ctx.raw) : 0;
+                                        if (ctx.raw === null || ctx.raw === undefined) return ` ${ctx.dataset.label}: N/A`;
+                                        const val = Number(ctx.raw);
                                         return ` ${ctx.dataset.label}: $${val.toFixed(2)}`;
                                     },
                                     afterBody: function(items) {
-                                        if (items.length >= 2) {
+                                        if (items.length >= 2 && items[0].raw !== null && items[1].raw !== null) {
                                             const vA = Number(items[0].raw || 0);
                                             const vB = Number(items[1].raw || 0);
                                             const diff = vB - vA;
@@ -9091,15 +9412,14 @@ Do not include markdown fences.`;
                             x: {
                                 title: {
                                     display: true,
-                                    text: isDay ? 'Time of Day (Trading Hours)' : (isWeek ? 'Day of the Week' : 'Day of the Month (1 – 31)'),
+                                    text: isSingleDayBoth ? 'Trading Hours' : 'Days of Period',
                                     color: '#64748b',
                                     font: { size: 10, weight: '700' }
                                 },
                                 grid: { color: 'rgba(51, 65, 85, 0.25)' },
                                 ticks: {
                                     color: '#94a3b8',
-                                    font: { size: 10, weight: '600' },
-                                    maxRotation: isWeek ? 30 : 0
+                                    font: { size: 10, weight: '600' }
                                 }
                             },
                             y: {
@@ -9122,19 +9442,20 @@ Do not include markdown fences.`;
                     }
                 });
             } else {
-                renderSvgComparisonFallback(canvas, isDay, labels, dataA, dataB, labelA, labelB);
+                renderSvgComparisonFallback(canvas, isSingleDayBoth, labels, dataA, dataB, labelA, labelB);
             }
         }
 
-        function renderSvgComparisonFallback(canvas, isDay, labels, dataA, dataB, labelA, labelB) {
+        function renderSvgComparisonFallback(canvas, isSingleDayBoth, labels, dataA, dataB, labelA, labelB) {
             const parent = canvas.parentElement;
             if (!parent) return;
-            const maxVal = Math.max(...dataA, ...dataB, 100);
+            const validVals = [...dataA.filter(v => v !== null), ...dataB.filter(v => v !== null)];
+            const maxVal = Math.max(...validVals, 100);
 
             let html = '<div class="space-y-1.5 overflow-y-auto max-h-[380px] pr-1">';
             labels.forEach((lb, i) => {
-                const vA = dataA[i] || 0;
-                const vB = dataB[i] || 0;
+                const vA = dataA[i] !== null ? Number(dataA[i]) : 0;
+                const vB = dataB[i] !== null ? Number(dataB[i]) : 0;
                 const wA = Math.round((vA / maxVal) * 100);
                 const wB = Math.round((vB / maxVal) * 100);
                 html += `
@@ -9160,95 +9481,66 @@ Do not include markdown fences.`;
         }
 
         function runComparison() {
-            const inputA = document.getElementById('compDateA');
-            const inputB = document.getElementById('compDateB');
-            if (!inputA || !inputB) return;
-
-            const valA = inputA.value;
-            const valB = inputB.value;
-            if (!valA || !valB) return;
-
-            let datesA = [];
-            let datesB = [];
-            let labelA = '';
-            let labelB = '';
-
-            if (currentCompareMode === 'day') {
-                datesA = [cleanDateStr(valA)];
-                datesB = [cleanDateStr(valB)];
-                labelA = formatDisplayDateStr(valA);
-                labelB = formatDisplayDateStr(valB);
-            } else if (currentCompareMode === 'week') {
-                const monA = getMondayFromWeekInput(valA);
-                const monB = getMondayFromWeekInput(valB);
-                datesA = [0,1,2,3,4,5,6].map(i => addDaysString(monA, i));
-                datesB = [0,1,2,3,4,5,6].map(i => addDaysString(monB, i));
-                const sunA = addDaysString(monA, 6);
-                const sunB = addDaysString(monB, 6);
-                labelA = `Week of ${formatDisplayDateStr(monA)}`;
-                labelB = `Week of ${formatDisplayDateStr(monB)}`;
-
-                // Update span subtitle under week pickers
-                const spanA = document.getElementById('compDateASpan');
-                const spanB = document.getElementById('compDateBSpan');
-                if (spanA) spanA.innerText = `${formatDisplayDateStr(monA)} – ${formatDisplayDateStr(sunA)}`;
-                if (spanB) spanB.innerText = `${formatDisplayDateStr(monB)} – ${formatDisplayDateStr(sunB)}`;
-            } else if (currentCompareMode === 'month') {
-                const partsA = valA.split('-').map(Number);
-                const daysInMonthA = new Date(partsA[0], partsA[1], 0).getDate();
-                datesA = [];
-                for (let d = 1; d <= daysInMonthA; d++) {
-                    datesA.push(`${valA}-${String(d).padStart(2, '0')}`);
-                }
-
-                const partsB = valB.split('-').map(Number);
-                const daysInMonthB = new Date(partsB[0], partsB[1], 0).getDate();
-                datesB = [];
-                for (let d = 1; d <= daysInMonthB; d++) {
-                    datesB.push(`${valB}-${String(d).padStart(2, '0')}`);
-                }
-
-                const mNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-                labelA = `${mNames[partsA[1]-1]} ${partsA[0]}`;
-                labelB = `${mNames[partsB[1]-1]} ${partsB[0]}`;
+            if (!compRangeStartA || !compRangeEndA || !compRangeStartB || !compRangeEndB) {
+                initCompareDefaults();
             }
+
+            const datesA = getDatesInRange(compRangeStartA, compRangeEndA);
+            const datesB = getDatesInRange(compRangeStartB, compRangeEndB);
+            const lenA = datesA.length;
+            const lenB = datesB.length;
+
+            const labelA = compRangeStartA === compRangeEndA
+                ? formatDisplayDateStr(compRangeStartA)
+                : `${formatDisplayDateStr(compRangeStartA)} – ${formatDisplayDateStr(compRangeEndA)}`;
+
+            const labelB = compRangeStartB === compRangeEndB
+                ? formatDisplayDateStr(compRangeStartB)
+                : `${formatDisplayDateStr(compRangeStartB)} – ${formatDisplayDateStr(compRangeEndB)}`;
 
             const metA = calculateMetricsForDates(datesA);
             const metB = calculateMetricsForDates(datesB);
 
+            const avgSalesA = lenA > 0 ? (metA.sales / lenA) : 0;
+            const avgSalesB = lenB > 0 ? (metB.sales / lenB) : 0;
+            const avgWagesA = lenA > 0 ? (metA.wages / lenA) : 0;
+            const avgWagesB = lenB > 0 ? (metB.wages / lenB) : 0;
+            const avgExpA = lenA > 0 ? (metA.expenses / lenA) : 0;
+            const avgExpB = lenB > 0 ? (metB.expenses / lenB) : 0;
+            const laborPctA = metA.sales > 0 ? (metA.wages / metA.sales * 100) : 0;
+            const laborPctB = metB.sales > 0 ? (metB.wages / metB.sales * 100) : 0;
+
             const container = document.getElementById('comparisonResultsContainer');
             if (!container) return;
 
-            function formatDiff(vA, vB, isCurrency = true, reverseGood = false) {
+            function formatDiff(vA, vB, isCurrency = true, reverseGood = false, isPercent = false) {
                 const diff = vB - vA;
                 const pct = vA > 0 ? (diff / vA) * 100 : (vB > 0 ? 100 : 0);
                 const sign = diff >= 0 ? '+' : '';
                 let isGood = diff >= 0;
                 if (reverseGood) isGood = diff <= 0;
                 const color = isGood ? 'text-emerald-400' : 'text-rose-400';
-                const formattedDiff = isCurrency ? `${sign}$${Math.abs(diff).toFixed(0)}` : `${sign}${diff.toFixed(1)}`;
-                return `<span class="${color} font-bold">${formattedDiff} (${sign}${pct.toFixed(1)}%)</span>`;
+                let formattedDiff;
+                if (isPercent) {
+                    formattedDiff = `${sign}${diff.toFixed(1)}%`;
+                } else if (isCurrency) {
+                    formattedDiff = `${sign}$${Math.abs(diff).toFixed(0)}`;
+                } else {
+                    formattedDiff = `${sign}${diff.toFixed(1)}`;
+                }
+                const pctSuffix = isPercent ? '' : ` (${sign}${pct.toFixed(1)}%)`;
+                return `<span class="${color} font-bold">${formattedDiff}${pctSuffix}</span>`;
             }
 
-            // Chart metadata based on current mode
-            let chartTitle = "Hourly Sales Comparison";
-            let chartSubtitle = "Hourly Vertical Columns (Time on Horizontal Axis) • Day vs Day";
-            let chartIcon = "📅";
+            const isSingleDayBoth = (lenA === 1 && lenB === 1);
+            let chartTitle = isSingleDayBoth ? "Hourly Sales Comparison" : "Daily Sales Comparison";
+            let chartSubtitle = isSingleDayBoth
+                ? "Hourly Trading Columns (Time on Horizontal Axis)"
+                : `Day-by-Day Progression (${lenA} days vs ${lenB} days)`;
+            let chartIcon = isSingleDayBoth ? "⏱️" : "📊";
             let canvasHeightClass = "h-[320px] sm:h-[380px]";
 
-            if (currentCompareMode === 'week') {
-                chartTitle = "Daily Sales Comparison";
-                chartSubtitle = "Daily Sales Bar Chart (Mon – Sun) on Same Plot";
-                chartIcon = "📆";
-                canvasHeightClass = "h-[300px] sm:h-[360px]";
-            } else if (currentCompareMode === 'month') {
-                chartTitle = "Daily Sales Comparison";
-                chartSubtitle = "Daily Vertical Column Bars of Both Months (Days 1 – 31)";
-                chartIcon = "🗓️";
-                canvasHeightClass = "h-[340px] sm:h-[400px]";
-            }
-
-            // Build Expense Categories Breakdown Rows (Filtered by current store)
+            // Build Expense Categories Breakdown Rows
             const validCategories = EXPENSE_CATEGORIES.filter(c => isCategoryForStore(c.key, currentStore));
             let expenseRowsHtml = '';
             let hasAnyCategoryExp = false;
@@ -9283,36 +9575,48 @@ Do not include markdown fences.`;
             const storeEntityName = currentStore === 'all' ? 'All Entities' : (currentStore === 'anatolya' ? 'Anatolya' : (currentStore === 'green_juice' ? 'Green Juice Bar' : 'Company Shared'));
 
             container.innerHTML = `
-                <!-- 1. Side-by-Side Cards -->
+                <!-- 1. Side-by-Side Summary KPI Cards -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="bg-indigo-950/40 border border-indigo-800/60 p-3.5 rounded-xl space-y-1 shadow-sm">
-                        <div class="text-[11px] font-extrabold text-indigo-300 uppercase tracking-wide flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-xs"></span>
-                            <span>Period A: ${labelA}</span>
+                    <div class="bg-indigo-950/40 border border-indigo-800/60 p-3.5 rounded-xl space-y-1.5 shadow-sm">
+                        <div class="text-[11px] font-extrabold text-indigo-300 uppercase tracking-wide flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-xs shrink-0"></span>
+                                <span class="truncate">Period A: ${labelA}</span>
+                            </div>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-900/60 border border-indigo-700/60 font-mono text-indigo-200">${lenA} ${lenA === 1 ? 'day' : 'days'}</span>
                         </div>
-                        <div class="text-xl font-black text-white">$${metA.sales.toFixed(2)}</div>
-                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap">
-                            <span>Labor: <b>$${metA.wages.toFixed(0)}</b></span>
+                        <div class="flex items-baseline justify-between">
+                            <div class="text-xl sm:text-2xl font-black text-white">$${metA.sales.toFixed(2)}</div>
+                            <div class="text-[11px] text-indigo-300 font-bold">$${avgSalesA.toFixed(0)}/day avg</div>
+                        </div>
+                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap border-t border-indigo-900/50">
+                            <span>Labor: <b>$${metA.wages.toFixed(0)}</b> <span class="text-[10px] text-slate-400">(${laborPctA.toFixed(1)}%)</span></span>
                             <span>Expenses: <b>$${metA.expenses.toFixed(0)}</b></span>
                             <span>Net Profit: <b class="${metA.net >= 0 ? 'text-purple-300' : 'text-rose-400'}">$${metA.net.toFixed(0)}</b></span>
                         </div>
                     </div>
 
-                    <div class="bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-xl space-y-1 shadow-sm">
-                        <div class="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs"></span>
-                            <span>Period B: ${labelB}</span>
+                    <div class="bg-emerald-950/40 border border-emerald-800/60 p-3.5 rounded-xl space-y-1.5 shadow-sm">
+                        <div class="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wide flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-xs shrink-0"></span>
+                                <span class="truncate">Period B: ${labelB}</span>
+                            </div>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/60 border border-emerald-700/60 font-mono text-emerald-200">${lenB} ${lenB === 1 ? 'day' : 'days'}</span>
                         </div>
-                        <div class="text-xl font-black text-white">$${metB.sales.toFixed(2)}</div>
-                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap">
-                            <span>Labor: <b>$${metB.wages.toFixed(0)}</b></span>
+                        <div class="flex items-baseline justify-between">
+                            <div class="text-xl sm:text-2xl font-black text-white">$${metB.sales.toFixed(2)}</div>
+                            <div class="text-[11px] text-emerald-300 font-bold">$${avgSalesB.toFixed(0)}/day avg</div>
+                        </div>
+                        <div class="text-[11px] text-slate-300 flex items-center gap-3 pt-1 flex-wrap border-t border-emerald-900/50">
+                            <span>Labor: <b>$${metB.wages.toFixed(0)}</b> <span class="text-[10px] text-slate-400">(${laborPctB.toFixed(1)}%)</span></span>
                             <span>Expenses: <b>$${metB.expenses.toFixed(0)}</b></span>
                             <span>Net Profit: <b class="${metB.net >= 0 ? 'text-purple-300' : 'text-rose-400'}">$${metB.net.toFixed(0)}</b></span>
                         </div>
                     </div>
                 </div>
 
-                <!-- 2. Visual Comparison Chart (Placed Directly Above the Expense & Variance Tables) -->
+                <!-- 2. Visual Comparison Chart -->
                 <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 sm:p-4 shadow-lg space-y-2.5">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                         <div class="flex items-center gap-2">
@@ -9352,8 +9656,8 @@ Do not include markdown fences.`;
                         <thead>
                             <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/50">
                                 <th class="p-2.5">Performance Metric</th>
-                                <th class="p-2.5 text-right">Period A</th>
-                                <th class="p-2.5 text-right">Period B</th>
+                                <th class="p-2.5 text-right">Period A (${lenA}d)</th>
+                                <th class="p-2.5 text-right">Period B (${lenB}d)</th>
                                 <th class="p-2.5 text-right">Variance (+ / -)</th>
                             </tr>
                         </thead>
@@ -9364,11 +9668,29 @@ Do not include markdown fences.`;
                                 <td class="p-2.5 text-right font-extrabold text-emerald-300">$${metB.sales.toFixed(2)}</td>
                                 <td class="p-2.5 text-right">${formatDiff(metA.sales, metB.sales, true, false)}</td>
                             </tr>
+                            <tr class="bg-slate-950/30">
+                                <td class="p-2.5 font-bold text-slate-300">⚡ Daily Average Sales</td>
+                                <td class="p-2.5 text-right font-bold text-slate-300">$${avgSalesA.toFixed(0)} / day</td>
+                                <td class="p-2.5 text-right font-bold text-emerald-300">$${avgSalesB.toFixed(0)} / day</td>
+                                <td class="p-2.5 text-right">${formatDiff(avgSalesA, avgSalesB, true, false)}</td>
+                            </tr>
                             <tr>
                                 <td class="p-2.5 font-bold">Staff Labor Wages ${metA.hasBankWages || metB.hasBankWages ? '<span class="text-[9px] text-sky-400 font-normal">(Bank + Cash)</span>' : ''}</td>
                                 <td class="p-2.5 text-right">$${metA.wages.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">$${metB.wages.toFixed(0)}</td>
                                 <td class="p-2.5 text-right">${formatDiff(metA.wages, metB.wages, true, true)}</td>
+                            </tr>
+                            <tr class="bg-slate-950/30">
+                                <td class="p-2.5 font-bold text-slate-300">⚡ Daily Average Wages</td>
+                                <td class="p-2.5 text-right font-bold text-slate-300">$${avgWagesA.toFixed(0)} / day</td>
+                                <td class="p-2.5 text-right font-bold text-slate-300">$${avgWagesB.toFixed(0)} / day</td>
+                                <td class="p-2.5 text-right">${formatDiff(avgWagesA, avgWagesB, true, true)}</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2.5 font-bold">Labor Cost % of Sales</td>
+                                <td class="p-2.5 text-right font-bold ${laborPctA > 35 ? 'text-rose-400' : (laborPctA >= 30 ? 'text-amber-400' : 'text-emerald-400')}">${laborPctA.toFixed(1)}%</td>
+                                <td class="p-2.5 text-right font-bold ${laborPctB > 35 ? 'text-rose-400' : (laborPctB >= 30 ? 'text-amber-400' : 'text-emerald-400')}">${laborPctB.toFixed(1)}%</td>
+                                <td class="p-2.5 text-right">${formatDiff(laborPctA, laborPctB, false, true, true)}</td>
                             </tr>
                             <tr>
                                 <td class="p-2.5 font-bold">Operating Expenses ${metA.hasBankWages || metB.hasBankWages ? '<span class="text-[9px] text-amber-400 font-normal">(excl. bank wages)</span>' : ''}</td>
@@ -9398,7 +9720,7 @@ Do not include markdown fences.`;
                     </table>
                 </div>
 
-                <!-- 4. Expense Categories Breakdown Comparison Table (Placed Directly Below Chart & Performance Table) -->
+                <!-- 4. Expense Categories Breakdown Comparison Table -->
                 <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80 shadow">
                     <div class="p-2.5 bg-slate-950/70 border-b border-slate-800 flex items-center justify-between">
                         <span class="text-[11px] uppercase font-extrabold text-slate-300 flex items-center gap-1.5">
@@ -9430,19 +9752,19 @@ Do not include markdown fences.`;
                 </div>
             `;
 
-            // Render Chart after elements are injected into DOM
             setTimeout(() => {
-                renderComparisonChart(currentCompareMode, datesA, datesB, labelA, labelB, valA, valB);
+                renderComparisonChart(datesA, datesB, labelA, labelB);
             }, 20);
         }
-        
+
         function renderComparisonView() {
-            const inputA = document.getElementById('compDateA');
-            const inputB = document.getElementById('compDateB');
-            if (!inputA || !inputB) {
-                renderComparisonPickers();
+            if (!compRangeStartA || !compRangeEndA || !compRangeStartB || !compRangeEndB) {
+                initCompareDefaults();
+            } else {
+                updateCompCalendarDisplay('A');
+                updateCompCalendarDisplay('B');
+                runComparison();
             }
-            runComparison();
         }
 
         function renderHourlyHeatmapView() {
@@ -9670,7 +9992,6 @@ function convertHourStr(hStr) {
             const kpiSales = document.getElementById('kpiSalesTotal');
             const kpiWages = document.getElementById('kpiWagesTotal');
             const kpiLabor = document.getElementById('kpiLaborPercent');
-            const kpiPeak = document.getElementById('kpiPeakHour');
 
             if (kpiSales) kpiSales.innerText = `$${totalDaySales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             const cardCashBadge = document.getElementById('kpiCardCashSplit');
@@ -9701,17 +10022,6 @@ function convertHourStr(hStr) {
                     kpiLabor.innerText = "—";
                 }
             }
-
-            let peakHour = "—";
-            let maxHourSale = 0;
-            for (const [hKey, amt] of Object.entries(hourlyData)) {
-                const numAmt = Number(amt) || 0;
-                if (numAmt > maxHourSale) {
-                    maxHourSale = numAmt;
-                    peakHour = `${convertHourStr(hKey)} ($${Math.round(numAmt)})`;
-                }
-            }
-            if (kpiPeak) kpiPeak.innerText = peakHour;
 
             const container = document.getElementById('hourlyChartContainer');
             if (!container) return;
