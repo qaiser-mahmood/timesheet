@@ -177,12 +177,12 @@
         <div id="rosterMainViewContainer" class="space-y-4">
             <!-- Roster Venue Switcher & Action Toolbar (Single Responsive Line, 4 Buttons) -->
             <div class="flex items-center justify-between gap-1 sm:gap-2 bg-slate-900 text-white p-1.5 sm:p-2.5 rounded-xl shadow-sm border border-slate-800">
-                <div class="hide-on-share inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-[11px] sm:text-xs font-semibold shrink-0">
-                    <button type="button" id="rosterStoreBtn_anatolya" onclick="switchStore('anatolya')" class="px-2 sm:px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1 sm:gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs">
-                        <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya</span>
+                <div class="hide-on-share flex flex-1 rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-[11px] sm:text-xs font-semibold mr-1.5 sm:mr-2">
+                    <button type="button" id="rosterStoreBtn_anatolya" onclick="switchStore('anatolya')" class="flex-1 justify-center px-2 sm:px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1 sm:gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer truncate" title="Anatolya Turkish Kebabs">
+                        <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded shrink-0"> <span class="truncate">Anatolya</span>
                     </button>
-                    <button type="button" id="rosterStoreBtn_green_juice" onclick="switchStore('green_juice')" class="px-2 sm:px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1 sm:gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar">
-                        <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice</span>
+                    <button type="button" id="rosterStoreBtn_green_juice" onclick="switchStore('green_juice')" class="flex-1 justify-center px-2 sm:px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1 sm:gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer truncate" title="Green Juice Bar">
+                        <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded shrink-0"> <span class="truncate">Green Juice</span>
                     </button>
                 </div>
                 <div class="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -329,23 +329,21 @@
         <!-- TAB 2: Hourly Sales & Analytics Intelligence (Hide on Share) -->
         <div id="hourlySalesSection" class="hidden hide-on-share bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white rounded-xl p-3 sm:p-5 space-y-4 shadow-xl border border-slate-800">
             <!-- Store Switcher for Sales & Expenses -->
-            <div class="flex items-center gap-2 bg-slate-950/80 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800/80">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Entity:</span>
-                    <div class="inline-flex rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold flex-wrap">
-                        <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer" title="Anatolya Turkish Kebabs (Epos Now)">
-                            <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Anatolya</span>
-                        </button>
-                        <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Green Juice Bar (Loyverse POS)">
-                            <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded"> <span>Green Juice</span>
-                        </button>
-                        <button type="button" id="storeBtn_company_shared" onclick="switchStore('company_shared')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Company shared overhead (vehicles, fuel, insurances, accounting, admin)">
-                            <span>🏢</span> <span>Company Overhead</span>
-                        </button>
-                        <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer" title="Consolidated view of all entities for BAS tax reporting">
-                            <span>🌐</span> <span>Consolidated (BAS)</span>
-                        </button>
-                    </div>
+            <div class="bg-slate-950/80 text-white p-2 sm:p-2.5 rounded-xl shadow-sm border border-slate-800/80 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 shrink-0">Entity:</span>
+                <div class="grid grid-cols-2 sm:flex sm:flex-row rounded-lg p-0.5 bg-slate-800 border border-slate-700/80 text-xs font-semibold gap-1 sm:gap-0.5 w-full sm:w-auto">
+                    <button type="button" id="storeBtn_anatolya" onclick="switchStore('anatolya')" class="w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer truncate" title="Anatolya Turkish Kebabs (Epos Now)">
+                        <img src="logo.png" alt="AK" class="w-3.5 h-3.5 object-contain inline-block rounded shrink-0"> <span class="truncate">Anatolya</span>
+                    </button>
+                    <button type="button" id="storeBtn_green_juice" onclick="switchStore('green_juice')" class="w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer truncate" title="Green Juice Bar (Loyverse POS)">
+                        <img src="freshJuiceLogo.png" alt="GJ" class="w-3.5 h-3.5 object-contain inline-block rounded shrink-0"> <span class="truncate">Green Juice</span>
+                    </button>
+                    <button type="button" id="storeBtn_company_shared" onclick="switchStore('company_shared')" class="w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer truncate" title="Company shared overhead (vehicles, fuel, insurances, accounting, admin)">
+                        <span>🏢</span> <span class="truncate">Company Overhead</span>
+                    </button>
+                    <button type="button" id="storeBtn_all" onclick="switchStore('all')" class="w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer truncate" title="Consolidated view of all entities for BAS tax reporting">
+                        <span>🌐</span> <span class="truncate">Consolidated (BAS)</span>
+                    </button>
                 </div>
             </div>
 
@@ -360,14 +358,14 @@
                     </span>
                     <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
-                <div class="flex items-center gap-1.5 sm:gap-2 text-xs">
-                    <button type="button" id="liveEposSyncBtn" onclick="handlePanelSyncClick()" class="text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer" title="Sync today's live sales from Epos Now">
+                <div class="grid grid-cols-3 gap-1.5 sm:flex sm:items-center sm:gap-2 text-xs w-full sm:w-auto">
+                    <button type="button" id="liveEposSyncBtn" onclick="handlePanelSyncClick()" class="w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer" title="Sync today's live sales from Epos Now">
                         <span id="liveEposSyncSpinner" class="w-3.5 h-3.5 flex items-center justify-center shrink-0">⚡</span> <span id="liveEposSyncText" class="truncate">Sync</span>
                     </button>
-                    <button type="button" onclick="refreshCloudData(true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap" title="Quick reload from Supabase database">
+                    <button type="button" onclick="refreshCloudData(true)" class="w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="Quick reload from Supabase database">
                         <span class="cloud-refresh-icon inline-block text-[10px]">🔄</span> <span>Refresh</span>
                     </button>
-                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses', true)" class="text-[11px] shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="View business expenses ledger">
+                    <button type="button" id="tabExpensesBtn" onclick="switchAnalyticsTab('expenses', true)" class="w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="View business expenses ledger">
                         📋 Expenses
                     </button>
                 </div>
@@ -394,47 +392,49 @@
             <!-- VIEW 1: Custom Date Range Chart -->
             <div id="analyticsDateRangeContainer" class="space-y-4">
                 <!-- Date Range Controls: Presets (Today/Week/Month with Nav) & Single Popover Calendar -->
-                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-                    <!-- Presets Group with Arrow Navigators (Today, Week, Month) -->
-                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col gap-2">
+                    <!-- Row 1: Today and Week -->
+                    <div class="grid grid-cols-2 gap-2 w-full">
                         <!-- Today Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                            <button type="button" onclick="navigatePreset('day', -1)" title="Previous Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
-                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="px-3 py-1.5 text-xs font-black bg-purple-600 text-white rounded-md shadow transition whitespace-nowrap min-w-[64px] text-center cursor-pointer">Today</button>
-                            <button type="button" onclick="navigatePreset('day', 1)" title="Next Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
+                        <div class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1 w-full">
+                            <button type="button" onclick="navigatePreset('day', -1)" title="Previous Day" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">◀</button>
+                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="flex-1 py-1.5 px-2 text-xs font-black bg-purple-600 text-white rounded-md shadow transition truncate text-center cursor-pointer">Today</button>
+                            <button type="button" onclick="navigatePreset('day', 1)" title="Next Day" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">▶</button>
                         </div>
 
                         <!-- Week Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                            <button type="button" onclick="navigatePreset('week', -1)" title="Previous Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
-                            <button type="button" id="btnPresetWeek" onclick="selectPreset('week')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[60px] text-center cursor-pointer">Week</button>
-                            <button type="button" onclick="navigatePreset('week', 1)" title="Next Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
-                        </div>
-
-                        <!-- Month Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                            <button type="button" onclick="navigatePreset('month', -1)" title="Previous Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
-                            <button type="button" id="btnPresetMonth" onclick="selectPreset('month')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[62px] text-center cursor-pointer">Month</button>
-                            <button type="button" onclick="navigatePreset('month', 1)" title="Next Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
+                        <div class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1 w-full">
+                            <button type="button" onclick="navigatePreset('week', -1)" title="Previous Week" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">◀</button>
+                            <button type="button" id="btnPresetWeek" onclick="selectPreset('week')" class="flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer">Week</button>
+                            <button type="button" onclick="navigatePreset('week', 1)" title="Next Week" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">▶</button>
                         </div>
                     </div>
 
-                    <!-- Single Interactive Calendar Trigger & Popover -->
-                    <div class="relative flex items-center gap-2" id="rangeCalendarWrapper">
-                        <input type="hidden" id="chartRangeFrom" value="">
-                        <input type="hidden" id="chartRangeTo" value="">
+                    <!-- Row 2: Month and Calendar Picker -->
+                    <div class="grid grid-cols-2 gap-2 w-full items-center">
+                        <!-- Month Preset Group -->
+                        <div class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1 w-full">
+                            <button type="button" onclick="navigatePreset('month', -1)" title="Previous Month" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">◀</button>
+                            <button type="button" id="btnPresetMonth" onclick="selectPreset('month')" class="flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer">Month</button>
+                            <button type="button" onclick="navigatePreset('month', 1)" title="Next Month" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">▶</button>
+                        </div>
 
-                        <!-- The Single Trigger Button -->
-                        <button type="button" id="rangeCalendarTriggerBtn" onclick="toggleRangeCalendarPopover(event)" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-purple-500/80 text-white rounded-lg px-3 py-1.5 text-xs font-bold flex items-center justify-between sm:justify-start gap-2.5 transition shadow-sm">
-                            <span class="flex items-center gap-1.5">
-                                <span class="text-purple-400 text-sm">📅</span>
-                                <span id="rangeCalendarDisplay" class="tracking-wide">Select Date Range</span>
-                            </span>
-                            <span class="text-slate-400 text-[9px]">▼</span>
-                        </button>
+                        <!-- Single Interactive Calendar Trigger & Popover -->
+                        <div class="relative w-full" id="rangeCalendarWrapper">
+                            <input type="hidden" id="chartRangeFrom" value="">
+                            <input type="hidden" id="chartRangeTo" value="">
 
-                        <!-- Popover Single Calendar Picker (1st click Start, 2nd click End, auto applies) -->
-                        <div id="rangeCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] text-white space-y-2.5">
+                            <!-- The Single Trigger Button -->
+                            <button type="button" id="rangeCalendarTriggerBtn" onclick="toggleRangeCalendarPopover(event)" class="w-full h-[46px] bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-purple-500/80 text-white rounded-lg px-2.5 py-1.5 text-xs font-bold flex items-center justify-between gap-1.5 transition shadow-sm cursor-pointer" title="Select custom date range">
+                                <span class="flex items-center gap-1.5 truncate">
+                                    <span class="text-purple-400 text-sm shrink-0">📅</span>
+                                    <span id="rangeCalendarDisplay" class="tracking-tight truncate text-[11px] sm:text-xs">Select Date Range</span>
+                                </span>
+                                <span class="text-slate-400 text-[9px] shrink-0">▼</span>
+                            </button>
+
+                            <!-- Popover Single Calendar Picker (1st click Start, 2nd click End, auto applies) -->
+                            <div id="rangeCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] max-w-[calc(100vw-1.5rem)] text-white space-y-2.5">
                             <!-- Popover Header with Month Nav -->
                             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                                 <button type="button" onclick="changeRangeCalMonth(-1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">◀</button>
@@ -693,48 +693,50 @@
                 </div>
 
                 <!-- Ledger Date Range Controls: Presets (Today/Week/Month with Nav) & All Preset + Popover Calendar -->
-                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-                    <!-- Presets Group with Arrow Navigators (Today, Week, Month) -->
-                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col gap-2">
+                    <!-- Row 1: Today and Week -->
+                    <div class="grid grid-cols-2 gap-2 w-full">
                         <!-- Today Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                            <button type="button" onclick="navigateLedgerPreset('day', -1)" title="Previous Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
-                            <button type="button" id="btnLedgerPresetDay" onclick="selectLedgerPreset('day')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[64px] text-center cursor-pointer">Today</button>
-                            <button type="button" onclick="navigateLedgerPreset('day', 1)" title="Next Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
+                        <div class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1 w-full">
+                            <button type="button" onclick="navigateLedgerPreset('day', -1)" title="Previous Day" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">◀</button>
+                            <button type="button" id="btnLedgerPresetDay" onclick="selectLedgerPreset('day')" class="flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer">Today</button>
+                            <button type="button" onclick="navigateLedgerPreset('day', 1)" title="Next Day" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">▶</button>
                         </div>
 
                         <!-- Week Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                            <button type="button" onclick="navigateLedgerPreset('week', -1)" title="Previous Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
-                            <button type="button" id="btnLedgerPresetWeek" onclick="selectLedgerPreset('week')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[60px] text-center cursor-pointer">Week</button>
-                            <button type="button" onclick="navigateLedgerPreset('week', 1)" title="Next Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
-                        </div>
-
-                        <!-- Month Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                            <button type="button" onclick="navigateLedgerPreset('month', -1)" title="Previous Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
-                            <button type="button" id="btnLedgerPresetMonth" onclick="selectLedgerPreset('month')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[62px] text-center cursor-pointer">Month</button>
-                            <button type="button" onclick="navigateLedgerPreset('month', 1)" title="Next Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
+                        <div class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1 w-full">
+                            <button type="button" onclick="navigateLedgerPreset('week', -1)" title="Previous Week" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">◀</button>
+                            <button type="button" id="btnLedgerPresetWeek" onclick="selectLedgerPreset('week')" class="flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer">Week</button>
+                            <button type="button" onclick="navigateLedgerPreset('week', 1)" title="Next Week" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">▶</button>
                         </div>
                     </div>
 
-                    <!-- Calendar Group: All Preset Button + Single Interactive Calendar Trigger & Popover -->
-                    <div class="relative flex items-center gap-2" id="ledgerCalendarWrapper">
-                        <button type="button" id="btnLedgerPresetAll" onclick="selectLedgerPreset('all')" title="Show all expenses from 1 June 2026 until today" class="px-3 py-1.5 text-xs font-black bg-amber-600 text-white rounded-lg shadow border border-amber-500 transition whitespace-nowrap">
-                            All (1/6)
-                        </button>
+                    <!-- Row 2: Month and Calendar Picker + All -->
+                    <div class="grid grid-cols-2 gap-2 w-full items-center">
+                        <!-- Month Preset Group -->
+                        <div class="flex items-center justify-between rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1 w-full">
+                            <button type="button" onclick="navigateLedgerPreset('month', -1)" title="Previous Month" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">◀</button>
+                            <button type="button" id="btnLedgerPresetMonth" onclick="selectLedgerPreset('month')" class="flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer">Month</button>
+                            <button type="button" onclick="navigateLedgerPreset('month', 1)" title="Next Month" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-base font-black cursor-pointer select-none shrink-0">▶</button>
+                        </div>
 
-                        <!-- Single Trigger Button -->
-                        <button type="button" id="ledgerCalendarTriggerBtn" onclick="toggleLedgerCalendarPopover(event)" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-amber-500/80 text-white rounded-lg px-3 py-1.5 text-xs font-bold flex items-center justify-between sm:justify-start gap-2.5 transition shadow-sm cursor-pointer" title="Filter ledger by date range">
-                            <span class="flex items-center gap-1.5">
-                                <span class="text-amber-400 text-sm">📅</span>
-                                <span id="ledgerCalendarDisplay" class="tracking-wide">All Time (1 Jun 2026 – Today)</span>
-                            </span>
-                            <span class="text-slate-400 text-[9px]">▼</span>
-                        </button>
+                        <!-- Calendar Group: All Preset Button + Single Interactive Calendar Trigger & Popover -->
+                        <div class="relative flex items-center gap-1.5 w-full" id="ledgerCalendarWrapper">
+                            <button type="button" id="btnLedgerPresetAll" onclick="selectLedgerPreset('all')" title="Show all expenses from 1 June 2026 until today" class="h-[46px] px-2.5 py-1 text-xs font-black bg-amber-600 text-white rounded-lg shadow border border-amber-500 transition whitespace-nowrap shrink-0 cursor-pointer">
+                                All (1/6)
+                            </button>
 
-                        <!-- Popover Single Calendar Picker (1st click Start, 2nd click End, auto applies) -->
-                        <div id="ledgerCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] max-w-[calc(100vw-1.5rem)] text-white space-y-2.5">
+                            <!-- Single Trigger Button -->
+                            <button type="button" id="ledgerCalendarTriggerBtn" onclick="toggleLedgerCalendarPopover(event)" class="h-[46px] flex-1 bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-amber-500/80 text-white rounded-lg px-2 py-1 text-xs font-bold flex items-center justify-between gap-1 transition shadow-sm cursor-pointer" title="Filter ledger by date range">
+                                <span class="flex items-center gap-1 truncate">
+                                    <span class="text-amber-400 text-sm shrink-0">📅</span>
+                                    <span id="ledgerCalendarDisplay" class="tracking-tight truncate text-[11px]">All Time</span>
+                                </span>
+                                <span class="text-slate-400 text-[8px] shrink-0">▼</span>
+                            </button>
+
+                            <!-- Popover Single Calendar Picker (1st click Start, 2nd click End, auto applies) -->
+                            <div id="ledgerCalendarPopover" class="hidden absolute right-0 top-full mt-2 z-50 bg-slate-900 border border-slate-700 rounded-2xl p-3.5 shadow-2xl w-[310px] max-w-[calc(100vw-1.5rem)] text-white space-y-2.5">
                             <!-- Popover Header with Month Nav -->
                             <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                                 <button type="button" onclick="changeLedgerCalMonth(-1)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition font-bold text-xs">◀</button>
@@ -1222,14 +1224,14 @@
                 <!-- Day Navigation Controls Bar -->
                 <div class="relative bg-slate-800/70 p-2 sm:p-2.5 rounded-xl border border-slate-700/70 flex flex-wrap items-center justify-between gap-2 shadow-sm">
                     <!-- Previous Day / Today or Date / Next Day Navigator -->
-                    <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
-                        <button type="button" onclick="navigateChartDay(-1)" title="Previous Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">
+                    <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-1 shadow-sm gap-1">
+                        <button type="button" onclick="navigateChartDay(-1)" title="Previous Day" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none">
                             ◀
                         </button>
                         <button type="button" id="chartDayNavBtn" onclick="jumpChartDayToToday()" title="Click to jump to Today" class="px-3.5 py-1.5 text-xs font-black bg-purple-600 hover:bg-purple-500 text-white rounded-md shadow transition whitespace-nowrap min-w-[76px] text-center cursor-pointer">
                             Today
                         </button>
-                        <button type="button" onclick="navigateChartDay(1)" title="Next Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">
+                        <button type="button" onclick="navigateChartDay(1)" title="Next Day" class="w-9 h-9 sm:w-10 sm:h-9 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-base font-black cursor-pointer select-none">
                             ▶
                         </button>
                     </div>
@@ -2882,17 +2884,17 @@
                     const text = document.getElementById('liveEposSyncText');
                     if (!btn) return;
                     if (currentStore === 'green_juice') {
-                        btn.className = "text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-emerald-500/30 cursor-pointer";
+                        btn.className = "w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-emerald-500/30 cursor-pointer";
                         btn.title = "Sync Green Juice Bar Sales via Loyverse POS";
                         if (spinner) spinner.innerText = "🥤";
                         if (text) text.innerText = "Sync";
                     } else if (currentStore === 'anatolya') {
-                        btn.className = "text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
+                        btn.className = "w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
                         btn.title = "Sync today's live sales from Epos Now";
                         if (spinner) spinner.innerText = "⚡";
                         if (text) text.innerText = "Sync";
                     } else {
-                        btn.className = "text-[11px] w-[74px] shrink-0 justify-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
+                        btn.className = "w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
                         btn.title = "Sync Sales";
                         if (spinner) spinner.innerText = "⚡";
                         if (text) text.innerText = "Sync";
@@ -3114,8 +3116,10 @@
                     if (!confirm(confirmMsg)) return;
 
                     const btn = document.getElementById('copyPrevWeekBtn');
-                    btn.innerText = "⏳ Copying...";
-                    btn.disabled = true;
+                    if (btn) {
+                        btn.innerHTML = '<span>⏳</span> <span>Copying...</span>';
+                        btn.disabled = true;
+                    }
 
                     try {
                         // 1. Try server-side action first
@@ -3158,8 +3162,10 @@
                         renderWeeklyTable();
                         alert(`Success! Copied ${count} shifts from previous week.`);
                     } finally {
-                        btn.innerText = "📋 Copy Last Week";
-                        btn.disabled = false;
+                        if (btn) {
+                            btn.innerHTML = '<span>📋</span> <span>Copy Last</span>';
+                            btn.disabled = false;
+                        }
                         loadCloudData();
                     }
                 }
@@ -4157,8 +4163,8 @@
             const btnWeek = document.getElementById('btnPresetWeek');
             const btnMonth = document.getElementById('btnPresetMonth');
             
-            const activeCls = "px-3 py-1.5 text-xs font-black bg-purple-600 text-white rounded-md shadow transition whitespace-nowrap cursor-pointer";
-            const inactiveCls = "px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap cursor-pointer";
+            const activeCls = "flex-1 py-1.5 px-2 text-xs font-black bg-purple-600 text-white rounded-md shadow transition truncate text-center cursor-pointer";
+            const inactiveCls = "flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer";
 
             if (btnDay) btnDay.className = (currentPresetType === 'day' ? activeCls : inactiveCls);
             if (btnWeek) btnWeek.className = (currentPresetType === 'week' ? activeCls : inactiveCls);
@@ -4645,9 +4651,9 @@
         function updateRosterTabButtonsUI() {
             const btnAna = document.getElementById('rosterStoreBtn_anatolya');
             const btnGj = document.getElementById('rosterStoreBtn_green_juice');
-            const activeAnaCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer";
-            const activeGjCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer";
-            const inactiveCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer";
+            const activeAnaCls = "flex-1 justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer truncate";
+            const activeGjCls = "flex-1 justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer truncate";
+            const inactiveCls = "flex-1 justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer truncate";
 
             if (btnAna) btnAna.className = (currentStore === 'anatolya' ? activeAnaCls : inactiveCls);
             if (btnGj) btnGj.className = (currentStore === 'green_juice' ? activeGjCls : inactiveCls);
@@ -4713,11 +4719,11 @@
             const btnCompany = document.getElementById('storeBtn_company_shared');
             const btnAll = document.getElementById('storeBtn_all');
 
-            const activeAmberCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer";
-            const activeEmeraldCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer";
-            const activePurpleCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-purple-600 text-white shadow-xs cursor-pointer";
-            const activeSkyCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-sky-600 text-white shadow-xs cursor-pointer";
-            const inactiveCls = "px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer";
+            const activeAmberCls = "w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow-xs cursor-pointer truncate";
+            const activeEmeraldCls = "w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-emerald-500 text-slate-950 shadow-xs cursor-pointer truncate";
+            const activePurpleCls = "w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-purple-600 text-white shadow-xs cursor-pointer truncate";
+            const activeSkyCls = "w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 bg-sky-600 text-white shadow-xs cursor-pointer truncate";
+            const inactiveCls = "w-full sm:w-auto justify-center px-2.5 py-1.5 rounded-md font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-700/50 cursor-pointer truncate";
 
             if (btnAnatolya) btnAnatolya.className = (storeKey === 'anatolya' ? activeAmberCls : inactiveCls);
             if (btnGJ) btnGJ.className = (storeKey === 'green_juice' ? activeEmeraldCls : inactiveCls);
@@ -5544,8 +5550,8 @@
             const btnMonth = document.getElementById('btnLedgerPresetMonth');
             const btnAll = document.getElementById('btnLedgerPresetAll');
 
-            const activeCls = "px-3 py-1.5 text-xs font-black bg-amber-600 text-white rounded-md shadow transition whitespace-nowrap cursor-pointer";
-            const inactiveCls = "px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap cursor-pointer";
+            const activeCls = "flex-1 py-1.5 px-2 text-xs font-black bg-amber-600 text-white rounded-md shadow transition truncate text-center cursor-pointer";
+            const inactiveCls = "flex-1 py-1.5 px-2 text-xs font-bold text-slate-200 hover:text-white rounded-md transition truncate text-center cursor-pointer";
 
             if (btnDay) btnDay.className = (currentLedgerPresetType === 'day' ? activeCls : inactiveCls);
             if (btnWeek) btnWeek.className = (currentLedgerPresetType === 'week' ? activeCls : inactiveCls);
