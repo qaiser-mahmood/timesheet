@@ -10040,9 +10040,11 @@ function convertHourStr(hStr) {
 
             let startHour = 9;  // 9:00 AM
             let endHour = 19;   // 7:00 PM (9am - 7pm trading hours)
+            let maxHourSale = 0;
 
             for (const [hKey, amt] of Object.entries(hourlyData)) {
                 const saleAmt = Number(amt) || 0;
+                if (saleAmt > maxHourSale) maxHourSale = saleAmt;
                 if (saleAmt > 0) {
                     const hNum = parseInt(hKey.split(':')[0], 10);
                     if (!isNaN(hNum)) {
