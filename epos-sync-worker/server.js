@@ -66,11 +66,14 @@ const appState = {
   activePage: null,
   isSyncing: false,
   isLoggingIn: false,
+  isPaused: false,
   pending2FACode: null,
   lastSyncTime: null,
   lastSyncResult: null,
   isAuthenticated: false,
   consecutiveFailures: 0,
+  last2FAPromptTime: 0,
+  consecutive2FAFailures: 0,
   telegramOffset: 0,
   activeSyncProgress: {
     isSyncing: false,
@@ -1429,12 +1432,20 @@ async function pollTelegram() {
 
         // Check if 2FA is pending and user entered 4-8 digits
         const cleanDigits = text.replace(/\s+/g, '');
-        if (appState.pending2FACode && /^\d{4,8}$/.test(cleanDigits)) {
-          console.log(`Received 2FA code from user: ${cleanDigits}`);
-          appState.pending2FACode.resolve(cleanDigits);
-          appState.pending2FACode = null;
-          await sendTelegramMessage(`👍 Code received (${cleanDigits})! Submitting to Epos Now...`);
-          continue;
+        if (/^\d{4,8}$/.test(cleanDigits)) {
+          if (appState.pending2FACode) {
+            console.log(`Received 2FA code from user: ${cleanDigits}`);
+            appState.pending2FACode.resolve(cleanDigits);
+            appState.pending2FACode = null;
+            await sendTelegramMessage(`👍 Code received (${cleanDigits})! Submitting to Epos Now...`);
+            continue;
+          } else {
+            await sendTelegramMessage(
+              `⚠️ No active login session is waiting for a code right now (the previous prompt may have expired).\n\n` +
+              `Type */login* to start a fresh login flow and generate a new code!`
+            );
+            continue;
+          }
         }
 
         const cmd = text.toLowerCase();
@@ -1445,25 +1456,42 @@ async function pollTelegram() {
             `• /login - Start fresh login and trigger SMS 2FA\n` +
             `• /sync - Run immediate sync to Supabase\n` +
             `• /status - Check status & last sync\n` +
-            `• /screenshot - View live browser screen\n\n` +
+            `• /screenshot - View live browser screen\n` +
+            `• /screentext - View text on current screen\n` +
+            `• /pause - Pause all automatic sync & SMS prompts\n` +
+            `• /resume - Resume automatic sync schedule\n\n` +
             `When 2FA SMS is requested, reply directly here with your 6-digit code.`
           );
+        } else if (cmd === '/pause' || cmd === '/stop') {
+          appState.isPaused = true;
+          await sendTelegramMessage(
+            `⏸️ *Sync & Auto-Login PAUSED*\n\n` +
+            `• Background scraping and automatic 2FA prompts are stopped.\n` +
+            `• No further SMS messages will be triggered.\n\n` +
+            `Type */resume* whenever you want to restart automatic sync, or */login* to log in manually.`
+          );
+        } else if (cmd === '/resume') {
+          appState.isPaused = false;
+          appState.last2FAPromptTime = 0;
+          appState.consecutive2FAFailures = 0;
+          await sendTelegramMessage(`▶️ *Sync & Auto-Login RESUMED*\n\nAutomatic schedule is active.`);
         } else if (cmd === '/status') {
           const { hour, minute, formatted } = getLocalTimeParts();
           const isOperating = (hour >= OPERATING_START_HOUR && hour < OPERATING_END_HOUR) || (hour === OPERATING_END_HOUR && minute === 0);
           const isPeak = (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR);
-          const mode = !isOperating ? '🌙 Sleep Mode (8pm–9am, keep-alive only)' : (isPeak ? '⚡ Peak (5-min sync)' : '🔄 Standard (15-min sync)');
+          const mode = appState.isPaused 
+            ? '⏸️ PAUSED by user' 
+            : (!isOperating ? '🌙 Sleep Mode (8pm–9am, keep-alive only)' : (isPeak ? '⚡ Peak (5-min sync)' : '🔄 Standard (15-min sync)'));
           await sendTelegramMessage(
             `📊 *Worker Status*\n\n` +
             `• Local Time: ${formatted} (${TIMEZONE})\n` +
             `• Current Mode: ${mode}\n` +
+            `• Sync Paused: ${appState.isPaused ? '⏸️ YES (Use /resume)' : '▶️ Active'}\n` +
             `• Operating Hours: 9:00 AM – 8:00 PM\n` +
-            `• Peak Hours: 11:00 AM – 3:00 PM (every 5 min)\n` +
             `• Authenticated: ${appState.isAuthenticated ? '✅ Yes' : '⚠️ No'}\n` +
             `• Login in progress: ${appState.isLoggingIn ? '⏳ Yes' : 'No'}\n` +
             `• Sync in progress: ${appState.isSyncing ? '⏳ Yes' : 'No'}\n` +
             `• Last Sync: ${appState.lastSyncTime || 'None yet'}\n` +
-            `• Last Result: ${appState.lastSyncResult ? JSON.stringify(appState.lastSyncResult) : 'N/A'}\n` +
             `• Account: ${EPOS_USERNAME}`
           );
         } else if (cmd.startsWith('/sync')) {
@@ -1485,7 +1513,8 @@ async function pollTelegram() {
             await sendTelegramMessage('⏳ Login is already in progress. Please wait a moment...');
           } else {
             await sendTelegramMessage('🔐 Initiating fresh login flow...');
-            ensureLoggedIn(true).catch(async (e) => {
+            appState.last2FAPromptTime = 0; // reset cooldown for manual request
+            ensureLoggedIn(true, true).catch(async (e) => {
               const stackTop = e.stack ? e.stack.split('\n')[1].trim() : '';
               await sendTelegramMessage(`❌ Login error: ${e.message}\n${stackTop}`);
             });
@@ -1611,7 +1640,21 @@ function waitFor2FACode(timeoutMs = 300000) {
 
 // Ensure user is logged in
 async function ensureLoggedIn(force = false, isManual = false) {
+  if (appState.isPaused && !isManual) {
+    throw new Error('Sync worker is currently paused by user command (/pause). Type /resume to enable.');
+  }
+
   if (appState.isLoggingIn) return await getActivePage();
+
+  // If called automatically by background cron, enforce a 30-minute cooldown on 2FA prompts
+  const now = Date.now();
+  const cooldownMs = 30 * 60 * 1000; // 30 minutes cooldown
+  if (!isManual && (now - appState.last2FAPromptTime < cooldownMs)) {
+    const remainingMin = Math.ceil((cooldownMs - (now - appState.last2FAPromptTime)) / 60000);
+    console.log(`[ensureLoggedIn] Auto-login skipped: 2FA prompt in cooldown (${remainingMin}m remaining). Use /login in Telegram to log in.`);
+    throw new Error(`Auto-login paused due to recent 2FA prompt (${remainingMin}m cooldown). Type /login in Telegram to log in.`);
+  }
+
   appState.isLoggingIn = true;
 
   try {
@@ -1633,6 +1676,7 @@ async function ensureLoggedIn(force = false, isManual = false) {
     if (!isLoginPage && !force) {
       console.log('Already logged in to Epos Now.');
       appState.isAuthenticated = true;
+      appState.consecutive2FAFailures = 0;
       return page;
     }
 
@@ -1702,6 +1746,7 @@ async function ensureLoggedIn(force = false, isManual = false) {
 
     if (is2FA) {
       console.log('2FA Challenge detected on screen!');
+      appState.last2FAPromptTime = Date.now();
 
       // Check if there is an explicit button to send the SMS
       try {
@@ -1733,19 +1778,49 @@ async function ensureLoggedIn(force = false, isManual = false) {
       await sendTelegramMessage(
         `📱 *Epos Now 2FA Code Required*\n\n` +
         (screenSummary ? `*Screen says:*\n_${screenSummary}_\n\n` : '') +
-        `➡️ *Reply directly with your 6-digit code*.\n\n` +
-        `💡 *Note*: If the screen asks for an *Authenticator App* code (e.g. Google Authenticator) or an *Email code*, please check those!\n` +
-        `💡 Type */screentext* to view full screen text, or */click Resend* if there is a resend button.`
+        `➡️ *Reply directly with your 6-digit code* within 5 minutes.\n\n` +
+        `💡 Type */pause* to stop automatic requests if you are busy.\n` +
+        `💡 Type */screentext* to view full screen text, or */click Resend* if needed.`
       );
 
       // Wait for user code from Telegram
       const code = await waitFor2FACode(300000);
-      await sendTelegramMessage(`👍 Received code ${code}. Entering into Epos Now...`);
+      await sendTelegramMessage(`👍 Received code ${code}. Submitting to Epos Now...`);
 
-      // Fill code into 2FA input
-      const codeInput = page.locator('input[name*="code" i], input[id*="code" i], input[type="text"], input[type="tel"], input[type="number"]');
-      await codeInput.first().waitFor({ state: 'visible', timeout: 15000 });
-      await codeInput.first().fill(code);
+      // 1. Detect multi-box single digit inputs (common in modern OTP screens)
+      const visibleInputs = page.locator('form input:visible, main input:visible, input[type="text"]:visible, input[type="tel"]:visible, input[type="number"]:visible');
+      const inputCount = await visibleInputs.count();
+      let filled = false;
+
+      if (inputCount >= 6) {
+        console.log(`Found ${inputCount} visible inputs on 2FA screen. Attempting multi-box fill...`);
+        try {
+          for (let i = 0; i < Math.min(code.length, inputCount); i++) {
+            await visibleInputs.nth(i).click().catch(() => {});
+            await visibleInputs.nth(i).fill(code[i]);
+            await page.waitForTimeout(60);
+          }
+          filled = true;
+        } catch (multiErr) {
+          console.warn('Multi-box fill failed, trying single input fallback:', multiErr.message);
+        }
+      }
+
+      // 2. Single code input fallback
+      if (!filled) {
+        const codeInput = page.locator('input[name*="code" i], input[id*="code" i], input[autocomplete*="one-time-code" i], input[type="tel"], input[type="number"], input[type="text"]:visible');
+        if (await codeInput.count() > 0) {
+          await codeInput.first().click().catch(() => {});
+          await codeInput.first().fill('');
+          await codeInput.first().fill(code);
+          filled = true;
+        }
+      }
+
+      // 3. Fallback: keyboard typing
+      if (!filled) {
+        await page.keyboard.type(code, { delay: 80 });
+      }
 
       // Check "Remember this device" if present
       try {
@@ -1753,15 +1828,73 @@ async function ensureLoggedIn(force = false, isManual = false) {
         if (await trustDevice.count() > 0) await trustDevice.first().check();
       } catch (_) {}
 
+      // Press Enter in case form submits on Enter
+      await page.keyboard.press('Enter').catch(() => {});
+
       // Click verify / submit button and wait for redirect
-      const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue")');
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'load', timeout: 35000 }).catch(() => {}),
-        verifyBtn.first().click()
-      ]);
+      const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue"), button:has-text("Log in"), button:has-text("Next")');
+      if (await verifyBtn.count() > 0) {
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'load', timeout: 35000 }).catch(() => {}),
+          verifyBtn.first().click().catch(() => {})
+        ]);
+      } else {
+        await page.waitForNavigation({ waitUntil: 'load', timeout: 20000 }).catch(() => {});
+      }
 
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
       await page.waitForTimeout(3000);
+
+      // Verify post-2FA state
+      let after2faUrl = '';
+      let after2faText = '';
+      for (let attempt = 0; attempt < 5; attempt++) {
+        try {
+          after2faUrl = page.url();
+          after2faText = await page.innerText('body');
+          break;
+        } catch (_) {
+          await page.waitForTimeout(1000);
+        }
+      }
+
+      const isStill2FAOrLogin = after2faUrl.toLowerCase().includes('twofactor') ||
+        after2faUrl.toLowerCase().includes('verification') ||
+        after2faUrl.toLowerCase().includes('challenge') ||
+        after2faUrl.toLowerCase().includes('login') ||
+        after2faText.toLowerCase().includes('invalid code') ||
+        after2faText.toLowerCase().includes('incorrect code') ||
+        after2faText.toLowerCase().includes('expired') ||
+        after2faText.toLowerCase().includes('enter code');
+
+      if (isStill2FAOrLogin) {
+        appState.consecutive2FAFailures++;
+        appState.isAuthenticated = false;
+
+        let reason = 'Epos Now rejected the code or remained on the verification screen.';
+        if (after2faText.toLowerCase().includes('invalid') || after2faText.toLowerCase().includes('incorrect')) {
+          reason = 'Epos Now: "Invalid or incorrect verification code".';
+        } else if (after2faText.toLowerCase().includes('expired')) {
+          reason = 'Epos Now: "Verification code has expired".';
+        } else if (after2faText.toLowerCase().includes('too many')) {
+          reason = 'Epos Now: "Too many attempts. Account may be temporarily locked".';
+        }
+
+        try {
+          const failBuf = await page.screenshot();
+          await sendTelegramPhoto(failBuf, `❌ 2FA Failed: ${reason.slice(0, 100)}`);
+        } catch (_) {}
+
+        await sendTelegramMessage(
+          `❌ *Epos Now Login Failed*\n\n` +
+          `• *Reason*: ${reason}\n` +
+          `• *Page URL*: \`${after2faUrl}\`\n\n` +
+          `⏸️ *Auto-login paused for 30 minutes* to avoid repeated SMS messages.\n` +
+          `When you are ready, type */login* in Telegram to try again.`
+        );
+
+        throw new Error(reason);
+      }
     }
 
     // Save authenticated session state
@@ -1769,6 +1902,7 @@ async function ensureLoggedIn(force = false, isManual = false) {
     await context.storageState({ path: STORAGE_STATE_PATH });
     console.log('Saved authenticated session to storageState.json');
     appState.isAuthenticated = true;
+    appState.consecutive2FAFailures = 0;
 
     // Send confirmation & screenshot
     try {
@@ -1783,7 +1917,13 @@ async function ensureLoggedIn(force = false, isManual = false) {
     const stackTop = err.stack ? err.stack.split('\n').slice(0, 3).join('\n') : '';
     console.error('Login flow failed:', err.message, stackTop);
     try {
-      if (appState.activePage) {
+      if (err.message.includes('Timed out waiting for 2FA code')) {
+        await sendTelegramMessage(
+          `⏰ *2FA Code Request Expired*\n\n` +
+          `No code was received within 5 minutes. Auto-login is now paused for 30 minutes.\n` +
+          `Type */login* whenever you wish to log in.`
+        );
+      } else if (appState.activePage && !err.message.includes('rejected credentials') && !err.message.includes('rejected the code') && !err.message.includes('Auto-login paused')) {
         await appState.activePage.waitForTimeout(1000);
         const errBuf = await appState.activePage.screenshot();
         await sendTelegramPhoto(errBuf, `❌ Login Error: ${err.message.slice(0, 100)}\n${stackTop.slice(0, 120)}`);
@@ -2358,6 +2498,11 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 
 // Main Sync Engine: Scrapes Today's live transactions
 async function runSync(isManual = false, notifyTelegram = false) {
+  if (appState.isPaused && !isManual) {
+    console.log('Sync is paused by user command (/pause). Skipping.');
+    return;
+  }
+
   if (appState.isSyncing) {
     console.log('Sync is already running. Skipping.');
     return;
@@ -2374,7 +2519,7 @@ async function runSync(isManual = false, notifyTelegram = false) {
 
   try {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\nMode: Today's Live Sales\n============================`);
-    const page = await ensureLoggedIn(false, false);
+    const page = await ensureLoggedIn(false, isManual);
 
     console.log('Loading fresh transactions report page for Today...');
     await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
@@ -2430,7 +2575,7 @@ async function runSync(isManual = false, notifyTelegram = false) {
 // Keep-Alive Heartbeat (Maintains active Epos Now session 24/7)
 // ----------------------------------------------------
 async function sessionHeartbeat() {
-  if (appState.isSyncing || appState.isLoggingIn) return;
+  if (appState.isSyncing || appState.isLoggingIn || appState.isPaused) return;
   try {
     const page = await getActivePage();
     if (page) {
@@ -2447,8 +2592,9 @@ async function sessionHeartbeat() {
       if (!isLoginPage) {
         appState.isAuthenticated = true;
       } else {
-        console.log('[Heartbeat] Session appears expired. Refreshing login...');
-        ensureLoggedIn(false, false).catch(e => console.warn('[Heartbeat] Login check:', e.message));
+        console.log('[Heartbeat] Session appears logged out. Awaiting manual /login or scheduled run.');
+        appState.isAuthenticated = false;
+        // Do NOT call ensureLoggedIn here! Heartbeat must NEVER trigger automated 2FA SMS prompts in the background!
       }
     }
   } catch (err) {
@@ -2479,6 +2625,10 @@ function getLocalTimeParts() {
 
 // Smart Cron: Evaluates every 5 minutes whether to sync based on Operating Hours (9am-8pm) & Peak (11am-3pm)
 cron.schedule('*/5 * * * *', () => {
+  if (appState.isPaused) {
+    console.log('[Cron] Sync is paused by user command (/pause).');
+    return;
+  }
   const { hour, minute, formatted } = getLocalTimeParts();
 
   // Operating window: 9:00 AM to 8:00 PM (hour 9 through 19, plus final sync at 20:00)
