@@ -1183,13 +1183,10 @@
                 </div>
 
                 <!-- Operating Hours Reference Note -->
-                <div class="text-[10px] text-slate-400 italic px-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span>🕒 <b>Shop Trading Hours:</b></span>
-                    <span>Mon–Wed: 9:30am–5pm</span>
-                    <span class="text-amber-300 font-semibold">Thu: 9:30am–7pm (Late Night)</span>
-                    <span>Fri: 9:30am–5pm</span>
-                    <span class="text-sky-300 font-semibold">Sat: 9am–5pm (Early Open)</span>
-                    <span>Sun: 9:30am–5pm</span>
+                <div id="heatmapTradingHoursNote" class="text-[10px] text-slate-400 italic px-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span>🕒 <b>Trading Hours:</b></span>
+                    <span>Mon–Wed, Fri–Sun: 9am–5pm</span>
+                    <span class="text-amber-300 font-semibold">Thu: 9am–8pm (Late Night)</span>
                 </div>
 
                 <!-- Heatmap Table Matrix -->
@@ -1209,6 +1206,7 @@
                                 <th class="p-1 text-center">5 PM</th>
                                 <th class="p-1 text-center">6 PM</th>
                                 <th class="p-1 text-center">7 PM</th>
+                                <th class="p-1 text-center">8 PM</th>
                                 <th class="p-2 text-right w-20">Day Total</th>
                             </tr>
                         </thead>
@@ -3442,17 +3440,15 @@
                     const [year, month, day] = dateInput.split('-').map(Number);
                     const dayOfWeek = new Date(year, month - 1, day).getDay(); 
                     
-                    let defaultStart = "09:30", defaultEnd = "17:00";
+                    let defaultStart = "09:00", defaultEnd = "17:00";
                     if (currentStore === 'green_juice') {
-                        // Green Juice default timings:
-                        // Start: 9am (09:00) Mon-Sat, 10:30am (10:30) Sunday
-                        // End: 6pm (18:00) every day except Thursday which is 9pm (21:00)
-                        defaultStart = (dayOfWeek === 0) ? "10:30" : "09:00";
+                        // Green Juice timings: Mon-Wed, Fri-Sun: 9am-6pm, Thu: 9am-9pm
+                        defaultStart = "09:00";
                         defaultEnd = (dayOfWeek === 4) ? "21:00" : "18:00";
                     } else {
-                        // Anatolya default timings:
-                        if (dayOfWeek === 6) defaultStart = "09:00";
-                        if (dayOfWeek === 4) defaultEnd = "19:00";
+                        // Anatolya timings: Mon-Wed, Fri-Sun: 9am-5pm, Thu: 9am-8pm
+                        defaultStart = "09:00";
+                        defaultEnd = (dayOfWeek === 4) ? "20:00" : "17:00";
                     }
                     document.getElementById('startTime').value = defaultStart;
                     document.getElementById('endTime').value = defaultEnd;
@@ -3998,18 +3994,38 @@
         let currentHeatmapMode = 'active_week';
         let currentCompareMode = 'day';
 
-        function isShopOpenHour(dayOfWeek, hour) {
-            // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-            if (hour < 9) return false;
-            if (dayOfWeek === 4) return hour <= 18; // Thu open till 7pm
-            if (dayOfWeek === 6) return hour <= 16; // Sat 9am - 5pm
-            return hour <= 16; // 9:30am - 5pm
+        function getStoreTradingHourRange(storeKey = currentStore, dow) {
+            // dow: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+            // Slot ranges: [startHour, endHour]
+            // Anatolya: Thu 9am-8pm [9, 19], Mon-Wed, Fri-Sun 9am-5pm [9, 16]
+            // Green Juice: Thu 9am-9pm [9, 20], Mon-Wed, Fri-Sun 9am-6pm [9, 17]
+            // Consolidated / All: Thu 9am-9pm [9, 20], Mon-Wed, Fri-Sun 9am-6pm [9, 17]
+            if (storeKey === 'green_juice') {
+                return (dow === 4) ? [9, 20] : [9, 17];
+            } else if (storeKey === 'anatolya') {
+                return (dow === 4) ? [9, 19] : [9, 16];
+            } else {
+                return (dow === 4) ? [9, 20] : [9, 17];
+            }
         }
 
-        function getShopHoursDescription(dayOfWeek) {
-            if (dayOfWeek === 4) return "9:30 AM – 7:00 PM (Late Night)";
-            if (dayOfWeek === 6) return "9:00 AM – 5:00 PM (Early Open)";
-            return "9:30 AM – 5:00 PM";
+        function isShopOpenHour(dayOfWeek, hour, storeKey = currentStore) {
+            // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+            const [startH, endH] = getStoreTradingHourRange(storeKey, dayOfWeek);
+            return (hour >= startH && hour <= endH);
+        }
+
+        function getShopHoursDescription(dayOfWeek, storeKey = currentStore) {
+            if (storeKey === 'green_juice') {
+                if (dayOfWeek === 4) return "9:00 AM – 9:00 PM (Late Night)";
+                return "9:00 AM – 6:00 PM";
+            } else if (storeKey === 'anatolya') {
+                if (dayOfWeek === 4) return "9:00 AM – 8:00 PM (Late Night)";
+                return "9:00 AM – 5:00 PM";
+            } else {
+                if (dayOfWeek === 4) return "9:00 AM – 9:00 PM (Late Night)";
+                return "9:00 AM – 6:00 PM";
+            }
         }
 
         function switchAnalyticsTab(tabName, syncRange = false) {
@@ -8584,7 +8600,7 @@ Do not include markdown fences.`;
                     dHours,
                     splh,
                     net: dayNet,
-                    hoursDesc: (typeof getShopHoursDescription === 'function' ? getShopHoursDescription(dow) : '')
+                    hoursDesc: (typeof getShopHoursDescription === 'function' ? getShopHoursDescription(dow, storeKey) : '')
                 };
                 dayBreakdown.push(dayObj);
 
@@ -9268,8 +9284,19 @@ Do not include markdown fences.`;
                 const hDataA = (recA && recA.hourly) ? recA.hourly : {};
                 const hDataB = (recB && recB.hourly) ? recB.hourly : {};
 
-                let startH = 9, endH = 19;
+                const [yA, mA, dA] = datesA[0].split('-').map(Number);
+                const dowA = new Date(Date.UTC(yA, mA - 1, dA)).getUTCDay();
+                const [yB, mB, dB] = datesB[0].split('-').map(Number);
+                const dowB = new Date(Date.UTC(yB, mB - 1, dB)).getUTCDay();
+
+                const [stdStartA, stdEndA] = getStoreTradingHourRange(currentStore, dowA);
+                const [stdStartB, stdEndB] = getStoreTradingHourRange(currentStore, dowB);
+
+                let startH = Math.min(stdStartA, stdStartB);
+                let endH = Math.max(stdEndA, stdEndB);
+
                 for (const hk of Object.keys(hDataA)) {
+                    if (hk.startsWith('_')) continue;
                     const hNum = parseInt(hk.split(':')[0], 10);
                     if (!isNaN(hNum) && Number(hDataA[hk]) > 0) {
                         if (hNum < startH) startH = Math.max(0, hNum);
@@ -9277,6 +9304,7 @@ Do not include markdown fences.`;
                     }
                 }
                 for (const hk of Object.keys(hDataB)) {
+                    if (hk.startsWith('_')) continue;
                     const hNum = parseInt(hk.split(':')[0], 10);
                     if (!isNaN(hNum) && Number(hDataB[hk]) > 0) {
                         if (hNum < startH) startH = Math.max(0, hNum);
@@ -9286,9 +9314,16 @@ Do not include markdown fences.`;
 
                 for (let h = startH; h <= endH; h++) {
                     const hk = String(h).padStart(2, '0') + ':00';
+                    const valA = Number(hDataA[hk] || 0);
+                    const valB = Number(hDataB[hk] || 0);
+                    const inStdA = (h >= stdStartA && h <= stdEndA);
+                    const inStdB = (h >= stdStartB && h <= stdEndB);
+                    if (!inStdA && !inStdB && valA === 0 && valB === 0) {
+                        continue; // Skip extra blank hours outside trading hours of both days
+                    }
                     labels.push(convertHourStr(hk));
-                    dataA.push(Number(hDataA[hk] || 0));
-                    dataB.push(Number(hDataB[hk] || 0));
+                    dataA.push(valA);
+                    dataB.push(valB);
                 }
 
                 datasets = [
@@ -9781,7 +9816,18 @@ Do not include markdown fences.`;
 
             const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
             const dowIndices = [1, 2, 3, 4, 5, 6, 0];
-            const hoursList = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+            const hoursList = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+            const noteEl = document.getElementById('heatmapTradingHoursNote');
+            if (noteEl) {
+                if (currentStore === 'green_juice') {
+                    noteEl.innerHTML = `<span>🕒 <b>Green Juice Hours:</b></span> <span>Mon–Wed, Fri–Sun: 9am–6pm</span> <span class="text-amber-300 font-semibold">Thu: 9am–9pm (Late Night)</span>`;
+                } else if (currentStore === 'anatolya') {
+                    noteEl.innerHTML = `<span>🕒 <b>Anatolya Hours:</b></span> <span>Mon–Wed, Fri–Sun: 9am–5pm</span> <span class="text-amber-300 font-semibold">Thu: 9am–8pm (Late Night)</span>`;
+                } else {
+                    noteEl.innerHTML = `<span>🕒 <b>Trading Hours:</b></span> <span>Anatolya: 9am–5pm (Thu 9am–8pm)</span> | <span>Green Juice: 9am–6pm (Thu 9am–9pm)</span>`;
+                }
+            }
 
             const histAverages = {};
             if (currentHeatmapMode === 'historical') {
@@ -9833,7 +9879,7 @@ Do not include markdown fences.`;
                 let rowDisplayTotal = 0;
 
                 for (let h of hoursList) {
-                    const isOpen = isShopOpenHour(dow, h);
+                    const isOpen = isShopOpenHour(dow, h, currentStore);
                     let saleAmt = 0;
                     let staffOnHour = [];
 
@@ -9858,7 +9904,7 @@ Do not include markdown fences.`;
                         rowDisplayTotal += saleAmt;
                     }
 
-                    if (!isOpen) {
+                    if (!isOpen && saleAmt === 0 && staffOnHour.length === 0) {
                         rowCellsHtml += `
                             <td class="p-1 text-center bg-slate-950/60 border border-slate-900/90 text-slate-600 text-[10px]" title="Closed during this hour">
                                 <span class="opacity-40">—</span>
@@ -9930,10 +9976,15 @@ function convertHourStr(hStr) {
             }
             targetDate = cleanDateStr(targetDate);
             
+            // Determine Day of Week for targetDate
+            const [tYear, tMonth, tDay] = targetDate.split('-').map(Number);
+            const targetDow = new Date(Date.UTC(tYear, tMonth - 1, tDay)).getUTCDay();
+            const hoursDesc = typeof getShopHoursDescription === 'function' ? getShopHoursDescription(targetDow, currentStore) : '';
+
             const storePill = currentStore === "green_juice" ? "🥤 Green Juice Bar" : (currentStore === "anatolya" ? "🥙 Anatolya Kebabs" : "🏢 Combined (All Stores)");
             const badgeEl = document.getElementById('salesSelectedDayBadge');
             if (badgeEl) {
-                badgeEl.innerText = `${formatDisplayDateStr(targetDate)} • ${storePill}`;
+                badgeEl.innerText = `${formatDisplayDateStr(targetDate)} • ${storePill}${hoursDesc ? ` (${hoursDesc})` : ''}`;
             }
 
             const salesRecord = getStoreSalesForDate(targetDate, currentStore);
@@ -10038,29 +10089,57 @@ function convertHourStr(hStr) {
                 return;
             }
 
-            let startHour = 9;  // 9:00 AM
-            let endHour = 19;   // 7:00 PM (9am - 7pm trading hours)
-            let maxHourSale = 0;
+            // Standard Trading Hours per Store:
+            // Anatolya: Thu 9am - 8pm (slots 9..19), Mon-Wed, Fri-Sun 9am - 5pm (slots 9..16)
+            // Green Juice: Thu 9am - 9pm (slots 9..20), Mon-Wed, Fri-Sun 9am - 6pm (slots 9..17)
+            // Combined: Thu 9am - 9pm (slots 9..20), Mon-Wed, Fri-Sun 9am - 6pm (slots 9..17)
+            const [stdStartHour, stdEndHour] = getStoreTradingHourRange(currentStore, targetDow);
 
+            let maxHourSale = 0;
+            let minActiveHour = 24;
+            let maxActiveHour = -1;
+
+            // Track active hours from sales
             for (const [hKey, amt] of Object.entries(hourlyData)) {
+                if (hKey.startsWith('_')) continue;
                 const saleAmt = Number(amt) || 0;
                 if (saleAmt > maxHourSale) maxHourSale = saleAmt;
                 if (saleAmt > 0) {
                     const hNum = parseInt(hKey.split(':')[0], 10);
                     if (!isNaN(hNum)) {
-                        if (hNum < startHour) startHour = Math.max(0, hNum);
-                        if (hNum > endHour) endHour = Math.min(23, hNum);
+                        if (hNum < minActiveHour) minActiveHour = hNum;
+                        if (hNum > maxActiveHour) maxActiveHour = hNum;
                     }
                 }
             }
 
+            // Track active hours from rostered shifts
+            dayShifts.forEach(shift => {
+                if (!shift.from || !shift.to) return;
+                const [sH, sM] = shift.from.split(':').map(Number);
+                const [eH, eM] = shift.to.split(':').map(Number);
+                let sTotal = sH * 60 + sM;
+                let eTotal = eH * 60 + eM;
+                if (eTotal < sTotal) eTotal += 24 * 60;
+                for (let h = 0; h < 24; h++) {
+                    if (sTotal < (h + 1) * 60 && eTotal > h * 60) {
+                        if (h < minActiveHour) minActiveHour = h;
+                        if (h > maxActiveHour) maxActiveHour = h;
+                    }
+                }
+            });
+
+            // Start from standard start (or earlier if early trade/prep occurred)
+            const loopStart = Math.min(stdStartHour, minActiveHour < 24 ? minActiveHour : stdStartHour);
+            // End at standard end (or later if late trade/cleanup occurred)
+            const loopEnd = Math.max(stdEndHour, maxActiveHour >= 0 ? maxActiveHour : stdEndHour);
+
             const maxSaleForScale = Math.max(maxHourSale, 50);
 
             let rowsHtml = '';
-            for (let h = startHour; h <= endHour; h++) {
+            for (let h = loopStart; h <= loopEnd; h++) {
                 const hKey = h.toString().padStart(2, '0') + ':00';
                 const saleAmt = Number(hourlyData[hKey] || 0);
-                const barWidthPct = Math.round((saleAmt / maxSaleForScale) * 100);
 
                 const staffOnShift = dayShifts.filter(shift => {
                     if (!shift.from || !shift.to) return false;
@@ -10073,6 +10152,15 @@ function convertHourStr(hStr) {
                     const hEnd = (h + 1) * 60;
                     return (sTotal < hEnd && eTotal > hStart);
                 });
+
+                // Remove extra blank hours outside standard trading hours (no sales and no staff)
+                const isStdTradingHour = (h >= stdStartHour && h <= stdEndHour);
+                const hasActivity = (saleAmt > 0 || staffOnShift.length > 0);
+                if (!isStdTradingHour && !hasActivity) {
+                    continue; // Skip extra blank hours outside trading hours
+                }
+
+                const barWidthPct = Math.round((saleAmt / maxSaleForScale) * 100);
 
                 let staffPills = '';
                 if (staffOnShift.length > 0) {
@@ -10090,7 +10178,7 @@ function convertHourStr(hStr) {
                 const hourLabel = convertHourStr(hKey);
 
                 rowsHtml += `
-                    <div class="flex items-center gap-2 py-1 border-b border-slate-800/60 last:border-0">
+                    <div class="flex items-center gap-2 py-1 border-b border-slate-800/60 last:border-0" title="${hourLabel} (${hKey} – ${(h+1).toString().padStart(2, '0')}:00)">
                         <div class="w-12 shrink-0 text-[11px] font-bold text-slate-300 text-right pr-1">
                             ${hourLabel}
                         </div>
