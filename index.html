@@ -394,28 +394,28 @@
             <!-- VIEW 1: Custom Date Range Chart -->
             <div id="analyticsDateRangeContainer" class="space-y-4">
                 <!-- Date Range Controls: Presets (Today/Week/Month with Nav) & Single Popover Calendar -->
-                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
                     <!-- Presets Group with Arrow Navigators (Today, Week, Month) -->
-                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
+                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <!-- Today Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
-                            <button type="button" onclick="navigatePreset('day', -1)" title="Previous Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="px-2.5 py-1 text-xs font-black bg-purple-600 text-white rounded shadow transition whitespace-nowrap">Today</button>
-                            <button type="button" onclick="navigatePreset('day', 1)" title="Next Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                            <button type="button" onclick="navigatePreset('day', -1)" title="Previous Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
+                            <button type="button" id="btnPresetDay" onclick="selectPreset('day')" class="px-3 py-1.5 text-xs font-black bg-purple-600 text-white rounded-md shadow transition whitespace-nowrap min-w-[64px] text-center cursor-pointer">Today</button>
+                            <button type="button" onclick="navigatePreset('day', 1)" title="Next Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
                         </div>
 
                         <!-- Week Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
-                            <button type="button" onclick="navigatePreset('week', -1)" title="Previous Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnPresetWeek" onclick="selectPreset('week')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition">Week</button>
-                            <button type="button" onclick="navigatePreset('week', 1)" title="Next Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                            <button type="button" onclick="navigatePreset('week', -1)" title="Previous Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
+                            <button type="button" id="btnPresetWeek" onclick="selectPreset('week')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[60px] text-center cursor-pointer">Week</button>
+                            <button type="button" onclick="navigatePreset('week', 1)" title="Next Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
                         </div>
 
                         <!-- Month Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
-                            <button type="button" onclick="navigatePreset('month', -1)" title="Previous Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnPresetMonth" onclick="selectPreset('month')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition">Month</button>
-                            <button type="button" onclick="navigatePreset('month', 1)" title="Next Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                            <button type="button" onclick="navigatePreset('month', -1)" title="Previous Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
+                            <button type="button" id="btnPresetMonth" onclick="selectPreset('month')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[62px] text-center cursor-pointer">Month</button>
+                            <button type="button" onclick="navigatePreset('month', 1)" title="Next Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
                         </div>
                     </div>
 
@@ -693,28 +693,28 @@
                 </div>
 
                 <!-- Ledger Date Range Controls: Presets (Today/Week/Month with Nav) & All Preset + Popover Calendar -->
-                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div class="relative bg-slate-800/70 p-2.5 sm:p-3 rounded-xl border border-slate-700/70 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
                     <!-- Presets Group with Arrow Navigators (Today, Week, Month) -->
-                    <div class="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0 scrollbar-none">
+                    <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <!-- Today Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
-                            <button type="button" onclick="navigateLedgerPreset('day', -1)" title="Previous Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnLedgerPresetDay" onclick="selectLedgerPreset('day')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap">Today</button>
-                            <button type="button" onclick="navigateLedgerPreset('day', 1)" title="Next Day" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                            <button type="button" onclick="navigateLedgerPreset('day', -1)" title="Previous Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
+                            <button type="button" id="btnLedgerPresetDay" onclick="selectLedgerPreset('day')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[64px] text-center cursor-pointer">Today</button>
+                            <button type="button" onclick="navigateLedgerPreset('day', 1)" title="Next Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
                         </div>
 
                         <!-- Week Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
-                            <button type="button" onclick="navigateLedgerPreset('week', -1)" title="Previous Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnLedgerPresetWeek" onclick="selectLedgerPreset('week')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap">Week</button>
-                            <button type="button" onclick="navigateLedgerPreset('week', 1)" title="Next Week" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                            <button type="button" onclick="navigateLedgerPreset('week', -1)" title="Previous Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
+                            <button type="button" id="btnLedgerPresetWeek" onclick="selectLedgerPreset('week')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[60px] text-center cursor-pointer">Week</button>
+                            <button type="button" onclick="navigateLedgerPreset('week', 1)" title="Next Week" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
                         </div>
 
                         <!-- Month Preset Group -->
-                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm">
-                            <button type="button" onclick="navigateLedgerPreset('month', -1)" title="Previous Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">◀</button>
-                            <button type="button" id="btnLedgerPresetMonth" onclick="selectLedgerPreset('month')" class="px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap">Month</button>
-                            <button type="button" onclick="navigateLedgerPreset('month', 1)" title="Next Month" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition text-xs font-bold">▶</button>
+                        <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                            <button type="button" onclick="navigateLedgerPreset('month', -1)" title="Previous Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">◀</button>
+                            <button type="button" id="btnLedgerPresetMonth" onclick="selectLedgerPreset('month')" class="px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap min-w-[62px] text-center cursor-pointer">Month</button>
+                            <button type="button" onclick="navigateLedgerPreset('month', 1)" title="Next Month" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-amber-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">▶</button>
                         </div>
                     </div>
 
@@ -1219,6 +1219,30 @@
 
             <!-- VIEW 4: Single Day Breakdown -->
             <div id="analyticsDailyContainer" class="hidden space-y-3">
+                <!-- Day Navigation Controls Bar -->
+                <div class="relative bg-slate-800/70 p-2 sm:p-2.5 rounded-xl border border-slate-700/70 flex flex-wrap items-center justify-between gap-2 shadow-sm">
+                    <!-- Previous Day / Today or Date / Next Day Navigator -->
+                    <div class="inline-flex items-center rounded-lg bg-slate-900 border border-slate-700 p-0.5 shadow-sm gap-0.5">
+                        <button type="button" onclick="navigateChartDay(-1)" title="Previous Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">
+                            ◀
+                        </button>
+                        <button type="button" id="chartDayNavBtn" onclick="jumpChartDayToToday()" title="Click to jump to Today" class="px-3.5 py-1.5 text-xs font-black bg-purple-600 hover:bg-purple-500 text-white rounded-md shadow transition whitespace-nowrap min-w-[76px] text-center cursor-pointer">
+                            Today
+                        </button>
+                        <button type="button" onclick="navigateChartDay(1)" title="Next Day" class="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 active:bg-purple-600/40 rounded-md transition text-sm font-black cursor-pointer select-none">
+                            ▶
+                        </button>
+                    </div>
+
+                    <!-- Date Jump Picker -->
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center bg-slate-900 hover:bg-slate-950 border border-slate-700 hover:border-purple-500/80 rounded-lg px-2.5 py-1 text-xs font-bold text-white transition shadow-sm">
+                            <span class="text-purple-400 mr-1.5 text-sm">📅</span>
+                            <input type="date" id="chartDatePickerInput" onchange="onChartDatePickerChange(this.value)" class="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Summary KPI Cards (2 Clean Cards) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl shadow-sm">
@@ -4093,6 +4117,7 @@
         function drillIntoDay(targetIso) {
             const dateInput = document.getElementById('date');
             if (dateInput) dateInput.value = targetIso;
+            currentDailyChartDate = targetIso;
             switchAnalyticsTab('daily');
             renderHourlySalesView(targetIso);
         }
@@ -4110,7 +4135,7 @@
             } else if (currentAnalyticsTab === 'heatmap') {
                 renderHourlyHeatmapView();
             } else {
-                renderHourlySalesView();
+                renderHourlySalesView(currentDailyChartDate || undefined);
             }
         }
 
@@ -4132,8 +4157,8 @@
             const btnWeek = document.getElementById('btnPresetWeek');
             const btnMonth = document.getElementById('btnPresetMonth');
             
-            const activeCls = "px-2.5 py-1 text-xs font-black bg-purple-600 text-white rounded shadow transition whitespace-nowrap";
-            const inactiveCls = "px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap";
+            const activeCls = "px-3 py-1.5 text-xs font-black bg-purple-600 text-white rounded-md shadow transition whitespace-nowrap cursor-pointer";
+            const inactiveCls = "px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap cursor-pointer";
 
             if (btnDay) btnDay.className = (currentPresetType === 'day' ? activeCls : inactiveCls);
             if (btnWeek) btnWeek.className = (currentPresetType === 'week' ? activeCls : inactiveCls);
@@ -5519,8 +5544,8 @@
             const btnMonth = document.getElementById('btnLedgerPresetMonth');
             const btnAll = document.getElementById('btnLedgerPresetAll');
 
-            const activeCls = "px-2.5 py-1 text-xs font-black bg-amber-600 text-white rounded shadow transition whitespace-nowrap";
-            const inactiveCls = "px-2.5 py-1 text-xs font-bold text-slate-200 hover:text-white rounded transition whitespace-nowrap";
+            const activeCls = "px-3 py-1.5 text-xs font-black bg-amber-600 text-white rounded-md shadow transition whitespace-nowrap cursor-pointer";
+            const inactiveCls = "px-3 py-1.5 text-xs font-bold text-slate-200 hover:text-white rounded-md transition whitespace-nowrap cursor-pointer";
 
             if (btnDay) btnDay.className = (currentLedgerPresetType === 'day' ? activeCls : inactiveCls);
             if (btnWeek) btnWeek.className = (currentLedgerPresetType === 'week' ? activeCls : inactiveCls);
@@ -9956,7 +9981,7 @@ Do not include markdown fences.`;
 
             tbody.innerHTML = tbodyHtml;
         }
-function convertHourStr(hStr) {
+        function convertHourStr(hStr) {
             if (!hStr) return '';
             let [h] = hStr.split(':').map(Number);
             let ampm = h >= 12 ? 'PM' : 'AM';
@@ -9964,17 +9989,76 @@ function convertHourStr(hStr) {
             return `${h12} ${ampm}`;
         }
 
+        let currentDailyChartDate = '';
+
+        function updateChartDayNavUI(activeDate) {
+            const btnDay = document.getElementById('chartDayNavBtn');
+            const inputDate = document.getElementById('chartDatePickerInput');
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            
+            if (inputDate) {
+                inputDate.value = activeDate;
+            }
+            if (btnDay) {
+                if (activeDate === todayIso) {
+                    btnDay.innerText = "Today";
+                    btnDay.title = "Viewing Today";
+                    btnDay.className = "px-3.5 py-1.5 text-xs font-black bg-purple-600 hover:bg-purple-500 text-white rounded-md shadow transition whitespace-nowrap min-w-[76px] text-center cursor-pointer";
+                } else {
+                    const [y, m, d] = activeDate.split('-').map(Number);
+                    const moShort = (typeof MONTH_NAMES !== 'undefined' && MONTH_NAMES[m - 1]) ? MONTH_NAMES[m - 1].slice(0, 3) : '';
+                    btnDay.innerText = `${d} ${moShort}`;
+                    btnDay.title = `Viewing ${d} ${moShort} ${y}. Click to jump to Today`;
+                    btnDay.className = "px-3.5 py-1.5 text-xs font-black bg-purple-600 hover:bg-purple-500 text-white rounded-md shadow transition whitespace-nowrap min-w-[76px] text-center cursor-pointer";
+                }
+            }
+        }
+        window.updateChartDayNavUI = updateChartDayNavUI;
+
+        function navigateChartDay(delta) {
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            if (!currentDailyChartDate) {
+                currentDailyChartDate = document.getElementById('date')?.value || todayIso;
+            }
+            const newDate = addDaysString(currentDailyChartDate, delta);
+            currentDailyChartDate = newDate;
+            const dateInput = document.getElementById('date');
+            if (dateInput) dateInput.value = newDate;
+            renderHourlySalesView(newDate);
+        }
+        window.navigateChartDay = navigateChartDay;
+
+        function jumpChartDayToToday() {
+            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            currentDailyChartDate = todayIso;
+            const dateInput = document.getElementById('date');
+            if (dateInput) dateInput.value = todayIso;
+            renderHourlySalesView(todayIso);
+        }
+        window.jumpChartDayToToday = jumpChartDayToToday;
+
+        function onChartDatePickerChange(val) {
+            if (!val) return;
+            currentDailyChartDate = val;
+            const dateInput = document.getElementById('date');
+            if (dateInput) dateInput.value = val;
+            renderHourlySalesView(val);
+        }
+        window.onChartDatePickerChange = onChartDatePickerChange;
+
         function renderHourlySalesView(targetDate) {
             if (isShareModeActive) return;
             
             if (!targetDate) {
-                targetDate = document.getElementById('date').value;
+                targetDate = currentDailyChartDate || document.getElementById('date')?.value;
             }
             if (!targetDate) {
-                const filterWeekVal = document.getElementById('filterWeek').value;
+                const filterWeekVal = document.getElementById('filterWeek')?.value;
                 targetDate = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
             }
             targetDate = cleanDateStr(targetDate);
+            currentDailyChartDate = targetDate;
+            updateChartDayNavUI(targetDate);
             
             // Determine Day of Week for targetDate
             const [tYear, tMonth, tDay] = targetDate.split('-').map(Number);
