@@ -932,22 +932,22 @@
 
                 <!-- ATO BAS Standard Boxes Grid (Official Box Numbers G1, 1A, G11, 1B, W1, W2, 3) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <!-- Box 1A & G1: estimated GST on all payment methods -->
+                    <!-- Cash-excluded BAS worksheet scope -->
                     <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
                         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                             <div class="flex items-center gap-1.5">
                                 <span class="w-5 h-5 rounded bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">1A</span>
-                                <span class="text-xs font-bold text-slate-200">Estimated GST on All Sales</span>
+                                <span class="text-xs font-bold text-slate-200">GST on Included Sales</span>
                             </div>
                             <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">10% GST</span>
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-baseline justify-between">
-                                <span class="text-[11px] text-slate-400">Box [G1] Total Sales:</span>
+                                <span class="text-[11px] text-slate-400">G1 Worksheet (excl. cash):</span>
                                 <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxG1">$0.00</span>
                             </div>
                             <div class="flex items-baseline justify-between text-[10px] text-slate-400">
-                                <span>Cash Sales (Included):</span>
+                                <span>Cash Sales (Excluded):</span>
                                 <span class="font-mono text-slate-400" id="basBoxG1Cash">$0.00</span>
                             </div>
                             <div class="flex items-baseline justify-between pt-1 border-t border-slate-800/60">
@@ -955,7 +955,7 @@
                                 <span class="text-lg font-black text-blue-400 font-mono" id="basBox1A">$0.00</span>
                             </div>
                         </div>
-                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">All sales included. GST assumes taxable, GST-inclusive sales; verify against your accounts.</p>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Cash-excluded worksheet. Included taxable, GST-inclusive sales ÷ 11; reconcile the complete BAS with your accounts.</p>
                     </div>
 
                     <!-- Box 1B & G11: GST on Purchases -->
@@ -1066,7 +1066,7 @@
                                 <thead>
                                     <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
                                         <th class="p-2">Store / Venue</th>
-                                        <th class="p-2 text-right">Total Sales (G1)</th>
+                                        <th class="p-2 text-right">Sales excl. Cash (G1)</th>
                                         <th class="p-2 text-right text-slate-400">Cash Sales</th>
                                         <th class="p-2 text-right">GST on Sales (1A)</th>
                                         <th class="p-2 text-right">Purchases (G11)</th>
@@ -1097,7 +1097,7 @@
                                     <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
                                         <th class="p-2">Month</th>
                                         <th class="p-2 text-right">Trading Days</th>
-                                        <th class="p-2 text-right" title="Card Sales included in BAS">Total Sales (G1)</th>
+                                        <th class="p-2 text-right" title="Card Sales included in BAS">Sales excl. Cash (G1)</th>
                                         <th class="p-2 text-right text-slate-400" title="Cash Sales excluded from BAS">Cash (excl.)</th>
                                         <th class="p-2 text-right">GST on Sales (1A)</th>
                                         <th class="p-2 text-right">Expenses (G11)</th>
@@ -7568,6 +7568,18 @@ Do not include markdown fences.`;
             window.print();
         }
 
+        function getBasSalesBreakdown(s) {
+            const h = s.hourly || {};
+            const card = numberOrDefault(s.cardSales, numberOrDefault(h._cardSales, 0));
+            const uber = numberOrDefault(s.uberSales, numberOrDefault(h._uberSales, 0));
+            const knownCash = s.cashSales ?? h._cashSales;
+            const total = numberOrDefault(s.totalSales, card + uber + numberOrDefault(knownCash, 0));
+            // Legacy records may have only card/uber splits. Do not classify Uber as cash.
+            const hasCardSplit = s.cardSales != null || h._cardSales != null;
+            const cash = numberOrDefault(knownCash, hasCardSplit ? total - card - uber : 0);
+            return { total, card, cash, included: Math.round((total - cash) * 100) / 100 };
+        }
+
         let basPayrollPeriodKey = null;
         function getBasPayrollActuals() {
             const key = [currentStore, currentBasFY, currentBasQuarter].join(':');
@@ -7612,27 +7624,24 @@ Do not include markdown fences.`;
                 periodDatesEl.innerText = `${formatDisplayDateStr(startIso)} – ${formatDisplayDateStr(endIso)} (${qInfo.days} days)`;
             }
 
-            // 1. Calculate total sales and estimated GST; cash remains included.
+            // 1. Calculate cash-excluded worksheet sales and GST on the included sales.
             const qSales = hourlySalesStore.filter(s => {
                 const d = cleanDateStr(s.date);
                 return d >= startIso && d <= endIso && isStoreMatch(s.store_id, currentStore);
             });
             let totalCardSales = 0;
             let totalCashSales = 0;
-            let totalAllSales = 0;
+            let totalIncludedSales = 0;
 
             qSales.forEach(s => {
-                const tot = Number(s.totalSales || 0);
-                const h = s.hourly || {};
-                const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
-                const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+                const { total: tot, card, cash, included } = getBasSalesBreakdown(s);
                 totalCardSales += card;
                 totalCashSales += cash;
-                totalAllSales += tot;
+                totalIncludedSales += included;
             });
 
-            // G1 includes every payment method, including cash and delivery sales.
-            const totalSalesG1 = totalAllSales;
+            // Custom worksheet scope excludes cash; delivery and other non-cash sales remain included.
+            const totalSalesG1 = totalIncludedSales;
             const gstOnSales1A = totalSalesG1 / 11;
             const tradingDaysCount = qSales.length;
 
@@ -7803,20 +7812,17 @@ Do not include markdown fences.`;
                 let venueRowsHtml = '';
                 venues.forEach(v => {
                     // 1. Sales for this venue
-                    let vCard = 0, vCash = 0, vTotal = 0;
+                    let vCard = 0, vCash = 0, vIncluded = 0;
                     if (v.isStore) {
                         const vSales = qSales.filter(s => (s.store_id || 'anatolya') === v.id);
                         vSales.forEach(s => {
-                            const tot = Number(s.totalSales || 0);
-                            const h = s.hourly || {};
-                            const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
-                            const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
+                            const { total: tot, card, cash, included } = getBasSalesBreakdown(s);
                             vCard += card;
-                            vTotal += tot;
+                            vIncluded += included;
                             vCash += cash;
                         });
                     }
-                    const v1A = vTotal / 11;
+                    const v1A = vIncluded / 11;
 
                     // 2. Expenses for this venue
                     let vG11 = 0, v1B = 0;
@@ -7853,7 +7859,7 @@ Do not include markdown fences.`;
                     venueRowsHtml += `
                         <tr class="hover:bg-slate-800/40 transition">
                             <td class="p-2 font-bold text-slate-200">${v.name}</td>
-                            <td class="p-2 text-right font-mono text-slate-200 font-bold">${vTotal !== 0 ? '$' + vTotal.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">${vIncluded !== 0 ? '$' + vIncluded.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-slate-400">${vCash > 0 ? '$' + vCash.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-blue-400 font-bold">${v1A > 0 ? '$' + v1A.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-slate-200 font-bold">${vG11 > 0 ? '$' + vG11.toFixed(2) : '—'}</td>
@@ -7894,17 +7900,14 @@ Do not include markdown fences.`;
                         const d = cleanDateStr(s.date);
                         return d >= m.start && d <= m.end && isStoreMatch(s.store_id, currentStore);
                     });
-                    let mCardG1 = 0;
+                    let mIncludedSales = 0;
                     let mCash = 0;
                     mSalesList.forEach(s => {
-                        const tot = Number(s.totalSales || 0);
-                        const h = s.hourly || {};
-                        const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
-                        const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
-                        mCardG1 += tot;
+                        const { total: tot, card, cash, included } = getBasSalesBreakdown(s);
+                        mIncludedSales += included;
                         mCash += cash;
                     });
-                    const m1A = mCardG1 / 11;
+                    const m1A = mIncludedSales / 11;
                     const mTradingDays = mSalesList.length;
 
                     const mExpList = expensesStore.filter(x => {
@@ -7930,7 +7933,7 @@ Do not include markdown fences.`;
                         <tr class="hover:bg-slate-800/40 transition">
                             <td class="p-2 font-bold text-slate-200">${m.name}</td>
                             <td class="p-2 text-right font-mono text-slate-300">${mTradingDays}</td>
-                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mCardG1.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mIncludedSales.toFixed(2)}</td>
                             <td class="p-2 text-right font-mono text-slate-400">$${mCash.toFixed(2)}</td>
                             <td class="p-2 text-right font-mono text-blue-400 font-bold">$${m1A.toFixed(2)}</td>
                             <td class="p-2 text-right font-mono text-slate-200 font-bold">$${mG11.toFixed(2)}</td>

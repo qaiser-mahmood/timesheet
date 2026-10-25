@@ -133,12 +133,12 @@ test('failed mutation performs one request and never retries direct database wri
 test('BAS actual payroll defaults to unknown, preserves explicit zero, resets between periods',()=>{
  const fields={basActualW1:{value:''},basActualW2:{value:''}};
  const c={document:{getElementById:id=>fields[id]},currentStore:'anatolya',currentBasFY:'2026',currentBasQuarter:'Q1'};
- vm.createContext(c);vm.runInContext(sourceBetween(html,'        let basPayrollPeriodKey', '        function renderBasReportView()'),c);
+ vm.createContext(c);vm.runInContext(sourceBetween(html,'        function getBasSalesBreakdown(', '        function renderBasReportView()'),c);
  assert.equal(c.getBasPayrollActuals().w2,null);
  fields.basActualW1.value='1000';fields.basActualW2.value='0';
  assert.equal(c.getBasPayrollActuals().w1,1000);assert.equal(c.getBasPayrollActuals().w2,0);
  c.currentBasQuarter='Q2';assert.equal(c.getBasPayrollActuals().w2,null);
- assert.ok(html.includes('const totalSalesG1 = totalAllSales;'));
+ assert.ok(html.includes('const totalSalesG1 = totalIncludedSales;'));
  assert.ok(!html.includes('ESTIMATED_TAX_RATE'));
  assert.ok(html.includes('netGstBox3 + payrollActuals.w2'));
 });
@@ -181,18 +181,19 @@ test('generated bookmarklet includes only the scoped upload token and parses as 
  assert.ok(code.includes('upload-token'));assert.ok(!code.includes('manager-secret'));assert.ok(code.includes('Authorization'));
  new vm.Script(code.slice('javascript:'.length));
 });
-test('BAS worksheet includes card, cash and delivery sales and uses actual payroll',()=>{
+test('BAS worksheet excludes cash, includes delivery sales and uses actual payroll',()=>{
  const fields={basActualW1:{value:''},basActualW2:{value:''},basBoxG1:{},basBox1A:{},basBoxW1:{},basBoxW2:{},basTotalPayable:{}};
  const c={document:{getElementById:id=>fields[id]||null},currentStore:'all',currentBasFY:'2026',currentBasQuarter:'Q1',
  updateBasQuarterButtonsUI(){},getBasQuarterDates:()=>({start:'2026-07-01',end:'2026-09-30',title:'Q1',days:92,months:[]}),
  hourlySalesStore:[{date:'2026-09-01',store_id:'anatolya',totalSales:165,cardSales:110,cashSales:33,uberSales:22}],
  expensesStore:[],dataStore:[],EXPENSE_CATEGORIES:[],BAS_GST_RULES:{},cleanDateStr:s=>s,isStoreMatch:()=>true,isExpenseMatch:()=>true,
  formatDisplayDateStr:s=>s};
- vm.createContext(c);vm.runInContext(sourceBetween(html,'        let basPayrollPeriodKey', '        function computePeriodFinancials('),c);
- c.renderBasReportView();assert.equal(fields.basBoxG1.innerText,'$165.00');assert.equal(fields.basBox1A.innerText,'$15.00');
+ vm.createContext(c);vm.runInContext(sourceBetween(html,'        function getBasSalesBreakdown(', '        function computePeriodFinancials('),c);
+ vm.runInContext(sourceBetween(html,'        function numberOrDefault(', '        let isShareModeActive'),c);
+ c.renderBasReportView();assert.equal(fields.basBoxG1.innerText,'$132.00');assert.equal(fields.basBox1A.innerText,'$12.00');
  assert.equal(fields.basBoxW2.innerText,'Payroll required');assert.equal(fields.basTotalPayable.innerText,'Payroll required');
  fields.basActualW1.value='1000';fields.basActualW2.value='120';c.renderBasReportView();
- assert.equal(fields.basBoxW1.innerText,'$1000.00');assert.equal(fields.basBoxW2.innerText,'$120.00');assert.equal(fields.basTotalPayable.innerText,'$135.00');
+ assert.equal(fields.basBoxW1.innerText,'$1000.00');assert.equal(fields.basBoxW2.innerText,'$120.00');assert.equal(fields.basTotalPayable.innerText,'$132.00');
 });
 
 test('Epos aborts without writing when pagination stalls',async()=>{
@@ -223,4 +224,37 @@ test('Epos database write failures cannot be reported as success',async()=>{
  const row={eposId:'one',date:'2026-10-25',time:'12:00',hour:'12:00',amount:10,isCash:false,raw:'row'};
  const page={locator:()=>emptyLocator,waitForTimeout:async()=>{},evaluate:async()=>++evaluations===1?[row]:false};
  await assert.rejects(w.context.scrapeAndSaveCurrentPage(page,'test',false),/Sales database write failed/);
+});
+
+test('cash exclusion preserves refunds, explicit zero cash and legacy payment splits',()=>{
+ const c={};vm.createContext(c);
+ vm.runInContext(sourceBetween(html,'        function numberOrDefault(', '        let isShareModeActive'),c);
+ vm.runInContext(sourceBetween(html,'        function getBasSalesBreakdown(', '        let basPayrollPeriodKey'),c);
+ const cases=[
+  [{totalSales:110,cardSales:0,cashSales:110},0],
+  [{totalSales:110,cardSales:110,cashSales:0},110],
+  [{totalSales:165,cardSales:110,cashSales:33,uberSales:22},132],
+  [{totalSales:-55,cardSales:-33,cashSales:-22},-33],
+  [{totalSales:165,hourly:{_cardSales:110,_cashSales:33,_uberSales:22}},132],
+  [{totalSales:165,cardSales:110,uberSales:22},132],
+  [{totalSales:110},110]
+ ];
+ for(const [record,expected] of cases)assert.equal(c.getBasSalesBreakdown(record).included,expected);
+});
+test('venue and monthly GST subtotals use the same cash-excluded sales scope',()=>{
+ const fields={basActualW1:{value:''},basActualW2:{value:''},basBoxG1:{},basBox1A:{},basStoreBreakdownTableBody:{},basMonthlyTableBody:{}};
+ const c={document:{getElementById:id=>fields[id]||null},currentStore:'all',currentBasFY:'2026',currentBasQuarter:'Q1',
+ updateBasQuarterButtonsUI(){},getBasQuarterDates:()=>({start:'2026-07-01',end:'2026-09-30',title:'Q1',days:92,months:[{key:'2026-09',name:'September',start:'2026-09-01',end:'2026-09-30'}]}),
+ hourlySalesStore:[{date:'2026-09-01',store_id:'anatolya',totalSales:165,cardSales:110,cashSales:33,uberSales:22}],
+ expensesStore:[],dataStore:[],EXPENSE_CATEGORIES:[],BAS_GST_RULES:{},cleanDateStr:s=>s,isStoreMatch:()=>true,isExpenseMatch:()=>true,formatDisplayDateStr:s=>s};
+ vm.createContext(c);
+ vm.runInContext(sourceBetween(html,'        function numberOrDefault(', '        let isShareModeActive'),c);
+ vm.runInContext(sourceBetween(html,'        function getBasSalesBreakdown(', '        function computePeriodFinancials('),c);
+ c.renderBasReportView();
+ assert.equal(fields.basBoxG1.innerText,'$132.00');
+ for(const id of ['basStoreBreakdownTableBody','basMonthlyTableBody']){
+  assert.ok(fields[id].innerHTML.includes('$132.00'),id+' included sales');
+  assert.ok(fields[id].innerHTML.includes('$12.00'),id+' GST');
+  assert.ok(!fields[id].innerHTML.includes('$15.00'),id+' must exclude cash GST');
+ }
 });
