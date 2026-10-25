@@ -71,3 +71,27 @@ Render's free tier spins down after 15 minutes of inactivity. To keep your sync 
 2. Create a new cron job pointing to: `https://your-app-name.onrender.com/health`
 3. Set schedule: **Every 10 minutes** between **8:00 AM and 9:00 PM AWST**.
 This keeps the worker active and syncing transactions live throughout the workday at zero cost!
+
+## Security and reliability update
+
+The portal now uses the authenticated worker for all reads and saves. A timed-out save is not automatically resubmitted through Supabase; refresh and check the saved records before retrying an unconfirmed save.
+
+- Deploy the worker and frontend together. The frontend requires the new /api/bookmarklet-token endpoint.
+- Public runtime JavaScript evaluators have been removed. Diagnostics, sync status, reset, and document parsing require an authorized Firebase manager token. /health remains public for uptime checks and no longer exposes sales or login state.
+- Bookmarklet code must be copied fresh before each import. Its upload-only access expires after 15 minutes or a worker restart. Existing saved bookmarklets must be replaced.
+- Roster upserts require the database uniqueness constraint (date, name, store_id); hourly sales require (date, store_id). Schema errors now fail instead of discarding shop identity. Verify these constraints before rollout.
+- Epos range selection is applied in chunks of at most 31 days. Filter failures, stalled pagination, out-of-range results, and database errors surface as failures instead of a green success message.
+- Loyverse follows all receipt pages. Repeated cursors or safety-limit exhaustion fail before incomplete totals are written.
+- The BAS screen is a worksheet. G1 includes all payment methods. GST remains an estimate from category rules. Enter actual W1/W2 totals from payroll; blank values remain unknown. Inputs stay in the current page only and reset when the shop, financial year, or quarter changes. Roster audit figures do not establish actual withholding.
+- Supabase access policies and deployed credentials are outside this repository. Verify anonymous database access is denied. Because the previous version exposed runtime code execution, review access logs and rotate backend/POS/bot credentials during rollout.
+
+### Regression tests
+
+From the repository root with Node.js 20 or newer:
+
+~~~sh
+node --test tests/regressions.cjs tests/roster.cjs
+node --check epos-sync-worker/server.js
+~~~
+
+Tests use isolated DOM/API/database substitutes and do not contact the live POS, Firebase, or Supabase. They cover authentication gates, upload token scope and expiry, safe shop-specific mutations, complete pagination, date handling, rendering, failure messages, payroll worksheet behavior, and ten roster duration-edit scenarios. Verify live Google sign-in, database constraints, Epos selectors, and POS connectivity in staging before deploying.

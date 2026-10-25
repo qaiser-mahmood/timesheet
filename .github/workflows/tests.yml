@@ -1,0 +1,17 @@
+name: Regression tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/regressions.cjs tests/roster.cjs
+        env:
+          TZ: Australia/Perth
+      - run: node --check epos-sync-worker/server.js

@@ -6,6 +6,12 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+function numberOrDefault(value, fallback = 0) {
+  if (value === null || value === undefined || value === '') return fallback;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
 // Configuration
 const PORT = process.env.PORT || 3000;
 const EPOS_USERNAME = process.env.EPOS_USERNAME || '';
@@ -252,7 +258,7 @@ async function supabaseServerFetchAll(path, options = {}) {
 }
 
 // Instant reset endpoint if sync ever gets stuck
-app.get('/sync-reset', async (req, res) => {
+app.get('/sync-reset', requireAuthorizedManager, async (req, res) => {
   appState.isSyncing = false;
   appState.isLoggingIn = false;
   appState.activeSyncProgress = null;
@@ -269,7 +275,7 @@ app.get('/sync-reset', async (req, res) => {
 });
 
 // Live debug screenshot endpoint (view in browser)
-app.get('/debug/screenshot', async (req, res) => {
+app.get('/debug/screenshot', requireAuthorizedManager, async (req, res) => {
   try {
     const page = await getActivePage();
     const buf = await page.screenshot({ fullPage: false });
@@ -281,7 +287,7 @@ app.get('/debug/screenshot', async (req, res) => {
 });
 
 // Live debug screentext endpoint (inspect text in browser)
-app.get('/debug/screentext', async (req, res) => {
+app.get('/debug/screentext', requireAuthorizedManager, async (req, res) => {
   try {
     const page = await getActivePage();
     const text = await page.innerText('body');
@@ -293,7 +299,7 @@ app.get('/debug/screentext', async (req, res) => {
 });
 
 // Live debug DOM inspection endpoint
-app.get('/debug/dom-inspect', async (req, res) => {
+app.get('/debug/dom-inspect', requireAuthorizedManager, async (req, res) => {
   try {
     const page = await getActivePage();
     const elements = await page.evaluate(() => {
@@ -337,44 +343,8 @@ app.get('/debug/dom-inspect', async (req, res) => {
   }
 });
 
-// Live debug eval endpoint (evaluates in browser context)
-app.all('/debug/eval', async (req, res) => {
-  try {
-    const page = await getActivePage();
-    const code = req.query.code || (req.body && req.body.code);
-    if (!code) return res.status(400).send('Missing code parameter');
-    const result = await page.evaluate((c) => {
-      try {
-        return { success: true, result: eval(c) };
-      } catch (e) {
-        return { success: false, error: e.message, stack: e.stack };
-      }
-    }, code);
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Live debug node eval endpoint (evaluates in Node.js server context with Playwright page)
-app.all('/debug/eval-node', async (req, res) => {
-  try {
-    const script = req.query.script || (req.body && req.body.script);
-    if (!script) return res.status(400).send('Missing script parameter');
-    const page = await getActivePage();
-    const fn = new Function('ctx', `return (async () => {
-      const { appState, page, ensureLoggedIn, applyEposDateFilter, scrapeAndSaveCurrentPage, sendTelegramMessage } = ctx;
-      ${script}
-    })();`);
-    const result = await fn({ appState, page, ensureLoggedIn, applyEposDateFilter, scrapeAndSaveCurrentPage, sendTelegramMessage });
-    res.json({ success: true, result });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message, stack: err.stack });
-  }
-});
-
 // Live debug trigger login endpoint
-app.get('/debug/login', async (req, res) => {
+app.get('/debug/login', requireAuthorizedManager, async (req, res) => {
   try {
     const page = await ensureLoggedIn(false, false);
     res.json({ success: true, url: page.url(), authenticated: appState.isAuthenticated });
@@ -384,7 +354,7 @@ app.get('/debug/login', async (req, res) => {
 });
 
 // Live debug apply-filter endpoint
-app.get('/debug/apply-filter', async (req, res) => {
+app.get('/debug/apply-filter', requireAuthorizedManager, async (req, res) => {
   try {
     const notify = req.query.notify === 'true' || req.query.notify === '1';
     const page = await ensureLoggedIn(false, false);
@@ -416,17 +386,12 @@ app.get(['/', '/health'], (req, res) => {
     status: 'ok',
     service: 'epos-sync-worker',
     time: new Date().toISOString(),
-    lastSyncTime: appState.lastSyncTime,
-    lastSyncResult: appState.lastSyncResult,
-    isAuthenticated: appState.isAuthenticated,
-    isSyncing: appState.isSyncing,
-    isLoggingIn: appState.isLoggingIn,
     uptimeSeconds: Math.floor(process.uptime())
   });
 });
 
 // Real-time sync progress status for Timesheet Dashboard
-app.get('/sync-status', (req, res) => {
+app.get('/sync-status', requireAuthorizedManager, (req, res) => {
   const isSyncActive = appState.isSyncing || !!(appState.activeSyncProgress && appState.activeSyncProgress.isSyncing);
   res.json({
     isSyncing: isSyncActive,
@@ -476,10 +441,10 @@ app.post('/api/data', requireAuthorizedManager, async (req, res) => {
       const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
       return {
         name: s.name,
-        cashRate: isOwner ? 0 : (Number(s.cash_rate) || 25),
-        taxRate: isOwner ? 0 : (Number(s.tax_rate) || 30),
-        gjCashRate: isOwner ? 0 : (Number(s.gj_cash_rate) || Number(s.cash_rate) || 25),
-        gjSundayRate: isOwner ? 0 : (Number(s.gj_sunday_rate) || Number(s.gj_cash_rate) || Number(s.cash_rate) || 25),
+        cashRate: isOwner ? 0 : numberOrDefault(s.cash_rate, 25),
+        taxRate: isOwner ? 0 : numberOrDefault(s.tax_rate, 30),
+        gjCashRate: isOwner ? 0 : numberOrDefault(s.gj_cash_rate, numberOrDefault(s.cash_rate, 25)),
+        gjSundayRate: isOwner ? 0 : numberOrDefault(s.gj_sunday_rate, numberOrDefault(s.gj_cash_rate, numberOrDefault(s.cash_rate, 25))),
         stores: s.stores || 'anatolya,green_juice',
         status: s.status || 'Active'
       };
@@ -604,28 +569,9 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         store_id: e.store_id || 'anatolya',
         updated_at: new Date().toISOString()
       };
-      try {
-        await supabaseServerFetch('roster?on_conflict=date,name,store_id', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(row)
-        });
-      } catch (err) {
-        // Fallback: check if existing row exists for date and name and store_id without losing store_id
-        const existing = await supabaseServerFetch(`roster?date=eq.${cleanD}&name=eq.${encodeURIComponent(row.name)}&store_id=eq.${row.store_id}`).catch(() => []);
-        if (existing && existing.length > 0) {
-          await supabaseServerFetch(`roster?id=eq.${existing[0].id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(row)
-          });
-        } else {
-          await supabaseServerFetch('roster?on_conflict=date,name', {
-            method: 'POST',
-            headers: { 'Prefer': 'resolution=merge-duplicates' },
-            body: JSON.stringify(row)
-          });
-        }
-      }
+      await supabaseServerFetch('roster?on_conflict=date,name,store_id', {
+        method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(row)
+      });
       return res.json({ status: 'success' });
     }
 
@@ -660,20 +606,7 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         });
         return res.json({ status: 'success', item: result && result[0] ? result[0] : { ...row, id: x.id } });
       }
-      try {
-        result = await supabaseServerFetch('expenses', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify(row)
-        });
-      } catch (err) {
-        delete row.store_id;
-        result = await supabaseServerFetch('expenses', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify(row)
-        });
-      }
+      result = await supabaseServerFetch('expenses', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(row) });
       return res.json({ status: 'success', item: result && result[0] ? result[0] : row });
     }
 
@@ -686,20 +619,7 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
         store_id: x.store_id || 'anatolya'
       }));
       let result;
-      try {
-        result = await supabaseServerFetch('expenses', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify(rows)
-        });
-      } catch (err) {
-        const rowsNoStore = rows.map(r => { const c = { ...r }; delete c.store_id; return c; });
-        result = await supabaseServerFetch('expenses', {
-          method: 'POST',
-          headers: { 'Prefer': 'return=representation' },
-          body: JSON.stringify(rowsNoStore)
-        });
-      }
+      result = await supabaseServerFetch('expenses', { method: 'POST', headers: { 'Prefer': 'return=representation' }, body: JSON.stringify(rows) });
       return res.json({ status: 'success', count: rows.length, items: result || rows });
     }
 
@@ -713,14 +633,9 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
     if (payload.action === 'delete') {
       const cleanD = cleanDateStr(payload.date);
       const nameEnc = encodeURIComponent(payload.name.toString().trim());
-      const storeFilter = payload.store_id ? `&store_id=eq.${payload.store_id}` : '';
-      await supabaseServerFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}${storeFilter}`, {
-        method: 'DELETE'
-      }).catch(() => {
-        return supabaseServerFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}`, {
-          method: 'DELETE'
-        });
-      });
+      const storeId = payload.store_id || 'anatolya';
+      if (!['anatolya', 'green_juice'].includes(storeId)) throw new Error('Invalid roster store');
+      await supabaseServerFetch('roster?date=eq.' + cleanD + '&name=eq.' + nameEnc + '&store_id=eq.' + storeId, { method: 'DELETE' });
       return res.json({ status: 'success' });
     }
 
@@ -729,8 +644,8 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
       const isOwner = (s.name && s.name.toString().trim().toLowerCase() === 'qaiser');
       const cRate = isOwner ? 0 : (Number(s.cash_rate !== undefined ? s.cash_rate : s.cashRate) || 0);
       const tRate = isOwner ? 0 : (Number(s.tax_rate !== undefined ? s.tax_rate : s.taxRate) || 0);
-      const gjCRate = isOwner ? 0 : (Number(s.gj_cash_rate !== undefined ? s.gj_cash_rate : s.gjCashRate) || cRate || 0);
-      const gjSunRate = isOwner ? 0 : (Number(s.gj_sunday_rate !== undefined ? s.gj_sunday_rate : s.gjSundayRate) || gjCRate || cRate || 0);
+      const gjCRate = isOwner ? 0 : numberOrDefault(s.gj_cash_rate !== undefined ? s.gj_cash_rate : s.gjCashRate, cRate);
+      const gjSunRate = isOwner ? 0 : numberOrDefault(s.gj_sunday_rate !== undefined ? s.gj_sunday_rate : s.gjSundayRate, gjCRate);
       
       let storesVal = s.stores || 'anatolya,green_juice';
       if (Array.isArray(storesVal)) storesVal = storesVal.join(',');
@@ -815,20 +730,9 @@ app.post('/api/mutate', requireAuthorizedManager, async (req, res) => {
           updated_at: new Date().toISOString()
         };
       });
-      try {
-        await supabaseServerFetch('roster?on_conflict=date,name,store_id', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(copied)
-        });
-      } catch (err) {
-        const stripped = copied.map(c => { const x = { ...c }; delete x.store_id; return x; });
-        await supabaseServerFetch('roster?on_conflict=date,name', {
-          method: 'POST',
-          headers: { 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(stripped)
-        });
-      }
+      await supabaseServerFetch('roster?on_conflict=date,name,store_id', {
+        method: 'POST', headers: { 'Prefer': 'resolution=merge-duplicates' }, body: JSON.stringify(copied)
+      });
       return res.json({ status: 'success', count: copied.length });
     }
 
@@ -871,7 +775,7 @@ app.get('/api/learned-rules', requireAuthorizedManager, (req, res) => {
 });
 
 // Endpoint for high-accuracy Vision AI document & screenshot parser using Gemini 2.0 Flash
-app.post('/api/expenses/parse-document', async (req, res) => {
+app.post('/api/expenses/parse-document', requireAuthorizedManager, async (req, res) => {
   try {
     const { fileBase64, mimeType, fileName } = req.body;
     if (!fileBase64) {
@@ -976,8 +880,31 @@ Do not include markdown fences.`;
   }
 });
 
+// Upload-only authorization; never expose a manager token on the POS site.
+const bookmarkletTokens = new Map();
+function pruneBookmarkletTokens() {
+  for (const [token, expires] of bookmarkletTokens) {
+    if (expires <= Date.now()) bookmarkletTokens.delete(token);
+  }
+}
+app.post('/api/bookmarklet-token', requireAuthorizedManager, (req, res) => {
+  pruneBookmarkletTokens();
+  if (bookmarkletTokens.size >= 100) return res.status(429).json({ error: 'Too many active upload tokens' });
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  bookmarkletTokens.set(token, expiresAt);
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ token, expiresAt });
+});
+function requireBookmarkletUpload(req, res, next) {
+  pruneBookmarkletTokens();
+  const token = (req.headers.authorization || '').replace(/^Bearer /, '');
+  if (!bookmarkletTokens.has(token)) return res.status(401).json({ error: 'Upload access expired. Copy a fresh bookmarklet from the portal.' });
+  next();
+}
+
 // Endpoint for browser bookmarklet sync (e.g. past months or custom ranges scraped directly by user in browser)
-app.post('/api/bookmarklet-sync', async (req, res) => {
+app.post('/api/bookmarklet-sync', requireBookmarkletUpload, async (req, res) => {
   try {
     const { days, transactions } = req.body;
     if (!days || !Array.isArray(days)) {
@@ -1036,7 +963,7 @@ app.post('/api/bookmarklet-sync', async (req, res) => {
             method: 'POST',
             headers: { 'Prefer': 'resolution=merge-duplicates' },
             body: JSON.stringify(formatted)
-          }).catch(err => console.warn('[BookmarkletSync] Warning saving raw tx chunk:', err.message));
+          });
         }));
       }
       txCount = transactions.length;
@@ -1060,30 +987,15 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
   const shouldWait = req.query.wait === 'true' || req.query.wait === '1';
   const notifyTelegram = req.query.notify === 'true' || req.query.notify === '1';
 
-  if (appState.isSyncing) {
-    if (!shouldWait) {
-      return res.json({ 
-        status: 'in_progress', 
-        message: 'Sync already underway', 
-        progress: appState.activeSyncProgress 
-      });
-    }
-    // Wait for active sync to complete (up to 45 seconds)
-    const start = Date.now();
-    while (appState.isSyncing && (Date.now() - start < 45000)) {
-      await new Promise(r => setTimeout(r, 1000));
-    }
-    return res.json({
-      status: 'ok',
-      message: 'Sync completed',
-      lastSyncResult: appState.lastSyncResult,
-      lastSyncTime: appState.lastSyncTime
-    });
-  }
+  const from = req.query.from || null;
+  const to = req.query.to || null;
+  try { if (from || to) validateSyncRange(from, to); }
+  catch (err) { return res.status(400).json({ status: 'error', message: err.message }); }
+  if (appState.isSyncing) return res.status(409).json({ status: 'in_progress', message: 'A sync is already running. Wait before starting another range.' });
 
   if (shouldWait) {
     try {
-      await runSync(true, notifyTelegram);
+      await runSync(true, notifyTelegram, from, to);
       return res.json({
         status: 'ok',
         message: 'Sync completed',
@@ -1094,7 +1006,7 @@ app.all('/sync', requireAuthorizedManager, async (req, res) => {
       return res.status(500).json({ status: 'error', message: err.message });
     }
   } else {
-    runSync(true, notifyTelegram).catch(console.error);
+    runSync(true, notifyTelegram, from, to).catch(console.error);
     return res.json({ 
       status: 'triggered', 
       message: 'Live sync for Today initiated' 
@@ -1141,8 +1053,13 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
     let allReceipts = [];
     let cursor = null;
     let pageCount = 0;
+    const seenCursors = new Set();
 
     do {
+      if (cursor) {
+        if (seenCursors.has(cursor)) throw new Error('Loyverse repeated a cursor; partial sales were not saved.');
+        seenCursors.add(cursor);
+      }
       pageCount++;
       const url = new URL(`${LOYVERSE_API_BASE}/receipts`);
       url.searchParams.set('created_at_min', minIso);
@@ -1190,7 +1107,8 @@ async function syncLoyverseSales(startDateIso = null, endDateIso = null) {
       const receipts = data.receipts || [];
       allReceipts = allReceipts.concat(receipts);
       cursor = data.cursor || null;
-    } while (cursor && pageCount < 20);
+    } while (cursor && pageCount < 1000);
+    if (cursor) throw new Error('Loyverse pagination limit reached; partial sales were not saved.');
 
     console.log(`[LoyverseSync] Fetched ${allReceipts.length} receipts from Loyverse.`);
 
@@ -1988,14 +1906,14 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
   console.log(`[EposFilter] Setting Epos Now Filter: ${fromIso} to ${toIso}...`);
 
   const now = new Date();
-  const todayIso = now.toISOString().split('T')[0];
+  const todayIso = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(now);
   const yDate = new Date(now);
   yDate.setDate(yDate.getDate() - 1);
-  const yesterdayIso = yDate.toISOString().split('T')[0];
+  const yesterdayIso = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(yDate);
 
   // Distinguish Today vs Yesterday vs Custom
-  const isToday = (fromIso === toIso && (fromIso === todayIso || fromIso === '2026-09-21'));
-  const isYesterday = !isToday && (fromIso === toIso && (fromIso === yesterdayIso || fromIso === '2026-09-20'));
+  const isToday = (fromIso === toIso && fromIso === todayIso);
+  const isYesterday = !isToday && (fromIso === toIso && fromIso === yesterdayIso);
 
   let targetPeriod = 'custom';
   let targetPeriodLabel = 'Custom';
@@ -2044,15 +1962,17 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
       console.log(`[EposFilter] Clicked dropdown option "${targetPeriod}".`);
       await page.waitForTimeout(800);
     } else {
-      await page.evaluate((val) => {
+      const selected = await page.evaluate((val) => {
         const lis = Array.from(document.querySelectorAll('li[role="option"], .MuiMenuItem-root'));
         for (const li of lis) {
           if (li.getAttribute('data-value') === val || (li.innerText || '').toLowerCase().includes(val)) {
             li.click();
-            break;
+            return true;
           }
         }
+        return false;
       }, targetPeriod);
+      if (!selected) throw new Error('Could not select Epos report period');
       await page.waitForTimeout(800);
     }
 
@@ -2064,7 +1984,7 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
         await dateInputs.nth(0).fill(`${fDay} / ${fMonth} / ${fYear} 12:00 AM`);
         await dateInputs.nth(1).fill(`${tDay} / ${tMonth} / ${tYear} 11:59 PM`);
       } else {
-        await page.evaluate(({ fDay, fMonth, fYear, tDay, tMonth, tYear }) => {
+        const datesSet = await page.evaluate(({ fDay, fMonth, fYear, tDay, tMonth, tYear }) => {
           const inps = Array.from(document.querySelectorAll('input')).filter(i => (i.placeholder || '').includes('DD / MM / YYYY'));
           function setVal(el, val) {
             if (!el) return;
@@ -2078,7 +1998,9 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
             setVal(inps[0], `${fDay} / ${fMonth} / ${fYear} 12:00 AM`);
             setVal(inps[1], `${tDay} / ${tMonth} / ${tYear} 11:59 PM`);
           }
+          return inps.length >= 2;
         }, { fDay, fMonth, fYear, tDay, tMonth, tYear });
+        if (!datesSet) throw new Error('Could not find both Epos date inputs');
       }
       await page.waitForTimeout(600);
     } else {
@@ -2123,11 +2045,12 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
     if (notifyTelegram) {
       await sendStepScreenshot(page, `⚠️ Warning in Step: ${err.message}`);
     }
+    throw err;
   }
 }
 
 // Scrapes currently displayed transactions from table (switching to 100/page and paginating completely)
-async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = true) {
+async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = true, expectedFrom = null, expectedTo = null) {
   console.log(`[EposScrape] Scraping transactions view (${chunkLabel})...`);
 
   // Step 1: Switch Rows per page to 100 for fast, full extraction
@@ -2155,7 +2078,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   const allTxList = [];
   const seenIds = new Set();
   let pageNum = 0;
-  const maxPages = 40; // allows up to 4,000 transactions at 100/page
+  const maxPages = 1000; // Abort before saving if this safety limit is reached.
 
   while (pageNum < maxPages) {
     pageNum++;
@@ -2305,7 +2228,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     // If no new rows were added, we have reached the end or duplicated page
     if (addedThisPage === 0 && pageNum > 1) {
       console.log(`[EposScrape] Page ${pageNum}: 0 new rows added. Finishing pagination.`);
-      break;
+      throw new Error('Epos repeated a results page. Partial sales were not saved.');
     }
 
     // Click Next Page button via DOM (ensures no out-of-viewport exceptions)
@@ -2339,6 +2262,8 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         break;
       }
     }
+    if (!changed) throw new Error('Epos pagination did not advance. Partial sales were not saved.');
+    if (pageNum === maxPages) throw new Error('Epos pagination limit reached. Partial sales were not saved.');
     await page.waitForTimeout(200);
   }
 
@@ -2380,6 +2305,10 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       count: daysGroup[dayDate].count,
       hourly: daysGroup[dayDate].hourly
     });
+  }
+
+  if (expectedFrom && expectedTo && daysBatch.some(d => d.date < expectedFrom || d.date > expectedTo)) {
+    throw new Error('Epos returned transactions outside the selected range. Sales were not saved.');
   }
 
   const txRows = allTxList.map((t, idx) => {
@@ -2452,6 +2381,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       console.error('Supabase hourly_sales upsert failed:', txt);
     }
   }
+  if (!hsRes.ok) throw new Error('Sales database write failed: ' + hsRes.status);
   if (hsRes.ok) {
     console.log(`Successfully upserted ${scrapeResult.daysBatch.length} day(s) to hourly_sales.`);
   }
@@ -2486,7 +2416,8 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         });
       }
     }
-    if (txRes.ok) insertedTx += chunk.length;
+    if (!txRes.ok) throw new Error('Raw transaction database write failed: ' + txRes.status);
+    insertedTx += chunk.length;
   }
   console.log(`Successfully upserted ${insertedTx} raw transactions (${chunkLabel}).`);
 
@@ -2511,7 +2442,14 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 }
 
 // Main Sync Engine: Scrapes Today's live transactions
-async function runSync(isManual = false, notifyTelegram = false) {
+function validateSyncRange(from, to) {
+  const valid = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value;
+  if (!valid(from) || !valid(to) || from > to) throw new Error('Invalid sync date range');
+  if ((Date.parse(to) - Date.parse(from)) / 86400000 > 366) throw new Error('Select at most 367 days');
+}
+async function runSync(isManual = false, notifyTelegram = false, from = null, to = null) {
+  if (from || to) validateSyncRange(from, to);
   if (appState.isPaused && !isManual) {
     console.log('Sync is paused by user command (/pause). Skipping.');
     return;
@@ -2523,14 +2461,6 @@ async function runSync(isManual = false, notifyTelegram = false) {
   }
   appState.isSyncing = true;
 
-  // Global safety watchdog (resets isSyncing if any operation hangs past 3.5 minutes)
-  const syncWatchdog = setTimeout(() => {
-    if (appState.isSyncing) {
-      console.warn('Sync reached global watchdog timeout (210s). Resetting isSyncing.');
-      appState.isSyncing = false;
-    }
-  }, 210000);
-
   try {
     console.log(`\n============================\nStarting sync run at ${new Date().toISOString()}...\nMode: Today's Live Sales\n============================`);
     const page = await ensureLoggedIn(false, isManual);
@@ -2540,15 +2470,16 @@ async function runSync(isManual = false, notifyTelegram = false) {
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     await page.waitForTimeout(2000);
 
-    const scrapeResult = await scrapeAndSaveCurrentPage(page, 'Today', false);
-    if (!scrapeResult || scrapeResult.totalTx === 0) {
-      console.warn('No transactions parsed on page.');
-      if (notifyTelegram) {
-        await sendTelegramMessage('⚠️ Scrape completed: 0 transactions found for Today yet.');
-      }
-      return;
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(new Date());
+    const ranges = splitDateRangeIntoChunks(from || today, to || today, 31);
+    const scrapeResult = { daysBatch: [], totalTx: 0, pagesLoaded: 0 };
+    for (const range of ranges) {
+      await applyEposDateFilter(page, range.from, range.to, notifyTelegram);
+      const result = await scrapeAndSaveCurrentPage(page, range.from + ' to ' + range.to, false, range.from, range.to);
+      scrapeResult.daysBatch.push(...result.daysBatch);
+      scrapeResult.totalTx += result.totalTx;
+      scrapeResult.pagesLoaded += result.pagesLoaded;
     }
-
     appState.lastSyncTime = new Date().toISOString();
     appState.lastSyncResult = {
       days: scrapeResult.daysBatch.length,
@@ -2576,7 +2507,6 @@ async function runSync(isManual = false, notifyTelegram = false) {
     }
     throw err;
   } finally {
-    clearTimeout(syncWatchdog);
     appState.isSyncing = false;
     if (appState.activeSyncProgress) {
       appState.activeSyncProgress.isSyncing = false;
