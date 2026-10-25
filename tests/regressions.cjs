@@ -258,3 +258,11 @@ test('venue and monthly GST subtotals use the same cash-excluded sales scope',()
   assert.ok(!fields[id].innerHTML.includes('$15.00'),id+' must exclude cash GST');
  }
 });
+
+test('Anatolya Sync opens the date-range dialog instead of immediately scraping today',()=>{
+ const calls=[];
+ const c={currentStore:'anatolya',openEposSyncModal:()=>calls.push('epos-range'),openLoyverseSyncModal:()=>calls.push('loyverse'),openActiveStoreSyncModal:()=>calls.push('active'),syncDirectFromEpos:()=>assert.fail('must choose a date range first')};
+ vm.createContext(c);vm.runInContext(sourceBetween(html,'                function handlePanelSyncClick()', '                function updateSyncButtonUI()'),c);
+ c.handlePanelSyncClick();assert.equal(calls.pop(),'epos-range');
+ c.currentStore='green_juice';c.handlePanelSyncClick();assert.equal(calls.pop(),'loyverse');
+});

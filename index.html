@@ -411,7 +411,7 @@
                     <span id="salesSyncNotificationPill" class="hidden text-[10px] px-2.5 py-0.5 rounded-full font-bold shadow-sm transition-all duration-300"></span>
                 </div>
                 <div class="grid grid-cols-3 gap-1.5 sm:flex sm:items-center sm:gap-2 text-xs w-full sm:w-auto">
-                    <button type="button" id="liveEposSyncBtn" onclick="handlePanelSyncClick()" class="w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer" title="Sync today's live sales from Epos Now">
+                    <button type="button" id="liveEposSyncBtn" onclick="handlePanelSyncClick()" class="w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer" title="Sync Epos Now sales for today or a selected date range">
                         <span id="liveEposSyncSpinner" class="w-3.5 h-3.5 flex items-center justify-center shrink-0">⚡</span> <span id="liveEposSyncText" class="truncate">Sync</span>
                     </button>
                     <button type="button" onclick="refreshCloudData(true)" class="w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition flex items-center gap-1.5 shadow-sm border border-slate-700 whitespace-nowrap cursor-pointer" title="Quick reload from Supabase database">
@@ -2542,7 +2542,7 @@
                     if (currentStore === 'green_juice') {
                         openLoyverseSyncModal();
                     } else if (currentStore === 'anatolya') {
-                        syncDirectFromEpos();
+                        openEposSyncModal();
                     } else {
                         openActiveStoreSyncModal();
                     }
@@ -2560,7 +2560,7 @@
                         if (text) text.innerText = "Sync";
                     } else if (currentStore === 'anatolya') {
                         btn.className = "w-full sm:w-auto justify-center text-[11px] sm:text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2 sm:py-1.5 px-2 rounded-lg transition-all flex items-center gap-1 shadow-md border border-purple-500/30 cursor-pointer";
-                        btn.title = "Sync today's live sales from Epos Now";
+                        btn.title = "Sync Epos Now sales for today or a selected date range";
                         if (spinner) spinner.innerText = "⚡";
                         if (text) text.innerText = "Sync";
                     } else {
