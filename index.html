@@ -918,8 +918,8 @@
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-black text-white tracking-wide" id="basPeriodTitle">Q1 2026/2027 Business Activity Statement</span>
-                                <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">ATO Ready</span>
+                                <span class="text-xs font-black text-white tracking-wide" id="basPeriodTitle">Q1 2026/2027 BAS Worksheet</span>
+                                <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-semibold">Worksheet — verify with payroll</span>
                             </div>
                             <div class="text-[11px] text-slate-300" id="basPeriodDates">1 July 2026 – 30 September 2026 (92 days)</div>
                         </div>
@@ -932,22 +932,22 @@
 
                 <!-- ATO BAS Standard Boxes Grid (Official Box Numbers G1, 1A, G11, 1B, W1, W2, 3) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <!-- Box 1A & G1: GST on Sales (Card Only) -->
+                    <!-- Box 1A & G1: estimated GST on all payment methods -->
                     <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-2 shadow relative overflow-hidden">
                         <div class="flex items-center justify-between border-b border-slate-800 pb-2">
                             <div class="flex items-center gap-1.5">
                                 <span class="w-5 h-5 rounded bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">1A</span>
-                                <span class="text-xs font-bold text-slate-200">GST on Card Sales</span>
+                                <span class="text-xs font-bold text-slate-200">Estimated GST on All Sales</span>
                             </div>
                             <span class="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">10% GST</span>
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-baseline justify-between">
-                                <span class="text-[11px] text-slate-400">Box [G1] Card Sales:</span>
+                                <span class="text-[11px] text-slate-400">Box [G1] Total Sales:</span>
                                 <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxG1">$0.00</span>
                             </div>
                             <div class="flex items-baseline justify-between text-[10px] text-slate-400">
-                                <span>Cash Sales (Excluded):</span>
+                                <span>Cash Sales (Included):</span>
                                 <span class="font-mono text-slate-400" id="basBoxG1Cash">$0.00</span>
                             </div>
                             <div class="flex items-baseline justify-between pt-1 border-t border-slate-800/60">
@@ -955,7 +955,7 @@
                                 <span class="text-lg font-black text-blue-400 font-mono" id="basBox1A">$0.00</span>
                             </div>
                         </div>
-                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Card G1 ÷ 11 (Cash sales excluded from BAS)</p>
+                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">All sales included. GST assumes taxable, GST-inclusive sales; verify against your accounts.</p>
                     </div>
 
                     <!-- Box 1B & G11: GST on Purchases -->
@@ -1013,7 +1013,7 @@
                         </div>
                         <div class="space-y-1">
                             <div class="flex items-baseline justify-between">
-                                <span class="text-[11px] text-slate-400">Box [W1] Tax Wages (ex. Cash):</span>
+                                <span class="text-[11px] text-slate-400">Box [W1] Gross Payroll:</span>
                                 <span class="text-xs font-bold text-slate-200 font-mono" id="basBoxW1">$0.00</span>
                             </div>
                             <div class="flex items-baseline justify-between pt-1">
@@ -1021,7 +1021,13 @@
                                 <span class="text-lg font-black text-amber-400 font-mono" id="basBoxW2">$0.00</span>
                             </div>
                         </div>
-                        <p class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Taxable roster wages (excluding cash wages) & estimated PAYG withholding</p>
+                        <div class="text-[9px] text-slate-400 italic pt-1 border-t border-slate-800/60">Enter actual payroll totals for this shop and period. These worksheet inputs reset when the period or shop changes.
+                        <label class="block mt-2">Actual W1 gross payments ($)
+                            <input id="basActualW1" type="number" min="0" step="0.01" placeholder="From payroll records" onchange="renderBasReportView()" class="block w-full mt-1 bg-slate-800 text-white rounded px-2 py-1">
+                        </label>
+                        <label class="block mt-2">Actual W2 withheld ($)
+                            <input id="basActualW2" type="number" min="0" step="0.01" placeholder="From payroll records" onchange="renderBasReportView()" class="block w-full mt-1 bg-slate-800 text-white rounded px-2 py-1">
+                        </label></div>
                     </div>
 
                     <!-- Total Settlement to ATO (Box 3 + Box W2) -->
@@ -1060,13 +1066,13 @@
                                 <thead>
                                     <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
                                         <th class="p-2">Store / Venue</th>
-                                        <th class="p-2 text-right">Card Sales (G1)</th>
+                                        <th class="p-2 text-right">Total Sales (G1)</th>
                                         <th class="p-2 text-right text-slate-400">Cash Sales</th>
                                         <th class="p-2 text-right">GST on Sales (1A)</th>
                                         <th class="p-2 text-right">Purchases (G11)</th>
                                         <th class="p-2 text-right">GST Credits (1B)</th>
-                                        <th class="p-2 text-right">Tax Wages (W1)</th>
-                                        <th class="p-2 text-right">Tax Withheld (W2)</th>
+                                        <th class="p-2 text-right">Roster Tax Pay (estimate)</th>
+                                        <th class="p-2 text-right">Actual Withholding</th>
                                         <th class="p-2 text-right">Net GST (3)</th>
                                     </tr>
                                 </thead>
@@ -1091,7 +1097,7 @@
                                     <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-950/60">
                                         <th class="p-2">Month</th>
                                         <th class="p-2 text-right">Trading Days</th>
-                                        <th class="p-2 text-right" title="Card Sales included in BAS">Card Sales (G1)</th>
+                                        <th class="p-2 text-right" title="Card Sales included in BAS">Total Sales (G1)</th>
                                         <th class="p-2 text-right text-slate-400" title="Cash Sales excluded from BAS">Cash (excl.)</th>
                                         <th class="p-2 text-right">GST on Sales (1A)</th>
                                         <th class="p-2 text-right">Expenses (G11)</th>
@@ -1148,8 +1154,8 @@
                                         <th class="p-2 text-right">Total Shifts</th>
                                         <th class="p-2 text-right">Total Hours</th>
                                         <th class="p-2 text-right">Tax Hours</th>
-                                        <th class="p-2 text-right" title="Formal taxable wages excluding cash wages">Tax Wages (W1)</th>
-                                        <th class="p-2 text-right">Tax Withheld (W2)</th>
+                                        <th class="p-2 text-right" title="Formal taxable wages excluding cash wages">Roster Tax Pay (estimate)</th>
+                                        <th class="p-2 text-right">Actual Withholding</th>
                                     </tr>
                                 </thead>
                                 <tbody id="basStaffTableBody" class="divide-y divide-slate-800/60 text-slate-200">
@@ -1880,7 +1886,8 @@
                         📋 Copy Browser Bookmarklet Code (v2.1)
                     </button>
                     <div class="text-[10px] text-gray-500 font-semibold">Or tap below to select & copy manually:</div>
-                    <textarea id="bookmarkletCodeBox" readonly onclick="this.focus();this.select();" class="w-full h-16 text-[9px] font-mono bg-gray-50 border border-gray-300 rounded p-1.5 text-gray-600 select-all" placeholder="Loading bookmarklet code..."></textarea>
+                    <p class="text-xs text-amber-300 mb-2">Copy fresh code before each import. Upload access expires after 15 minutes.</p>
+                    <textarea title="Upload access expires in 15 minutes. Copy fresh code before importing." id="bookmarkletCodeBox" readonly onclick="this.focus();this.select();" class="w-full h-16 text-[9px] font-mono bg-gray-50 border border-gray-300 rounded p-1.5 text-gray-600 select-all" placeholder="Loading bookmarklet code..."></textarea>
                 </div>
             </div>
 
@@ -2037,16 +2044,25 @@
 
         // 2. Core State
         const EPOS_WORKER_URL = "https://epos-sync-worker.onrender.com";
-        const SUPABASE_URL = "https://ckyutsdgpdamnhsqoail.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_ZOJOaDyvy3SKzTADZrzgIg_6h44R8sf";
-        const ESTIMATED_TAX_RATE = 0.15;
+        function toLocalDateIso(date = new Date()) {
+            return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+        }
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+        }
+        function numberOrDefault(value, fallback = 0) {
+            if (value === null || value === undefined || value === '') return fallback;
+            const number = Number(value);
+            return Number.isFinite(number) ? number : fallback;
+        }
+
         let isShareModeActive = false;
         let dataStore = [];
         let staffRegistry = [];
         let hourlySalesStore = [];
         let expensesStore = [];
         let currentStore = localStorage.getItem('alhamd_current_store') || 'anatolya'; // 'anatolya' | 'green_juice' | 'all'
-        const todayStr = new Date().toLocaleDateString('sv').split(' ')[0]; 
+        const todayStr = getLocalTodayIso(); 
         document.getElementById('filterWeek').value = todayStr;
 
                 function toggleRosterShareMode() {
@@ -2167,446 +2183,29 @@
                 window.isExpenseMatch = isExpenseMatch;
                 window.getStoreSalesForDate = getStoreSalesForDate;
 
-                async function supabaseFetch(path, options = {}) {
-                    const url = `${SUPABASE_URL}/rest/v1/${path}`;
-                    const headers = {
-                        "apikey": SUPABASE_KEY,
-                        "Authorization": `Bearer ${SUPABASE_KEY}`,
-                        "Content-Type": "application/json",
-                        ...(options.headers || {})
-                    };
-                    const res = await fetch(url, { ...options, headers });
-                    if (!res.ok) {
-                        const errText = await res.text();
-                        if (res.status === 401 || res.status === 403) {
-                            throw new Error("Worker service is waking up or database requires manager login. Please wait 15 seconds and click Refresh.");
-                        }
-                        throw new Error(`Supabase error [${res.status}]: ${errText}`);
-                    }
-                    const contentType = res.headers.get("content-type");
-                    if (contentType && contentType.includes("application/json")) {
-                        return await res.json();
-                    }
-                    return null;
-                }
-
-                async function supabaseFetchAll(path, options = {}) {
-                    let allRows = [];
-                    let offset = 0;
-                    const pageSize = 1000;
-                    while (true) {
-                        const sep = path.includes('?') ? '&' : '?';
-                        const pagePath = `${path}${sep}limit=${pageSize}&offset=${offset}`;
-                        const rows = await supabaseFetch(pagePath, options);
-                        if (!Array.isArray(rows) || rows.length === 0) break;
-                        allRows = allRows.concat(rows);
-                        if (rows.length < pageSize) break;
-                        offset += pageSize;
-                    }
-                    return allRows;
-                }
-
                 async function callSheetApi(payload) {
                     const user = auth.currentUser;
-                    if (!user || !isAuthorizedEmail(user.email)) {
-                        return { status: "error", message: "Unauthorized: Account not on access list" };
-                    }
-                    if (!payload || !payload.action) return { status: "error", message: "No action specified" };
-
-                    // 1. Obtain Google ID token for server-side verification
-                    let idToken = null;
+                    if (!user || !isAuthorizedEmail(user.email)) throw new Error('Please sign in with an authorized management account.');
+                    if (!payload || !payload.action) throw new Error('No action specified');
+                    const controller = new AbortController();
+                    const reading = payload.action === 'get';
+                    const timeout = setTimeout(() => controller.abort(), reading ? 30000 : 60000);
                     try {
-                        idToken = await user.getIdToken();
-                    } catch (tokErr) {
-                        console.warn("Could not retrieve ID token:", tokErr);
-                    }
-
-                    // 2. Primary Route: High-security Render Worker API (with 12s timeout guard)
-                    if (idToken) {
-                        try {
-                            const beController = new AbortController();
-                            const beTimeout = setTimeout(() => beController.abort(), 12000);
-
-                            if (payload.action === "get") {
-                                const beResp = await fetch(`${EPOS_WORKER_URL}/api/data`, {
-                                    method: "POST",
-                                    headers: {
-                                        "Authorization": `Bearer ${idToken}`,
-                                        "Content-Type": "application/json"
-                                    },
-                                    signal: beController.signal
-                                });
-                                clearTimeout(beTimeout);
-                                if (beResp.ok) {
-                                    return await beResp.json();
-                                } else if (beResp.status === 401 || beResp.status === 403) {
-                                    const errData = await beResp.json().catch(() => ({}));
-                                    throw new Error(errData.message || "Forbidden: Access denied by secure server");
-                                }
-                            } else {
-                                const beResp = await fetch(`${EPOS_WORKER_URL}/api/mutate`, {
-                                    method: "POST",
-                                    headers: {
-                                        "Authorization": `Bearer ${idToken}`,
-                                        "Content-Type": "application/json"
-                                    },
-                                    body: JSON.stringify(payload),
-                                    signal: beController.signal
-                                });
-                                clearTimeout(beTimeout);
-                                if (beResp.ok) {
-                                    return await beResp.json();
-                                } else if (beResp.status === 401 || beResp.status === 403) {
-                                    const errData = await beResp.json().catch(() => ({}));
-                                    throw new Error(errData.message || "Forbidden: Access denied by secure server");
-                                }
-                            }
-                        } catch (beErr) {
-                            if (beErr.message && (beErr.message.includes("Forbidden") || beErr.message.includes("Access denied"))) {
-                                throw beErr;
-                            }
-                            console.warn("Backend worker API unreachable, using direct Supabase fallback:", beErr.message);
+                        const idToken = await user.getIdToken();
+                        const response = await fetch(EPOS_WORKER_URL + '/api/' + (reading ? 'data' : 'mutate'), {
+                            method: 'POST',
+                            headers: { Authorization: 'Bearer ' + idToken, 'Content-Type': 'application/json' },
+                            body: reading ? undefined : JSON.stringify(payload), signal: controller.signal
+                        });
+                        const result = await response.json();
+                        if (!response.ok || result.error || result.status === 'error') throw new Error(result.message || result.error || 'Request failed (' + response.status + ')');
+                        return result;
+                    } catch (error) {
+                        if (!reading && (error.name === 'AbortError' || error instanceof TypeError)) {
+                            throw new Error('Save could not be confirmed. Refresh and check whether it was saved before trying again.');
                         }
-                    }
-
-                    // 3. Fallback direct Supabase queries (for transition or local fallback)
-                    if (payload.action === "get") {
-                        const [staffRows, rosterRows, salesRows, expenseRows] = await Promise.all([
-                            supabaseFetch("staff?select=*&order=name.asc"),
-                            supabaseFetchAll("roster?select=*&order=date.asc"),
-                            supabaseFetchAll("hourly_sales?select=*&order=date.asc"),
-                            supabaseFetchAll("expenses?select=*&order=date.desc")
-                        ]);
-
-                        const logs = (rosterRows || []).map(r => {
-                            const isGj = (r.store_id === 'green_juice');
-                            const tot = Number(r.total_hours) || 0;
-                            return {
-                                date: r.date,
-                                weekCommencing: r.week_commencing || r.date,
-                                store_id: r.store_id || 'anatolya',
-                                name: r.name,
-                                from: r.shift_from || "",
-                                to: r.shift_to || "",
-                                cashRate: Number(r.cash_rate) || 0,
-                                taxRate: isGj ? 0 : (Number(r.tax_rate) || 0),
-                                totalHours: tot,
-                                cashHours: isGj ? tot : (Number(r.cash_hours) || 0),
-                                taxHours: isGj ? 0 : (Number(r.tax_hours) || 0)
-                            };
-                        });
-
-                        const staff = (staffRows || []).map(s => {
-                            const isOwner = (s.name && s.name.toString().trim().toLowerCase() === "qaiser");
-                            const cRate = Number(s.cash_rate) || 25;
-                            const gjCRate = Number(s.gj_cash_rate) || cRate;
-                            const gjSunRate = Number(s.gj_sunday_rate) || gjCRate;
-                            let storesList = ['anatolya', 'green_juice'];
-                            if (s.stores) {
-                                try {
-                                    storesList = typeof s.stores === 'string' ? JSON.parse(s.stores) : s.stores;
-                                } catch(_) {
-                                    storesList = [s.stores];
-                                }
-                            }
-                            return {
-                                name: s.name,
-                                cashRate: isOwner ? 0 : cRate,
-                                taxRate: isOwner ? 0 : (Number(s.tax_rate) || 30),
-                                gjCashRate: isOwner ? 0 : gjCRate,
-                                gjSundayRate: isOwner ? 0 : gjSunRate,
-                                stores: Array.isArray(storesList) ? storesList : ['anatolya', 'green_juice'],
-                                status: s.status || "Active"
-                            };
-                        });
-
-                        const sales = (salesRows || []).map(s => {
-                            const tot = Number(s.total_sales) || 0;
-                            let h = s.hourly || {};
-                            if (typeof h === 'string') {
-                                try { h = JSON.parse(h); } catch(_) { h = {}; }
-                            }
-                            let card = null;
-                            let cash = null;
-                            let uber = null;
-                            if (s.card_sales !== undefined && s.card_sales !== null && Number(s.card_sales) > 0) {
-                                card = Number(s.card_sales);
-                            } else if (h._cardSales !== undefined && h._cardSales !== null) {
-                                card = Number(h._cardSales);
-                            }
-                            if (s.cash_sales !== undefined && s.cash_sales !== null && Number(s.cash_sales) > 0) {
-                                cash = Number(s.cash_sales);
-                            } else if (h._cashSales !== undefined && h._cashSales !== null) {
-                                cash = Number(h._cashSales);
-                            }
-                            if (s.uber_sales !== undefined && s.uber_sales !== null && Number(s.uber_sales) > 0) {
-                                uber = Number(s.uber_sales);
-                            } else if (h._uberSales !== undefined && h._uberSales !== null) {
-                                uber = Number(h._uberSales);
-                            }
-                            if (card === null && cash === null && uber === null) {
-                                card = tot;
-                                cash = 0;
-                                uber = 0;
-                            } else {
-                                if (cash === null) cash = 0;
-                                if (uber === null) uber = 0;
-                                if (card === null) card = Math.max(0, tot - cash - uber);
-                            }
-                            return {
-                                date: s.date,
-                                store_id: s.store_id || 'anatolya',
-                                totalSales: tot,
-                                cardSales: Math.round(card * 100) / 100,
-                                cashSales: Math.round(cash * 100) / 100,
-                                uberSales: Math.round((uber || 0) * 100) / 100,
-                                hourly: h,
-                                updatedAt: s.updated_at || ""
-                            };
-                        });
-
-                        const expenses = (expenseRows || []).filter(x => {
-                            const isGj = (x.store_id === 'green_juice');
-                            if (isGj && (x.category || '').toLowerCase() === 'wages') return false;
-                            return true;
-                        }).map(x => ({
-                            id: x.id,
-                            date: cleanDateStr(x.date),
-                            store_id: x.store_id || 'anatolya',
-                            category: x.category || 'Others',
-                            amount: Number(x.amount) || 0,
-                            notes: x.notes || ''
-                        }));
-
-                        return { logs, staff, sales, expenses };
-                    }
-
-                    if (payload.action === "save_staff" && payload.staff) {
-                        const s = payload.staff;
-                        const isOwner = (s.name && s.name.toString().trim().toLowerCase() === "qaiser");
-                        const cRate = isOwner ? 0 : (Number(s.cash_rate !== undefined ? s.cash_rate : s.cashRate) || 0);
-                        const tRate = isOwner ? 0 : (Number(s.tax_rate !== undefined ? s.tax_rate : s.taxRate) || 0);
-                        const gjCRate = isOwner ? 0 : (Number(s.gj_cash_rate !== undefined ? s.gj_cash_rate : s.gjCashRate) || cRate || 0);
-                        const gjSunRate = isOwner ? 0 : (Number(s.gj_sunday_rate !== undefined ? s.gj_sunday_rate : s.gjSundayRate) || gjCRate || cRate || 0);
-                        let storesVal = s.stores || "anatolya,green_juice";
-                        if (Array.isArray(storesVal)) storesVal = storesVal.join(",");
-
-                        const row = {
-                            name: s.name.toString().trim(),
-                            cash_rate: cRate,
-                            tax_rate: tRate,
-                            gj_cash_rate: gjCRate,
-                            gj_sunday_rate: gjSunRate,
-                            stores: storesVal,
-                            status: s.status || "Active"
-                        };
-                        try {
-                            await supabaseFetch("staff?on_conflict=name", {
-                                method: "POST",
-                                headers: { "Prefer": "resolution=merge-duplicates" },
-                                body: JSON.stringify(row)
-                            });
-                        } catch (e) {
-                            delete row.gj_cash_rate;
-                            delete row.gj_sunday_rate;
-                            delete row.stores;
-                            await supabaseFetch("staff?on_conflict=name", {
-                                method: "POST",
-                                headers: { "Prefer": "resolution=merge-duplicates" },
-                                body: JSON.stringify(row)
-                            });
-                        }
-                        return { status: "success" };
-                    }
-
-                    if (payload.action === "save" && payload.entry) {
-                        const e = payload.entry;
-                        const targetStore = e.store_id || (currentStore === 'green_juice' ? 'green_juice' : 'anatolya');
-                        const row = {
-                            date: cleanDateStr(e.date),
-                            week_commencing: e.weekCommencing || getMondayString(cleanDateStr(e.date)),
-                            name: e.name.toString().trim(),
-                            shift_from: e.from || "",
-                            shift_to: e.to || "",
-                            cash_rate: Number(e.cashRate) || 0,
-                            tax_rate: Number(e.taxRate) || 0,
-                            total_hours: Number(e.totalHours) || 0,
-                            cash_hours: Number(e.cashHours) || 0,
-                            tax_hours: Number(e.taxHours) || 0,
-                            store_id: targetStore,
-                            updated_at: new Date().toISOString()
-                        };
-                        try {
-                            await supabaseFetch("roster?on_conflict=date,name,store_id", {
-                                method: "POST",
-                                headers: { "Prefer": "resolution=merge-duplicates" },
-                                body: JSON.stringify(row)
-                            });
-                        } catch (upsertErr) {
-                            // Check if existing shift exists for date, name, store_id
-                            const existCheck = await supabaseFetch(`roster?date=eq.${row.date}&name=eq.${encodeURIComponent(row.name)}&store_id=eq.${targetStore}`).catch(() => []);
-                            if (existCheck && existCheck.length > 0) {
-                                await supabaseFetch(`roster?id=eq.${existCheck[0].id}`, {
-                                    method: "PATCH",
-                                    body: JSON.stringify(row)
-                                });
-                            } else {
-                                await supabaseFetch("roster?on_conflict=date,name", {
-                                    method: "POST",
-                                    headers: { "Prefer": "resolution=merge-duplicates" },
-                                    body: JSON.stringify(row)
-                                });
-                            }
-                        }
-                        return { status: "success" };
-                    }
-
-                    if (payload.action === "update_expense_entity" && payload.id && payload.store_id) {
-                        const patchRes = await supabaseFetch(`expenses?id=eq.${payload.id}`, {
-                            method: "PATCH",
-                            headers: { "Prefer": "return=representation" },
-                            body: JSON.stringify({ store_id: payload.store_id })
-                        });
-                        return { status: "success", item: patchRes && patchRes[0] ? patchRes[0] : null };
-                    }
-
-                    if (payload.action === "save_expense" && payload.expense) {
-                        const x = payload.expense;
-                        const row = {
-                            date: cleanDateStr(x.date),
-                            category: x.category || 'Others',
-                            amount: Number(x.amount) || 0,
-                            notes: x.notes || '',
-                            store_id: x.store_id || 'anatolya'
-                        };
-                        if (x.id) {
-                            const res = await supabaseFetch(`expenses?id=eq.${x.id}`, {
-                                method: "PATCH",
-                                headers: { "Prefer": "return=representation" },
-                                body: JSON.stringify(row)
-                            });
-                            return { status: "success", item: res && res[0] ? res[0] : { ...row, id: x.id } };
-                        }
-                        const res = await supabaseFetch("expenses", {
-                            method: "POST",
-                            headers: { "Prefer": "return=representation" },
-                            body: JSON.stringify(row)
-                        });
-                        return { status: "success", item: res && res[0] ? res[0] : row };
-                    }
-
-                    if (payload.action === "batch_save_expenses" && Array.isArray(payload.expenses) && payload.expenses.length > 0) {
-                        const rows = payload.expenses.map(x => ({
-                            date: cleanDateStr(x.date),
-                            category: x.category || 'Others',
-                            amount: Math.abs(Number(x.amount)) || 0,
-                            notes: (x.notes || '').slice(0, 300),
-                            store_id: x.store_id || 'anatolya'
-                        }));
-                        let res;
-                        try {
-                            res = await supabaseFetch("expenses", {
-                                method: "POST",
-                                headers: { "Prefer": "return=representation" },
-                                body: JSON.stringify(rows)
-                            });
-                        } catch (e) {
-                            const rowsNoStore = rows.map(r => { const c = { ...r }; delete c.store_id; return c; });
-                            res = await supabaseFetch("expenses", {
-                                method: "POST",
-                                headers: { "Prefer": "return=representation" },
-                                body: JSON.stringify(rowsNoStore)
-                            });
-                        }
-                        return { status: "success", count: rows.length, items: res || rows };
-                    }
-
-                    if (payload.action === "delete_expense" && payload.id) {
-                        await supabaseFetch(`expenses?id=eq.${payload.id}`, {
-                            method: "DELETE"
-                        });
-                        return { status: "success" };
-                    }
-
-                    if (payload.action === "save_learned_rule" || payload.action === "delete_learned_rule") {
-                        return { status: "success" };
-                    }
-
-                    if (payload.action === "delete") {
-                        const cleanD = cleanDateStr(payload.date);
-                        const nameEnc = encodeURIComponent(payload.name.toString().trim());
-                        const storeFilter = payload.store_id ? `&store_id=eq.${payload.store_id}` : '';
-                        await supabaseFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}${storeFilter}`, {
-                            method: "DELETE"
-                        }).catch(() => {
-                            return supabaseFetch(`roster?date=eq.${cleanD}&name=ilike.${nameEnc}`, {
-                                method: "DELETE"
-                            });
-                        });
-                        return { status: "success" };
-                    }
-
-                    if (payload.action === "save_hourly_sales") {
-                        const cleanD = cleanDateStr(payload.date);
-                        const row = {
-                            date: cleanD,
-                            total_sales: Number(payload.totalSales) || 0,
-                            hourly: payload.hourly || {},
-                            updated_at: new Date().toISOString()
-                        };
-                        await supabaseFetch("hourly_sales?on_conflict=date", {
-                            method: "POST",
-                            headers: { "Prefer": "resolution=merge-duplicates" },
-                            body: JSON.stringify(row)
-                        });
-                        return { status: "success" };
-                    }
-
-                    if (payload.action === "copy_previous_week") {
-                        const targetMon = payload.targetWeekMonday;
-                        const prevMon = addDaysString(targetMon, -7);
-                        const storeId = payload.store_id || (currentStore === 'green_juice' ? 'green_juice' : 'anatolya');
-                        const storeFilter = `&store_id=eq.${storeId}`;
-                        const prevShifts = await supabaseFetch(`roster?week_commencing=eq.${prevMon}${storeFilter}`);
-                        if (!prevShifts || prevShifts.length === 0) {
-                            return { status: "success", count: 0 };
-                        }
-                        const isGj = (storeId === 'green_juice');
-                        const copied = prevShifts.map(s => {
-                            const nextDate = addDaysString(cleanDateStr(s.date), 7);
-                            const tot = Number(s.total_hours) || 0;
-                            return {
-                                date: nextDate,
-                                week_commencing: targetMon,
-                                name: s.name,
-                                shift_from: s.shift_from || "",
-                                shift_to: s.shift_to || "",
-                                cash_rate: Number(s.cash_rate) || 0,
-                                tax_rate: isGj ? 0 : (Number(s.tax_rate) || 0),
-                                total_hours: tot,
-                                cash_hours: isGj ? tot : (Number(s.cash_hours) || 0),
-                                tax_hours: isGj ? 0 : (Number(s.tax_hours) || 0),
-                                store_id: storeId,
-                                updated_at: new Date().toISOString()
-                            };
-                        });
-                        try {
-                            await supabaseFetch("roster?on_conflict=date,name,store_id", {
-                                method: "POST",
-                                headers: { "Prefer": "resolution=merge-duplicates" },
-                                body: JSON.stringify(copied)
-                            });
-                        } catch (upsertErr) {
-                            await supabaseFetch("roster?on_conflict=date,name", {
-                                method: "POST",
-                                headers: { "Prefer": "resolution=merge-duplicates" },
-                                body: JSON.stringify(copied)
-                            });
-                        }
-                        return { status: "success", count: copied.length };
-                    }
-
-                    return { status: "error", message: `Unknown action ${payload.action}` };
+                        throw error;
+                    } finally { clearTimeout(timeout); }
                 }
 
                 let isCloudLoading = false;
@@ -2638,7 +2237,7 @@
 
                     const sInput = document.getElementById('eposSyncStartDate');
                     const eInput = document.getElementById('eposSyncEndDate');
-                    const today = new Date().toISOString().split('T')[0];
+                    const today = getLocalTodayIso();
                     
                     if (window.analyticsDateRange && window.analyticsDateRange.start && window.analyticsDateRange.end) {
                         if (sInput) sInput.value = window.analyticsDateRange.start;
@@ -2647,7 +2246,7 @@
                         const d = new Date();
                         const day = d.getDay();
                         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                        const mon = new Date(d.setDate(diff)).toISOString().split('T')[0];
+                        const mon = toLocalDateIso(new Date(d.setDate(diff)));
                         if (sInput) sInput.value = mon;
                         if (eInput) eInput.value = today;
                     }
@@ -2664,7 +2263,7 @@
                     if (!sInput || !eInput) return;
 
                     const now = new Date();
-                    const toIso = (dt) => dt.toISOString().split('T')[0];
+                    const toIso = (dt) => toLocalDateIso(dt);
 
                     if (preset === 'yesterday') {
                         const y = new Date(now);
@@ -2758,7 +2357,7 @@
                     syncDirectFromEpos(sDate, eDate);
                 }
 
-                async function syncDirectFromEpos() {
+                async function syncDirectFromEpos(from = null, to = null) {
                     const user = auth.currentUser;
                     if (!user || !isAuthorizedEmail(user.email)) {
                         alert("Please login with an authorized management account first.");
@@ -2811,7 +2410,9 @@
 
                         let workerResult = null;
                         try {
-                            const resp = await fetch(`${EPOS_WORKER_URL}/sync?wait=true&notify=true`, {
+                            const syncParams = new URLSearchParams({ wait: 'true', notify: 'true' });
+                            if (from && to) { syncParams.set('from', from); syncParams.set('to', to); }
+                            const resp = await fetch(EPOS_WORKER_URL + '/sync?' + syncParams, {
                                 signal: controller.signal,
                                 cache: 'no-cache',
                                 headers: authHeaders
@@ -2819,14 +2420,13 @@
                             clearTimeout(progressTimer);
                             clearTimeout(abortTimeout);
 
-                            if (resp.ok) {
-                                const data = await resp.json();
-                                workerResult = data.lastSyncResult;
-                            }
+                            const data = await resp.json();
+                            if (!resp.ok || data.status !== 'ok') throw new Error(data.message || 'Sales sync failed.');
+                            workerResult = data.lastSyncResult;
                         } catch (netErr) {
                             clearTimeout(progressTimer);
                             clearTimeout(abortTimeout);
-                            console.warn("Direct Epos scrape request encountered issue:", netErr);
+                            throw netErr;
                         }
 
                         setSyncStatus('⚡ Updating database...', 'bg-purple-600 text-white');
@@ -2842,7 +2442,7 @@
                         clearSyncStatus(6000);
                     } catch (err) {
                         console.error("Direct Epos sync error:", err);
-                        setSyncStatus('⚠️ Loaded database only', 'bg-amber-700 text-white');
+                        setSyncStatus('⚠️ Sync not completed: ' + err.message, 'bg-amber-700 text-white');
                         clearSyncStatus(5000);
                         isCloudLoading = false;
                         await loadCloudData({ silent: true });
@@ -3341,7 +2941,7 @@
                 function navigateRosterWeek(delta) {
                     const input = document.getElementById('filterWeek');
                     let currentVal = input ? input.value : '';
-                    if (!currentVal) currentVal = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+                    if (!currentVal) currentVal = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (getLocalTodayIso());
                     const currentMon = getMondayString(cleanDateStr(currentVal));
                     const targetMon = addDaysString(currentMon, delta * 7);
                     if (input) input.value = targetMon;
@@ -3351,7 +2951,7 @@
 
                 function jumpRosterToCurrentWeek() {
                     const input = document.getElementById('filterWeek');
-                    const today = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+                    const today = (typeof getLocalTodayIso === 'function') ? getLocalTodayIso() : (getLocalTodayIso());
                     const curMon = getMondayString(cleanDateStr(today));
                     if (input) input.value = curMon;
                     syncDashboardWeekFilter();
@@ -3586,11 +3186,7 @@
                 }
 
                 function getLocalTodayIso() {
-                    const now = new Date();
-                    const y = now.getFullYear();
-                    const m = String(now.getMonth() + 1).padStart(2, '0');
-                    const d = String(now.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${d}`;
+                    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Australia/Perth' }).format(new Date());
                 }
                 window.getLocalTodayIso = getLocalTodayIso;
 
@@ -3599,13 +3195,13 @@
                     let date = new Date(Date.UTC(y, m - 1, d));
                     let day = date.getUTCDay();
                     date.setUTCDate(date.getUTCDate() - (day === 0 ? 6 : day - 1));
-                    return date.toISOString().split('T')[0];
+                    return date.toISOString().slice(0, 10);
                 }
 
                 function addDaysString(dateString, days) {
                     const [y, m, d] = dateString.split('-').map(Number);
                     let date = new Date(Date.UTC(y, m - 1, d + days));
-                    return date.toISOString().split('T')[0];
+                    return date.toISOString().slice(0, 10);
                 }
 
                 function formatDisplayDateStr(dateStr) {
@@ -3672,7 +3268,7 @@
         if (currentStore === 'green_juice') return (e.store_id === 'green_juice');
         return true;
     });
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalTodayIso();
     const isHistoric = (startMondayStr < getMondayString(today));
 
     let storeStaffPool = staffRegistry.filter(s => {
@@ -3697,7 +3293,7 @@
 
     targetRenderList.forEach(staffName => {
         const isOwner = (staffName.toLowerCase().trim() === 'qaiser');
-        let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${staffName}</td>`;
+        let staffRowHtml = `<td class="px-1 py-1.5 font-bold text-gray-900 border-r bg-gray-50 max-w-[64px] truncate">${escapeHtml(staffName)}</td>`;
         let sCashH = 0, sTaxH = 0, sCashP = 0, sTaxP = 0, sTotalH = 0;
 
         for (let i = 0; i < 7; i++) {
@@ -3782,11 +3378,18 @@
     renderCurrentAnalyticsView();
 }
 
-        function getBookmarkletCodeString() {
-            return `javascript:(async function(){var W_URL="https://epos-sync-worker.onrender.com/api/bookmarklet-sync";var b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='12px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='99999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='12px 20px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 35px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif';b.style.fontSize='12px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.width='max-content';b.style.transition='all 0.3s ease';document.body.appendChild(b);}b.innerHTML='⚡ Scanning Epos Now Transactions (v2.1)...';b.style.backgroundColor='#1e1b4b';function sB(msg,bg,timeout){if(!b)return;b.innerHTML=msg;if(bg)b.style.backgroundColor=bg;if(timeout)setTimeout(function(){if(b)b.remove();},timeout);}try{function toIso(y,m,d){return String(y)+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}function parseAnyDate(str){if(!str)return null;var now=new Date();var curYear=now.getFullYear();var s=str.trim();if(s.toLowerCase()==='today')return now.toISOString().split('T')[0];if(s.toLowerCase()==='yesterday'){var yD=new Date(now);yD.setDate(yD.getDate()-1);return yD.toISOString().split('T')[0];}var mIso=s.match(/\\b(\\d{4})-(\\d{2})-(\\d{2})\\b/);if(mIso)return mIso[0];var mSlash=s.match(/\\b(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})\\b/);if(mSlash){var d=parseInt(mSlash[1],10);var mo=parseInt(mSlash[2],10);var yr=mSlash[3].length===2?'20'+mSlash[3]:mSlash[3];if(d>=1&&d<=31&&mo>=1&&mo<=12)return toIso(yr,mo,d);}var months=['january','february','march','april','may','june','july','august','september','october','november','december'];var sMonths=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];var mWord=s.match(/\\b(\\d{1,2})(?:st|nd|rd|th)?[\\s\\-\\/]+([A-Za-z]{3,9})(?:[\\s\\-\\/,]+(\\d{2,4}))?\\b/i);if(mWord){var mName=mWord[2].toLowerCase();var mIdx=months.indexOf(mName);if(mIdx===-1)mIdx=sMonths.indexOf(mName.slice(0,3));if(mIdx!==-1){var yr2=mWord[3]?(mWord[3].length===2?'20'+mWord[3]:mWord[3]):String(curYear);return toIso(yr2,mIdx+1,mWord[1]);}}return null;}function parseTimeStr(timeStr){if(!timeStr)return null;var tm=timeStr.match(/(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\s*([apAP][mM])?/i);if(!tm)return null;var h=parseInt(tm[1],10);var ampm=tm[4]?tm[4].toUpperCase():'';if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;return String(h).padStart(2,'0')+':00';}try{var combobox=document.querySelector('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-select');if(combobox&&(combobox.innerText||'').trim()!=='100'){combobox.click();await new Promise(function(r){setTimeout(r,400);});var opt100=document.querySelector('li[data-value="100"], [role="option"][data-value="100"]');if(opt100){opt100.click();sB('⏳ Switched table to 100 rows/page. Loading...','#312e81');await new Promise(function(r){setTimeout(r,2500);});}}}catch(e){}function findNextOrMoreButton(){var allBtns=Array.from(document.querySelectorAll('button, a[role="button"], div[role="button"], [class*="button" i], [class*="btn" i]'));for(var i=0;i<allBtns.length;i++){var bEl=allBtns[i];var txt=(bEl.innerText||bEl.textContent||'').trim().toLowerCase();if(txt.includes('more transaction')||txt.includes('load more')||txt.includes('show more')||(txt.includes('more')&&txt.includes('tx'))){if(!bEl.disabled&&bEl.getAttribute('aria-disabled')!=='true'&&bEl.offsetParent!==null){return bEl;}}}var next=document.querySelector('button[aria-label="Go to next page"], button[title="Go to next page"]');if(!next){next=document.querySelector('button[aria-label*="next page" i], .MuiTablePagination-actions button:last-child');}if(next&&!next.disabled&&next.getAttribute('aria-disabled')!=='true'&&next.offsetParent!==null){return next;}return null;}function getPaginationLabel(){var el=document.querySelector('.MuiTablePagination-displayedRows, .MuiTablePagination-caption, [class*="displayedRows"]');return el?(el.innerText||'').trim():'';}function extractRowsFromPage(){var rows=[];var gridRows=document.querySelectorAll('.MuiDataGrid-row, tr[data-id], tbody tr, table tr');for(var i=0;i<gridRows.length;i++){var rEl=gridRows[i];var rText=(rEl.innerText||rEl.textContent||'').replace(/\\s+/g,' ').trim();if(!rText||rText.toLowerCase().includes('transaction report'))continue;var dM=rText.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\btoday\\b|\\byesterday\\b)/i);var tM=rText.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i);var aM=rText.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(dM&&tM&&aM){var isoDate=parseAnyDate(dM[1]);var amountVal=parseFloat(aM[1]);var isCash=/\\bcash\\b/i.test(rText)&&!/\\bcard\\b|\\beftpos\\b|\\bvisa\\b|\\bmastercard\\b/i.test(rText);if(isoDate&&!isNaN(amountVal)){rows.push({eposId:rEl.getAttribute('data-id')||'',date:isoDate,time:tM[1],hour:parseTimeStr(tM[1])||'12:00',amount:amountVal,isCash:isCash,raw:rText.slice(0,80)});}}}if(rows.length===0){var cards=document.querySelectorAll('[role="row"], [role="listitem"], [class*="card" i], [class*="row" i], [class*="item" i], [class*="transaction" i], li');for(var j=0;j<cards.length;j++){var cEl=cards[j];var cText=(cEl.innerText||cEl.textContent||'').replace(/\\s+/g,' ').trim();if(!cText||cText.toLowerCase().includes('transaction report'))continue;var cdM=cText.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\btoday\\b|\\byesterday\\b)/i);var ctM=cText.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i);var caM=cText.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(cdM&&ctM&&caM){var cIso=parseAnyDate(cdM[1]);var cAmt=parseFloat(caM[1]);var cCash=/\\bcash\\b/i.test(cText)&&!/\\bcard\\b|\\beftpos\\b|\\bvisa\\b|\\bmastercard\\b/i.test(cText);if(cIso&&!isNaN(cAmt)){rows.push({eposId:cEl.getAttribute('data-id')||'',date:cIso,time:ctM[1],hour:parseTimeStr(ctM[1])||'12:00',amount:cAmt,isCash:cCash,raw:cText.slice(0,80)});}}}}if(rows.length===0){var textSource=document.body.innerText||'';var lines=textSource.split(/\\r?\\n/).map(function(l){return l.trim();}).filter(Boolean);for(var k=0;k<lines.length;k++){var lStr=lines[k];var ldM=lStr.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\btoday\\b|\\byesterday\\b|\\b\\d{1,2}\\s+[A-Za-z]{3,9}(?:\\s+\\d{2,4})?\\b)/i);if(!ldM)continue;var ltM=lStr.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i);var timeLineIdx=k;if(!ltM&&k+1<lines.length){ltM=lines[k+1].match(/^(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)$/i);if(ltM)timeLineIdx=k+1;}if(ldM&&ltM){var lIso=parseAnyDate(ldM[1]);var lTime=ltM[1];var lHour=parseTimeStr(lTime)||'12:00';var lAmt=null;var lCash=false;var rawGroup=[lStr];if(timeLineIdx!==k)rawGroup.push(lines[timeLineIdx]);for(var n=timeLineIdx+1;n<Math.min(timeLineIdx+8,lines.length);n++){var nextL=lines[n];var nDate=/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}|\\b\\d{4}-\\d{2}-\\d{2}|\\btoday\\b|\\byesterday\\b)/i.test(nextL);var nTime=/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i.test(nextL);if(nDate&&nTime)break;rawGroup.push(nextL);if(lAmt===null){var laM=nextL.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(laM)lAmt=parseFloat(laM[1]);}if(/\\bcash\\b/i.test(nextL))lCash=true;else if(/\\bcard\\b|\\beftpos\\b|\\bvisa\\b|\\bmastercard\\b/i.test(nextL))lCash=false;}if(lIso&&lAmt!==null&&!isNaN(lAmt)){rows.push({eposId:'',date:lIso,time:lTime,hour:lHour,amount:lAmt,isCash:lCash,raw:rawGroup.join(' ').slice(0,80)});}}}}return rows;}var allTxList=[];var seenIds=new Set();function collectNewRows(pageRows){var added=0;for(var i=0;i<pageRows.length;i++){var r=pageRows[i];var uKey=r.eposId?('epos_'+r.eposId):(r.date+'_'+r.time+'_'+r.amount.toFixed(2));if(!seenIds.has(uKey)){seenIds.add(uKey);allTxList.push(r);added++;}}return added;}collectNewRows(extractRowsFromPage());sB('🔍 Found '+allTxList.length+' txs on initial page...','#312e81');var maxLoops=120;var loopCount=0;while(loopCount<maxLoops){loopCount++;var btn=null;var findStart=Date.now();while(Date.now()-findStart<8000){btn=findNextOrMoreButton();if(btn)break;await new Promise(function(r){setTimeout(r,500);});}if(!btn){break;}var oldPageLabel=getPaginationLabel();sB('🔍 Found '+allTxList.length+' txs. Loading next batch ('+loopCount+')...','#312e81');btn.scrollIntoView({behavior:'smooth',block:'center'});btn.click();var waitStart=Date.now();var newlyAdded=0;while(Date.now()-waitStart<12000){await new Promise(function(r){setTimeout(r,700);});var newLabel=getPaginationLabel();newlyAdded=collectNewRows(extractRowsFromPage());if(newlyAdded>0||(oldPageLabel&&newLabel&&newLabel!==oldPageLabel)){await new Promise(function(r){setTimeout(r,400);});collectNewRows(extractRowsFromPage());sB('🔍 Scanned '+allTxList.length+' txs ('+(newLabel||('batch '+loopCount))+')...','#312e81');break;}}if(newlyAdded===0){break;}}if(allTxList.length===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure the Epos Now Transactions report is open.</span>','#991b1b',7000);return;}var daysGroup={};for(var m=0;m<allTxList.length;m++){var tx=allTxList[m];var dKey=tx.date;if(!daysGroup[dKey]){daysGroup[dKey]={totalSales:0,cardSales:0,cashSales:0,count:0,hourly:{}};}daysGroup[dKey].count++;daysGroup[dKey].totalSales+=tx.amount;if(tx.isCash){daysGroup[dKey].cashSales+=tx.amount;}else{daysGroup[dKey].cardSales+=tx.amount;}daysGroup[dKey].hourly[tx.hour]=(daysGroup[dKey].hourly[tx.hour]||0)+tx.amount;}var sortedDays=Object.keys(daysGroup).sort().reverse();var daysBatch=[];for(var d=0;d<sortedDays.length;d++){var dayDate=sortedDays[d];daysGroup[dayDate].totalSales=Math.round(daysGroup[dayDate].totalSales*100)/100;daysGroup[dayDate].cardSales=Math.round(daysGroup[dayDate].cardSales*100)/100;daysGroup[dayDate].cashSales=Math.round(daysGroup[dayDate].cashSales*100)/100;for(var hk in daysGroup[dayDate].hourly){daysGroup[dayDate].hourly[hk]=Math.round(daysGroup[dayDate].hourly[hk]*100)/100;}daysGroup[dayDate].hourly._cardSales=daysGroup[dayDate].cardSales;daysGroup[dayDate].hourly._cashSales=daysGroup[dayDate].cashSales;daysBatch.push({date:dayDate,totalSales:daysGroup[dayDate].totalSales,cardSales:daysGroup[dayDate].cardSales,cashSales:daysGroup[dayDate].cashSales,count:daysGroup[dayDate].count,hourly:daysGroup[dayDate].hourly});}var compactTxList=allTxList.map(function(t){return {id:t.eposId||'',date:t.date,time:t.time,amount:t.amount,payment_method:t.isCash?'Cash':'Card',raw:(t.raw||'').slice(0,80)};});var maxRetries=2;var resp=null;var uploadErr=null;for(var attempt=0;attempt<=maxRetries;attempt++){try{sB('⏳ Uploading '+sortedDays.length+' day(s) ('+allTxList.length+' txs) to Supabase'+(attempt>0?' (Retry '+attempt+')...':'...'),'#1e1b4b');resp=await fetch(W_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:daysBatch,transactions:compactTxList})});if(resp.ok)break;uploadErr=await resp.text();}catch(netErr){uploadErr=netErr.message||netErr;if(attempt<maxRetries){await new Promise(function(r){setTimeout(r,2000);});}}}if(!resp||!resp.ok){throw new Error('Worker upload failed: '+(uploadErr||'Network error'));}var summaryLines=daysBatch.map(function(d){return d.date+': $'+d.totalSales.toFixed(2)+' (Card: $'+d.cardSales.toFixed(2)+' | Cash: $'+d.cashSales.toFixed(2)+')';});sB('✅ <b>Successfully Synced '+sortedDays.length+' day(s) & '+allTxList.length+' txs to Supabase!</b><br><span style="font-size:11px;font-weight:normal;opacity:0.95;">'+summaryLines.slice(0,6).join('<br>')+(summaryLines.length>6?'<br>+ '+(summaryLines.length-6)+' more days...':'')+'</span>','#065f46',15000);}catch(err){console.error('Bookmarklet error:',err);sB('❌ Error: '+(err.message||err),'#991b1b',12000);}})();`;
+        async function getBookmarkletCodeString() {
+            const user = auth.currentUser;
+            if (!user || !isAuthorizedEmail(user.email)) throw new Error('Please sign in first.');
+            const response = await fetch(EPOS_WORKER_URL + '/api/bookmarklet-token', {
+                method: 'POST', headers: { Authorization: 'Bearer ' + await user.getIdToken() }
+            });
+            if (!response.ok) throw new Error('Could not authorize upload. Please retry when the worker is available.');
+            const { token } = await response.json();
+            return `javascript:(async function(){var W_URL=${JSON.stringify(EPOS_WORKER_URL + "/api/bookmarklet-sync")};var U_TOKEN=${JSON.stringify(token)};var b=document.getElementById('epos-sync-banner');if(!b){b=document.createElement('div');b.id='epos-sync-banner';b.style.position='fixed';b.style.top='12px';b.style.left='50%';b.style.transform='translateX(-50%)';b.style.zIndex='99999999';b.style.backgroundColor='#1e1b4b';b.style.color='#ffffff';b.style.padding='12px 20px';b.style.borderRadius='12px';b.style.boxShadow='0 10px 35px rgba(0,0,0,0.6)';b.style.fontFamily='-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif';b.style.fontSize='12px';b.style.fontWeight='bold';b.style.textAlign='center';b.style.maxWidth='92vw';b.style.width='max-content';b.style.transition='all 0.3s ease';document.body.appendChild(b);}b.innerHTML='⚡ Scanning Epos Now Transactions (v2.1)...';b.style.backgroundColor='#1e1b4b';function sB(msg,bg,timeout){if(!b)return;b.innerHTML=msg;if(bg)b.style.backgroundColor=bg;if(timeout)setTimeout(function(){if(b)b.remove();},timeout);}try{function toIso(y,m,d){return String(y)+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');}function parseAnyDate(str){if(!str)return null;var now=new Date();var curYear=now.getFullYear();var s=str.trim();if(s.toLowerCase()==='today')return toIso(now.getFullYear(),now.getMonth()+1,now.getDate());if(s.toLowerCase()==='yesterday'){var yD=new Date(now);yD.setDate(yD.getDate()-1);return toIso(yD.getFullYear(),yD.getMonth()+1,yD.getDate());}var mIso=s.match(/\\b(\\d{4})-(\\d{2})-(\\d{2})\\b/);if(mIso)return mIso[0];var mSlash=s.match(/\\b(\\d{1,2})[\\/\\-\\.](\\d{1,2})[\\/\\-\\.](\\d{2,4})\\b/);if(mSlash){var d=parseInt(mSlash[1],10);var mo=parseInt(mSlash[2],10);var yr=mSlash[3].length===2?'20'+mSlash[3]:mSlash[3];if(d>=1&&d<=31&&mo>=1&&mo<=12)return toIso(yr,mo,d);}var months=['january','february','march','april','may','june','july','august','september','october','november','december'];var sMonths=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];var mWord=s.match(/\\b(\\d{1,2})(?:st|nd|rd|th)?[\\s\\-\\/]+([A-Za-z]{3,9})(?:[\\s\\-\\/,]+(\\d{2,4}))?\\b/i);if(mWord){var mName=mWord[2].toLowerCase();var mIdx=months.indexOf(mName);if(mIdx===-1)mIdx=sMonths.indexOf(mName.slice(0,3));if(mIdx!==-1){var yr2=mWord[3]?(mWord[3].length===2?'20'+mWord[3]:mWord[3]):String(curYear);return toIso(yr2,mIdx+1,mWord[1]);}}return null;}function parseTimeStr(timeStr){if(!timeStr)return null;var tm=timeStr.match(/(\\d{1,2}):(\\d{2})(?::(\\d{2}))?\\s*([apAP][mM])?/i);if(!tm)return null;var h=parseInt(tm[1],10);var ampm=tm[4]?tm[4].toUpperCase():'';if(ampm==='PM'&&h<12)h+=12;if(ampm==='AM'&&h===12)h=0;return String(h).padStart(2,'0')+':00';}try{var combobox=document.querySelector('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-select');if(combobox&&(combobox.innerText||'').trim()!=='100'){combobox.click();await new Promise(function(r){setTimeout(r,400);});var opt100=document.querySelector('li[data-value="100"], [role="option"][data-value="100"]');if(opt100){opt100.click();sB('⏳ Switched table to 100 rows/page. Loading...','#312e81');await new Promise(function(r){setTimeout(r,2500);});}}}catch(e){}function findNextOrMoreButton(){var allBtns=Array.from(document.querySelectorAll('button, a[role="button"], div[role="button"], [class*="button" i], [class*="btn" i]'));for(var i=0;i<allBtns.length;i++){var bEl=allBtns[i];var txt=(bEl.innerText||bEl.textContent||'').trim().toLowerCase();if(txt.includes('more transaction')||txt.includes('load more')||txt.includes('show more')||(txt.includes('more')&&txt.includes('tx'))){if(!bEl.disabled&&bEl.getAttribute('aria-disabled')!=='true'&&bEl.offsetParent!==null){return bEl;}}}var next=document.querySelector('button[aria-label="Go to next page"], button[title="Go to next page"]');if(!next){next=document.querySelector('button[aria-label*="next page" i], .MuiTablePagination-actions button:last-child');}if(next&&!next.disabled&&next.getAttribute('aria-disabled')!=='true'&&next.offsetParent!==null){return next;}return null;}function getPaginationLabel(){var el=document.querySelector('.MuiTablePagination-displayedRows, .MuiTablePagination-caption, [class*="displayedRows"]');return el?(el.innerText||'').trim():'';}function extractRowsFromPage(){var rows=[];var gridRows=document.querySelectorAll('.MuiDataGrid-row, tr[data-id], tbody tr, table tr');for(var i=0;i<gridRows.length;i++){var rEl=gridRows[i];var rText=(rEl.innerText||rEl.textContent||'').replace(/\\s+/g,' ').trim();if(!rText||rText.toLowerCase().includes('transaction report'))continue;var dM=rText.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\btoday\\b|\\byesterday\\b)/i);var tM=rText.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i);var aM=rText.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(dM&&tM&&aM){var isoDate=parseAnyDate(dM[1]);var amountVal=parseFloat(aM[1]);var isCash=/\\bcash\\b/i.test(rText)&&!/\\bcard\\b|\\beftpos\\b|\\bvisa\\b|\\bmastercard\\b/i.test(rText);if(isoDate&&!isNaN(amountVal)){rows.push({eposId:rEl.getAttribute('data-id')||'',date:isoDate,time:tM[1],hour:parseTimeStr(tM[1])||'12:00',amount:amountVal,isCash:isCash,raw:rText.slice(0,80)});}}}if(rows.length===0){var cards=document.querySelectorAll('[role="row"], [role="listitem"], [class*="card" i], [class*="row" i], [class*="item" i], [class*="transaction" i], li');for(var j=0;j<cards.length;j++){var cEl=cards[j];var cText=(cEl.innerText||cEl.textContent||'').replace(/\\s+/g,' ').trim();if(!cText||cText.toLowerCase().includes('transaction report'))continue;var cdM=cText.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\btoday\\b|\\byesterday\\b)/i);var ctM=cText.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i);var caM=cText.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(cdM&&ctM&&caM){var cIso=parseAnyDate(cdM[1]);var cAmt=parseFloat(caM[1]);var cCash=/\\bcash\\b/i.test(cText)&&!/\\bcard\\b|\\beftpos\\b|\\bvisa\\b|\\bmastercard\\b/i.test(cText);if(cIso&&!isNaN(cAmt)){rows.push({eposId:cEl.getAttribute('data-id')||'',date:cIso,time:ctM[1],hour:parseTimeStr(ctM[1])||'12:00',amount:cAmt,isCash:cCash,raw:cText.slice(0,80)});}}}}if(rows.length===0){var textSource=document.body.innerText||'';var lines=textSource.split(/\\r?\\n/).map(function(l){return l.trim();}).filter(Boolean);for(var k=0;k<lines.length;k++){var lStr=lines[k];var ldM=lStr.match(/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}(?:[\\/\\-\\.]\\d{2,4})?\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b|\\btoday\\b|\\byesterday\\b|\\b\\d{1,2}\\s+[A-Za-z]{3,9}(?:\\s+\\d{2,4})?\\b)/i);if(!ldM)continue;var ltM=lStr.match(/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i);var timeLineIdx=k;if(!ltM&&k+1<lines.length){ltM=lines[k+1].match(/^(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)$/i);if(ltM)timeLineIdx=k+1;}if(ldM&&ltM){var lIso=parseAnyDate(ldM[1]);var lTime=ltM[1];var lHour=parseTimeStr(lTime)||'12:00';var lAmt=null;var lCash=false;var rawGroup=[lStr];if(timeLineIdx!==k)rawGroup.push(lines[timeLineIdx]);for(var n=timeLineIdx+1;n<Math.min(timeLineIdx+8,lines.length);n++){var nextL=lines[n];var nDate=/(\\b\\d{1,2}[\\/\\-\\.]\\d{1,2}|\\b\\d{4}-\\d{2}-\\d{2}|\\btoday\\b|\\byesterday\\b)/i.test(nextL);var nTime=/(\\d{1,2}:\\d{2}(?::\\d{2})?\\s*[apAP][mM]?)/i.test(nextL);if(nDate&&nTime)break;rawGroup.push(nextL);if(lAmt===null){var laM=nextL.match(/(?:[\\$£€]\\s*)?([0-9]+\\.[0-9]{2})/);if(laM)lAmt=parseFloat(laM[1]);}if(/\\bcash\\b/i.test(nextL))lCash=true;else if(/\\bcard\\b|\\beftpos\\b|\\bvisa\\b|\\bmastercard\\b/i.test(nextL))lCash=false;}if(lIso&&lAmt!==null&&!isNaN(lAmt)){rows.push({eposId:'',date:lIso,time:lTime,hour:lHour,amount:lAmt,isCash:lCash,raw:rawGroup.join(' ').slice(0,80)});}}}}return rows;}var allTxList=[];var seenIds=new Set();function collectNewRows(pageRows){var added=0;for(var i=0;i<pageRows.length;i++){var r=pageRows[i];var uKey=r.eposId?('epos_'+r.eposId):(r.date+'_'+r.time+'_'+r.amount.toFixed(2));if(!seenIds.has(uKey)){seenIds.add(uKey);allTxList.push(r);added++;}}return added;}collectNewRows(extractRowsFromPage());sB('🔍 Found '+allTxList.length+' txs on initial page...','#312e81');var maxLoops=120;var loopCount=0;while(loopCount<maxLoops){loopCount++;var btn=null;var findStart=Date.now();while(Date.now()-findStart<8000){btn=findNextOrMoreButton();if(btn)break;await new Promise(function(r){setTimeout(r,500);});}if(!btn){break;}var oldPageLabel=getPaginationLabel();sB('🔍 Found '+allTxList.length+' txs. Loading next batch ('+loopCount+')...','#312e81');btn.scrollIntoView({behavior:'smooth',block:'center'});btn.click();var waitStart=Date.now();var newlyAdded=0;while(Date.now()-waitStart<12000){await new Promise(function(r){setTimeout(r,700);});var newLabel=getPaginationLabel();newlyAdded=collectNewRows(extractRowsFromPage());if(newlyAdded>0||(oldPageLabel&&newLabel&&newLabel!==oldPageLabel)){await new Promise(function(r){setTimeout(r,400);});collectNewRows(extractRowsFromPage());sB('🔍 Scanned '+allTxList.length+' txs ('+(newLabel||('batch '+loopCount))+')...','#312e81');break;}}if(newlyAdded===0){break;}}if(allTxList.length===0){sB('⚠️ No transactions found on screen.<br><span style="font-size:11px;font-weight:normal;">Make sure the Epos Now Transactions report is open.</span>','#991b1b',7000);return;}var daysGroup={};for(var m=0;m<allTxList.length;m++){var tx=allTxList[m];var dKey=tx.date;if(!daysGroup[dKey]){daysGroup[dKey]={totalSales:0,cardSales:0,cashSales:0,count:0,hourly:{}};}daysGroup[dKey].count++;daysGroup[dKey].totalSales+=tx.amount;if(tx.isCash){daysGroup[dKey].cashSales+=tx.amount;}else{daysGroup[dKey].cardSales+=tx.amount;}daysGroup[dKey].hourly[tx.hour]=(daysGroup[dKey].hourly[tx.hour]||0)+tx.amount;}var sortedDays=Object.keys(daysGroup).sort().reverse();var daysBatch=[];for(var d=0;d<sortedDays.length;d++){var dayDate=sortedDays[d];daysGroup[dayDate].totalSales=Math.round(daysGroup[dayDate].totalSales*100)/100;daysGroup[dayDate].cardSales=Math.round(daysGroup[dayDate].cardSales*100)/100;daysGroup[dayDate].cashSales=Math.round(daysGroup[dayDate].cashSales*100)/100;for(var hk in daysGroup[dayDate].hourly){daysGroup[dayDate].hourly[hk]=Math.round(daysGroup[dayDate].hourly[hk]*100)/100;}daysGroup[dayDate].hourly._cardSales=daysGroup[dayDate].cardSales;daysGroup[dayDate].hourly._cashSales=daysGroup[dayDate].cashSales;daysBatch.push({date:dayDate,totalSales:daysGroup[dayDate].totalSales,cardSales:daysGroup[dayDate].cardSales,cashSales:daysGroup[dayDate].cashSales,count:daysGroup[dayDate].count,hourly:daysGroup[dayDate].hourly});}var compactTxList=allTxList.map(function(t){return {id:t.eposId||'',date:t.date,time:t.time,amount:t.amount,payment_method:t.isCash?'Cash':'Card',raw:(t.raw||'').slice(0,80)};});var maxRetries=2;var resp=null;var uploadErr=null;for(var attempt=0;attempt<=maxRetries;attempt++){try{sB('⏳ Uploading '+sortedDays.length+' day(s) ('+allTxList.length+' txs) to Supabase'+(attempt>0?' (Retry '+attempt+')...':'...'),'#1e1b4b');resp=await fetch(W_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+U_TOKEN},body:JSON.stringify({days:daysBatch,transactions:compactTxList})});if(resp.ok)break;uploadErr=await resp.text();}catch(netErr){uploadErr=netErr.message||netErr;if(attempt<maxRetries){await new Promise(function(r){setTimeout(r,2000);});}}}if(!resp||!resp.ok){throw new Error('Worker upload failed: '+(uploadErr||'Network error'));}var summaryLines=daysBatch.map(function(d){return d.date+': $'+d.totalSales.toFixed(2)+' (Card: $'+d.cardSales.toFixed(2)+' | Cash: $'+d.cashSales.toFixed(2)+')';});sB('✅ <b>Successfully Synced '+sortedDays.length+' day(s) & '+allTxList.length+' txs to Supabase!</b><br><span style="font-size:11px;font-weight:normal;opacity:0.95;">'+summaryLines.slice(0,6).join('<br>')+(summaryLines.length>6?'<br>+ '+(summaryLines.length-6)+' more days...':'')+'</span>','#065f46',15000);}catch(err){console.error('Bookmarklet error:',err);sB('❌ Error: '+(err.message||err),'#991b1b',12000);}})();`;
         }
 
-        function openEposModal() {
+        async function openEposModal() {
             const user = auth.currentUser;
             if (!user) {
                 alert("Please login first to use this feature.");
@@ -3796,7 +3399,7 @@
             if (modal) {
                 modal.classList.remove('hidden');
                 const box = document.getElementById('bookmarkletCodeBox');
-                if (box) box.value = getBookmarkletCodeString();
+                if (box) { box.value = 'Authorizing upload…'; try { box.value = await getBookmarkletCodeString(); } catch (err) { box.value = err.message; } }
             }
         }
 
@@ -3805,8 +3408,9 @@
             if (modal) modal.classList.add('hidden');
         }
 
-        function copyBookmarkletCode() {
-            const bookmarkletCode = getBookmarkletCodeString();
+        async function copyBookmarkletCode() {
+            let bookmarkletCode;
+            try { bookmarkletCode = await getBookmarkletCodeString(); } catch (err) { alert(err.message); return; }
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(bookmarkletCode).then(() => {
@@ -4004,15 +3608,17 @@
                 await callSheetApi({
                     action: "save_hourly_sales",
                     date: d,
+                    store_id: 'anatolya',
                     totalSales: daysMap[d].totalSales,
                     cardSales: daysMap[d].cardSales,
                     cashSales: daysMap[d].cashSales,
                     hourly: daysMap[d].hourly
                 });
 
-                hourlySalesStore = hourlySalesStore.filter(s => cleanDateStr(s.date) !== d);
+                hourlySalesStore = hourlySalesStore.filter(s => !(cleanDateStr(s.date) === d && (s.store_id || 'anatolya') === 'anatolya'));
                 hourlySalesStore.push({
                     date: d,
+                    store_id: 'anatolya',
                     totalSales: daysMap[d].totalSales,
                     cardSales: daysMap[d].cardSales,
                     cashSales: daysMap[d].cashSales,
@@ -4182,8 +3788,8 @@
             if (btnMonth) btnMonth.className = (currentPresetType === 'month' ? activeCls : inactiveCls);
 
             const now = new Date();
-            const nowIso = now.toISOString().split('T')[0];
-            const refIso = presetRefDate.toISOString().split('T')[0];
+            const nowIso = toLocalDateIso(now);
+            const refIso = toLocalDateIso(presetRefDate);
 
             // 1. Day Button: "Today" when on today, otherwise show day e.g. "17 Sep"
             if (btnDay) {
@@ -4282,7 +3888,7 @@
         }
 
         function applyPresetRange() {
-            const refIso = presetRefDate.toISOString().split('T')[0];
+            const refIso = toLocalDateIso(presetRefDate);
 
             if (currentPresetType === 'day') {
                 setDateRange(refIso, refIso, 'day');
@@ -4303,7 +3909,7 @@
                 let lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
                 const now = new Date();
                 const isCurMonth = (y === now.getFullYear() && m === now.getMonth());
-                const todayIso = now.toISOString().split('T')[0];
+                const todayIso = toLocalDateIso(now);
                 if (isCurMonth && lastIso > todayIso) {
                     lastIso = todayIso;
                 }
@@ -4316,7 +3922,7 @@
             const toInput = document.getElementById('chartRangeTo');
             if (fromInput && !fromInput.value) {
                 // Default to Today
-                const nowIso = new Date().toISOString().split('T')[0];
+                const nowIso = getLocalTodayIso();
                 fromInput.value = nowIso;
                 toInput.value = nowIso;
                 currentPresetType = 'day';
@@ -4412,7 +4018,7 @@
                 html += '<div class="p-1.5"></div>';
             }
 
-            const todayIso = new Date().toISOString().split('T')[0];
+            const todayIso = getLocalTodayIso();
 
             for (let d = 1; d <= numDays; d++) {
                 const dStr = String(d).padStart(2, '0');
@@ -4536,7 +4142,7 @@
             let cur = new Date(startIso + 'T00:00:00Z');
             const end = new Date(endIso + 'T00:00:00Z');
             while (cur <= end) {
-                list.push(cur.toISOString().split('T')[0]);
+                list.push(toLocalDateIso(cur));
                 cur.setUTCDate(cur.getUTCDate() + 1);
             }
             return list;
@@ -4634,7 +4240,7 @@
                     storeSelect.onchange = () => updateExpenseModalCategoryOptions(storeSelect.value);
                 }
                 const dInput = document.getElementById('expenseDate');
-                if (dInput) dInput.value = prefillDate || new Date().toISOString().split('T')[0];
+                if (dInput) dInput.value = prefillDate || getLocalTodayIso();
                 const amtInput = document.getElementById('expenseAmount');
                 if (amtInput) amtInput.value = '';
                 const notesInput = document.getElementById('expenseNotes');
@@ -4883,7 +4489,7 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-sm font-bold text-white flex items-center gap-1.5">
                                     <span>${isOwner ? '👑' : '👤'}</span>
-                                    <span>${s.name}</span>
+                                    <span>${escapeHtml(s.name)}</span>
                                 </span>
                                 ${isOwner ? '<span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-semibold">Owner</span>' : ''}
                                 <span class="text-[9px] px-1.5 py-0.2 rounded font-semibold ${isActive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-700 text-slate-400'}">
@@ -4924,11 +4530,11 @@
                             </div>
                             <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1">
                                 <label class="block text-[9px] font-bold text-emerald-400 uppercase">GJ Cash (Mon–Sat) ($)</label>
-                                <input type="number" step="0.5" id="staff_gj_cash_${idx}" value="${isOwner ? 0 : (s.gjCashRate !== undefined ? s.gjCashRate : (s.cashRate || 25))}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
+                                <input type="number" step="0.5" id="staff_gj_cash_${idx}" value="${isOwner ? 0 : (s.gjCashRate !== undefined ? s.gjCashRate : numberOrDefault(s.cashRate, 25))}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
                             </div>
                             <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 space-y-1">
                                 <label class="block text-[9px] font-bold text-emerald-400 uppercase">GJ Sunday Cash ($)</label>
-                                <input type="number" step="0.5" id="staff_gj_sun_${idx}" value="${isOwner ? 0 : (s.gjSundayRate !== undefined ? s.gjSundayRate : (s.gjCashRate || s.cashRate || 25))}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
+                                <input type="number" step="0.5" id="staff_gj_sun_${idx}" value="${isOwner ? 0 : (s.gjSundayRate !== undefined ? s.gjSundayRate : numberOrDefault(s.gjCashRate, numberOrDefault(s.cashRate, 25)))}" ${isOwner ? 'readonly' : ''} class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-mono font-bold text-xs">
                             </div>
                         </div>
 
@@ -5056,7 +4662,7 @@
         function openLoyverseSyncModal() {
             const modal = document.getElementById('loyverseSyncModal');
             if (!modal) return;
-            const todayIso = new Date().toISOString().split('T')[0];
+            const todayIso = getLocalTodayIso();
             const sInput = document.getElementById('loyverseStartDate');
             const eInput = document.getElementById('loyverseEndDate');
             if (sInput && !sInput.value) sInput.value = todayIso;
@@ -5079,7 +4685,7 @@
 
         function setLoyversePreset(preset) {
             const today = new Date();
-            const todayIso = today.toISOString().split('T')[0];
+            const todayIso = toLocalDateIso(today);
             const sInput = document.getElementById('loyverseStartDate');
             const eInput = document.getElementById('loyverseEndDate');
             const disp = document.getElementById('loyverseSelectedRangeDisplay');
@@ -5104,7 +4710,7 @@
                 label = `This Month (${formatDisplayDateStr(firstIso)} – ${formatDisplayDateStr(todayIso)})`;
             } else if (preset === 'last30') {
                 const d30 = new Date(today.getTime() - 29 * 86400000);
-                const d30Iso = d30.toISOString().split('T')[0];
+                const d30Iso = toLocalDateIso(d30);
                 sInput.value = d30Iso;
                 eInput.value = todayIso;
                 label = `Last 30 Days (${formatDisplayDateStr(d30Iso)} – ${formatDisplayDateStr(todayIso)})`;
@@ -5390,7 +4996,7 @@
             const icon = isSuccess ? '✅' : '⚠️';
             toast.innerHTML = `
                 <span class="text-sm shrink-0 mt-0.5">${icon}</span>
-                <span class="flex-1 break-words whitespace-pre-line leading-relaxed">${msg}</span>
+                <span class="flex-1 break-words whitespace-pre-line leading-relaxed">${escapeHtml(msg)}</span>
                 <button type="button" class="text-slate-400 hover:text-white font-bold text-sm px-1.5 py-0.5 -mr-1 -mt-0.5 rounded cursor-pointer transition hover:bg-white/10 shrink-0" title="Dismiss">✕</button>
             `;
 
@@ -5548,7 +5154,7 @@
         let currentLedgerPresetType = 'all'; // 'all' | 'day' | 'week' | 'month' | 'custom'
         let ledgerPresetRefDate = new Date();
         let ledgerDateFrom = '2026-06-01'; // Day 1
-        let ledgerDateTo = new Date().toISOString().split('T')[0]; // Today
+        let ledgerDateTo = getLocalTodayIso(); // Today
         let ledgerCalViewYear = new Date().getFullYear();
         let ledgerCalViewMonth = new Date().getMonth();
         let ledgerCalSelectionStep = 0; // 0 = start, 1 = end
@@ -5573,8 +5179,8 @@
             if (btnAll) btnAll.className = (currentLedgerPresetType === 'all' ? activeAllCls : inactiveAllCls);
 
             const now = new Date();
-            const nowIso = now.toISOString().split('T')[0];
-            const refIso = ledgerPresetRefDate.toISOString().split('T')[0];
+            const nowIso = toLocalDateIso(now);
+            const refIso = toLocalDateIso(ledgerPresetRefDate);
 
             // 1. Day Button: "Today" when on today, otherwise show day e.g. "17 Sep"
             if (btnDay) {
@@ -5647,8 +5253,8 @@
 
         function applyLedgerPresetRange() {
             const now = new Date();
-            const todayIso = now.toISOString().split('T')[0];
-            const refIso = ledgerPresetRefDate.toISOString().split('T')[0];
+            const todayIso = toLocalDateIso(now);
+            const refIso = toLocalDateIso(ledgerPresetRefDate);
 
             if (currentLedgerPresetType === 'all') {
                 setLedgerDateRange('2026-06-01', todayIso, 'all');
@@ -5666,7 +5272,7 @@
                 let lastIso = `${y}-${String(m + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
                 const now = new Date();
                 const isCurMonth = (y === now.getFullYear() && m === now.getMonth());
-                const todayIso = now.toISOString().split('T')[0];
+                const todayIso = toLocalDateIso(now);
                 if (isCurMonth && lastIso > todayIso) {
                     lastIso = todayIso;
                 }
@@ -5773,7 +5379,7 @@
                 html += '<div class="p-1.5"></div>';
             }
 
-            const todayIso = new Date().toISOString().split('T')[0];
+            const todayIso = getLocalTodayIso();
 
             for (let d = 1; d <= numDays; d++) {
                 const dStr = String(d).padStart(2, '0');
@@ -5847,7 +5453,7 @@
             const displayEl = document.getElementById('ledgerCalendarDisplay');
             if (!displayEl) return;
 
-            const todayIso = new Date().toISOString().split('T')[0];
+            const todayIso = getLocalTodayIso();
             if (currentLedgerPresetType === 'all' || (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso)) {
                 displayEl.innerText = "All Time (1 Jun 2026 – Today)";
             } else if (ledgerDateFrom === ledgerDateTo) {
@@ -6224,7 +5830,7 @@
                             <div class="flex items-center justify-between text-[11px] font-bold gap-1 truncate">
                                 <span class="flex items-center gap-1.5 truncate">
                                     <span>${c.icon}</span>
-                                    <span class="truncate">${c.key}</span>
+                                    <span class="truncate">${escapeHtml(c.key)}</span>
                                 </span>
                                 <span class="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${isActive ? 'bg-amber-400 text-slate-950 font-black' : 'bg-slate-700 text-slate-300 font-semibold'}">${count}</span>
                             </div>
@@ -6269,7 +5875,7 @@
             // Update top header sales badge when viewing Ledger!
             const badgeEl = document.getElementById('salesSelectedDayBadge');
             if (badgeEl) {
-                const todayIso = new Date().toISOString().split('T')[0];
+                const todayIso = getLocalTodayIso();
                 if (currentLedgerPresetType === 'all' || (ledgerDateFrom === '2026-06-01' && ledgerDateTo >= todayIso)) {
                     badgeEl.innerText = "Ledger: All Time (1 Jun 2026 – Today)";
                 } else if (ledgerDateFrom === ledgerDateTo) {
@@ -6311,22 +5917,22 @@
                         <tr class="hover:bg-slate-800/50 transition">
                             <td class="p-2.5 font-semibold text-slate-300 whitespace-nowrap">${formatDisplayDateStr(x.date)}</td>
                             <td class="p-2.5">
-                                <select onchange="changeExpenseEntity(${x.id}, this.value)" class="text-[11px] font-bold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs ${entityStyle}" title="Click to reassign to another shop/entity">
+                                <select onchange="changeExpenseEntity(${Number(x.id)}, this.value)" class="text-[11px] font-bold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs ${entityStyle}" title="Click to reassign to another shop/entity">
                                     <option value="anatolya" ${s === 'anatolya' ? 'selected' : ''}>🥙 Anatolya</option>
                                     <option value="green_juice" ${s === 'green_juice' ? 'selected' : ''}>🥤 Green Juice</option>
                                     <option value="company_shared" ${s === 'company_shared' ? 'selected' : ''}>🏢 Company Shared</option>
                                 </select>
                             </td>
                             <td class="p-2.5">
-                                <select onchange="changeExpenseCategory(${x.id}, this.value)" class="text-[11px] font-semibold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs bg-slate-900 border-slate-700 text-slate-200" title="Click to reassign category">
+                                <select onchange="changeExpenseCategory(${Number(x.id)}, this.value)" class="text-[11px] font-semibold rounded-lg px-2 py-1 border transition cursor-pointer shadow-xs bg-slate-900 border-slate-700 text-slate-200" title="Click to reassign category">
                                     ${rowValidCats.map(c => `<option value="${c.key}" ${x.category === c.key ? 'selected' : ''}>${c.icon} ${c.label}</option>`).join('')}
                                 </select>
                             </td>
-                            <td class="p-2.5 text-slate-300">${x.notes || '<span class="opacity-30">—</span>'}</td>
+                            <td class="p-2.5 text-slate-300">${x.notes ? escapeHtml(x.notes) : '<span class="opacity-30">—</span>'}</td>
                             <td class="p-2.5 text-right font-black text-amber-300 whitespace-nowrap">${Number(x.amount || 0).toFixed(2)}</td>
                             <td class="p-2.5 text-center whitespace-nowrap">
-                                <button type="button" onclick="openEditExpenseModal(${x.id})" class="text-blue-400 hover:text-blue-300 font-bold text-xs mr-2 cursor-pointer" title="Edit expense details">✏️</button>
-                                <button type="button" onclick="deleteExpenseItem(${x.id})" class="text-rose-400 hover:text-rose-300 font-bold text-xs cursor-pointer" title="Delete record">🗑️</button>
+                                <button type="button" onclick="openEditExpenseModal(${Number(x.id)})" class="text-blue-400 hover:text-blue-300 font-bold text-xs mr-2 cursor-pointer" title="Edit expense details">✏️</button>
+                                <button type="button" onclick="deleteExpenseItem(${Number(x.id)})" class="text-rose-400 hover:text-rose-300 font-bold text-xs cursor-pointer" title="Delete record">🗑️</button>
                             </td>
                         </tr>
                     `;
@@ -6526,20 +6132,20 @@
                     <tr class="hover:bg-slate-800/40 transition">
                         <td class="p-2.5 font-bold text-white flex items-center gap-1.5">
                             <span class="text-amber-400">⚡</span>
-                            <span>${r.label || r.keyword}</span>
+                            <span>${escapeHtml(r.label || r.keyword)}</span>
                         </td>
                         <td class="p-2.5">
                             <span class="text-xs px-2 py-0.5 rounded font-bold ${r.entity === 'green_juice' ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/60' : (r.entity === 'company_shared' ? 'bg-purple-950/80 text-purple-300 border border-purple-800/60' : 'bg-amber-950/80 text-amber-300 border border-amber-800/60')}">
-                                ${entName}
+                                ${escapeHtml(entName)}
                             </span>
                         </td>
                         <td class="p-2.5">
                             <span class="text-xs px-2 py-0.5 rounded font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                                ${r.category}
+                                ${escapeHtml(r.category)}
                             </span>
                         </td>
                         <td class="p-2.5 text-center">
-                            <button type="button" onclick="deleteLearnedRule('${kwEscaped}')" class="text-rose-400 hover:text-rose-300 font-bold text-xs p-1 cursor-pointer" title="Delete rule">
+                            <button type="button" data-keyword="${escapeHtml(r.keyword || '')}" onclick="deleteLearnedRule(this.dataset.keyword)" class="text-rose-400 hover:text-rose-300 font-bold text-xs p-1 cursor-pointer" title="Delete rule">
                                 🗑️
                             </button>
                         </td>
@@ -7089,7 +6695,7 @@
 
                 const beResp = await fetch(`${EPOS_WORKER_URL}/api/expenses/parse-document`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await auth.currentUser.getIdToken() },
                     body: JSON.stringify({
                         fileBase64: base64Data,
                         mimeType: file.type || 'image/png',
@@ -7105,7 +6711,7 @@
                         }
                         return result.rows.map((item, idx) => ({
                             id: `ai_${Date.now()}_${idx}`,
-                            date: item.date || new Date().toISOString().split('T')[0],
+                            date: item.date || getLocalTodayIso(),
                             amount: Math.abs(Number(item.amount) || 0),
                             notes: item.supplier || 'Receipt Item',
                             entity: item.entity || 'anatolya',
@@ -7252,7 +6858,7 @@ Do not include markdown fences.`;
                     const parsed = JSON.parse(cleanJson.substring(startIdx, endIdx + 1));
                     return parsed.map((item, idx) => ({
                         id: `ai_${Date.now()}_${idx}`,
-                        date: item.date || new Date().toISOString().split('T')[0],
+                        date: item.date || getLocalTodayIso(),
                         amount: Math.abs(Number(item.amount) || 0),
                         notes: item.supplier || 'Receipt Item',
                         entity: item.entity || 'anatolya',
@@ -7342,7 +6948,7 @@ Do not include markdown fences.`;
 
                         detectedTransactions.push({
                             id: `tx_${Date.now()}_${i}`,
-                            date: txDateIso || new Date().toISOString().split('T')[0],
+                            date: txDateIso || getLocalTodayIso(),
                             amount: num,
                             notes: desc || defaultFileName,
                             entity: cls.entity,
@@ -7385,7 +6991,7 @@ Do not include markdown fences.`;
                     const cls = classifyExpenseTransaction(supplier);
                     detectedTransactions.push({
                         id: `doc_${Date.now()}`,
-                        date: docDate || new Date().toISOString().split('T')[0],
+                        date: docDate || getLocalTodayIso(),
                         amount: maxAmt,
                         notes: supplier,
                         entity: cls.entity,
@@ -7401,7 +7007,7 @@ Do not include markdown fences.`;
         }
 
         function normalizeDateStringToIso(str) {
-            if (!str) return new Date().toISOString().split('T')[0];
+            if (!str) return getLocalTodayIso();
             if (str.includes('/')) {
                 const p = str.split('/');
                 if (p.length === 3) {
@@ -7415,9 +7021,9 @@ Do not include markdown fences.`;
             }
             try {
                 const parsed = new Date(str);
-                if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+                if (!isNaN(parsed.getTime())) return toLocalDateIso(parsed);
             } catch(e) {}
-            return new Date().toISOString().split('T')[0];
+            return getLocalTodayIso();
         }
 
         function setSmartStagingFilter(mode) {
@@ -7490,7 +7096,7 @@ Do not include markdown fences.`;
         function addManualStagingRow() {
             smartStagingRows.push({
                 id: `manual_${Date.now()}`,
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalTodayIso(),
                 amount: 0,
                 notes: 'Manual expense',
                 entity: currentStore === 'green_juice' ? 'green_juice' : (currentStore === 'company_shared' ? 'company_shared' : 'anatolya'),
@@ -7669,7 +7275,7 @@ Do not include markdown fences.`;
                 const isKept = r.duplicateStatus === 'kept';
                 const rowBorderBg = isDupe ? (isKept ? 'bg-emerald-950/20 border-l-4 border-emerald-500' : 'bg-amber-950/30 border-l-4 border-amber-500') : '';
                 const cardBorderBg = isDupe ? (isKept ? 'border-emerald-500/80 bg-slate-900/90' : 'border-amber-500/80 bg-amber-950/20') : 'border-slate-800 bg-slate-900/80';
-                const safeNotes = (r.notes || '').replace(/"/g, '&quot;');
+                const safeNotes = escapeHtml(r.notes || '');
 
                 // Desktop Table Row
                 html += `
@@ -7962,8 +7568,25 @@ Do not include markdown fences.`;
             window.print();
         }
 
+        let basPayrollPeriodKey = null;
+        function getBasPayrollActuals() {
+            const key = [currentStore, currentBasFY, currentBasQuarter].join(':');
+            const w1 = document.getElementById('basActualW1');
+            const w2 = document.getElementById('basActualW2');
+            if (key !== basPayrollPeriodKey) {
+                if (w1) w1.value = '';
+                if (w2) w2.value = '';
+                basPayrollPeriodKey = key;
+            }
+            const read = el => el && el.value.trim() !== '' && Number.isFinite(Number(el.value)) && Number(el.value) >= 0 ? Number(el.value) : null;
+            return { w1: read(w1), w2: read(w2) };
+        }
+        function formatPayrollAmount(value) {
+            return value === null ? 'Payroll required' : '$' + value.toFixed(2);
+        }
         function renderBasReportView() {
             updateBasQuarterButtonsUI();
+            const payrollActuals = getBasPayrollActuals();
             const fySelect = document.getElementById('basFinancialYear');
             if (fySelect && fySelect.value !== currentBasFY) {
                 fySelect.value = currentBasFY;
@@ -7982,14 +7605,14 @@ Do not include markdown fences.`;
             // Banner Title & Dates
             const periodTitleEl = document.getElementById('basPeriodTitle');
             if (periodTitleEl) {
-                periodTitleEl.innerText = `${qInfo.title} Business Activity Statement`;
+                periodTitleEl.innerText = `${qInfo.title} BAS Worksheet`;
             }
             const periodDatesEl = document.getElementById('basPeriodDates');
             if (periodDatesEl) {
                 periodDatesEl.innerText = `${formatDisplayDateStr(startIso)} – ${formatDisplayDateStr(endIso)} (${qInfo.days} days)`;
             }
 
-            // 1. Calculate Card Sales (G1), Cash Sales (excluded), & GST on Sales (1A)
+            // 1. Calculate total sales and estimated GST; cash remains included.
             const qSales = hourlySalesStore.filter(s => {
                 const d = cleanDateStr(s.date);
                 return d >= startIso && d <= endIso && isStoreMatch(s.store_id, currentStore);
@@ -8008,8 +7631,8 @@ Do not include markdown fences.`;
                 totalAllSales += tot;
             });
 
-            // For BAS, Box G1 strictly includes Card Sales as requested by user
-            const totalSalesG1 = totalCardSales;
+            // G1 includes every payment method, including cash and delivery sales.
+            const totalSalesG1 = totalAllSales;
             const gstOnSales1A = totalSalesG1 / 11;
             const tradingDaysCount = qSales.length;
 
@@ -8127,9 +7750,9 @@ Do not include markdown fences.`;
                 let shiftWithheld = 0;
 
                 if (!isOwner) {
-                    // For BAS (Box W1), ATO only reports formal taxable wages subject to PAYG withholding (excluding cash wages)
+                    // Roster breakdown only; actual W1/W2 are entered from payroll records.
                     shiftTaxPay = (th * tr);
-                    shiftWithheld = shiftTaxPay * (shift.taxRate ? ESTIMATED_TAX_RATE : 0);
+                    shiftWithheld = 0; // Actual withholding comes from payroll, never a fixed percentage.
                     totalWagesW1 += shiftTaxPay;
                     totalTaxWithheldW2 += shiftWithheld;
                 }
@@ -8154,16 +7777,16 @@ Do not include markdown fences.`;
             });
 
             const boxW1El = document.getElementById('basBoxW1');
-            if (boxW1El) boxW1El.innerText = `$${totalWagesW1.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (boxW1El) boxW1El.innerText = formatPayrollAmount(payrollActuals.w1);
 
             const boxW2El = document.getElementById('basBoxW2');
-            if (boxW2El) boxW2El.innerText = `$${totalTaxWithheldW2.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (boxW2El) boxW2El.innerText = formatPayrollAmount(payrollActuals.w2);
 
             // 5. Total Settlement to ATO (Net GST Box 3 + PAYG Box W2)
-            const totalPayableToAto = (netGstBox3 > 0 ? netGstBox3 : 0) + totalTaxWithheldW2;
+            const totalPayableToAto = payrollActuals.w1 === null || payrollActuals.w2 === null ? null : netGstBox3 + payrollActuals.w2;
             const payableEl = document.getElementById('basTotalPayable');
             if (payableEl) {
-                payableEl.innerText = `$${totalPayableToAto.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                payableEl.innerText = totalPayableToAto === null ? 'Payroll required' : (totalPayableToAto < 0 ? 'Credit ' : '') + '$' + Math.abs(totalPayableToAto).toFixed(2);
             }
 
             // ================= RENDER AUDIT TABLES =================
@@ -8180,7 +7803,7 @@ Do not include markdown fences.`;
                 let venueRowsHtml = '';
                 venues.forEach(v => {
                     // 1. Sales for this venue
-                    let vCard = 0, vCash = 0;
+                    let vCard = 0, vCash = 0, vTotal = 0;
                     if (v.isStore) {
                         const vSales = qSales.filter(s => (s.store_id || 'anatolya') === v.id);
                         vSales.forEach(s => {
@@ -8189,10 +7812,11 @@ Do not include markdown fences.`;
                             const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
                             const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
                             vCard += card;
+                            vTotal += tot;
                             vCash += cash;
                         });
                     }
-                    const v1A = vCard / 11;
+                    const v1A = vTotal / 11;
 
                     // 2. Expenses for this venue
                     let vG11 = 0, v1B = 0;
@@ -8219,23 +7843,23 @@ Do not include markdown fences.`;
                             const th = Math.max(0, totH - ch);
                             const taxPay = (th * tr);
                             vW1 += taxPay;
-                            vW2 += (taxPay * (shift.taxRate ? ESTIMATED_TAX_RATE : 0));
+                            // No per-venue withholding is inferred from roster rates.
                         });
                     }
-                    // Green Juice is 100% Cash Pay -> $0 Box W1 & W2
+                    // Cash payment does not establish withholding; actual payroll totals are entered separately.
 
                     const vNetGst = v1A - v1B;
 
                     venueRowsHtml += `
                         <tr class="hover:bg-slate-800/40 transition">
                             <td class="p-2 font-bold text-slate-200">${v.name}</td>
-                            <td class="p-2 text-right font-mono text-slate-200 font-bold">${vCard > 0 ? '$' + vCard.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-slate-200 font-bold">${vTotal !== 0 ? '$' + vTotal.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-slate-400">${vCash > 0 ? '$' + vCash.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-blue-400 font-bold">${v1A > 0 ? '$' + v1A.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-slate-200 font-bold">${vG11 > 0 ? '$' + vG11.toFixed(2) : '—'}</td>
                             <td class="p-2 text-right font-mono text-purple-400 font-bold">${v1B > 0 ? '$' + v1B.toFixed(2) : '—'}</td>
-                            <td class="p-2 text-right font-mono text-amber-300 font-bold">${vW1 > 0 ? '$' + vW1.toFixed(2) : '<span class="text-slate-500 font-normal">Cash Pay ($0)</span>'}</td>
-                            <td class="p-2 text-right font-mono text-amber-400 font-bold">${vW2 > 0 ? '$' + vW2.toFixed(2) : '—'}</td>
+                            <td class="p-2 text-right font-mono text-amber-300 font-bold">${vW1 > 0 ? '$' + vW1.toFixed(2) : '<span class="text-slate-500 font-normal">Roster estimate</span>'}</td>
+                            <td class="p-2 text-right font-mono text-amber-400 font-bold">Not allocated</td>
                             <td class="p-2 text-right font-mono font-black ${vNetGst >= 0 ? 'text-emerald-400' : 'text-sky-400'}">
                                 ${vNetGst < 0 ? '-' : ''}$${Math.abs(vNetGst).toFixed(2)}
                             </td>
@@ -8252,8 +7876,8 @@ Do not include markdown fences.`;
                         <td class="p-2 text-right font-mono text-blue-300">$${gstOnSales1A.toFixed(2)}</td>
                         <td class="p-2 text-right font-mono text-white">$${totalPurchasesG11.toFixed(2)}</td>
                         <td class="p-2 text-right font-mono text-purple-300">$${totalGstCredits1B.toFixed(2)}</td>
-                        <td class="p-2 text-right font-mono text-amber-300">$${totalWagesW1.toFixed(2)}</td>
-                        <td class="p-2 text-right font-mono text-amber-400">$${totalTaxWithheldW2.toFixed(2)}</td>
+                        <td class="p-2 text-right font-mono text-amber-300">${formatPayrollAmount(payrollActuals.w1)}</td>
+                        <td class="p-2 text-right font-mono text-amber-400">${formatPayrollAmount(payrollActuals.w2)}</td>
                         <td class="p-2 text-right font-mono text-amber-400">$${netGstBox3.toFixed(2)}</td>
                     </tr>
                 `;
@@ -8277,7 +7901,7 @@ Do not include markdown fences.`;
                         const h = s.hourly || {};
                         const card = s.cardSales !== undefined && s.cardSales !== null ? Number(s.cardSales) : (h._cardSales !== undefined ? Number(h._cardSales) : tot);
                         const cash = s.cashSales !== undefined && s.cashSales !== null ? Number(s.cashSales) : (h._cashSales !== undefined ? Number(h._cashSales) : Math.max(0, tot - card));
-                        mCardG1 += card;
+                        mCardG1 += tot;
                         mCash += cash;
                     });
                     const m1A = mCardG1 / 11;
@@ -8345,7 +7969,7 @@ Do not include markdown fences.`;
                     catRowsHtml += `
                         <tr class="hover:bg-slate-800/40 transition">
                             <td class="p-2 font-bold text-slate-200 flex items-center gap-1.5">
-                                <span>${c.icon}</span> <span>${c.key}</span>
+                                <span>${c.icon}</span> <span>${escapeHtml(c.key)}</span>
                             </td>
                             <td class="p-2 text-[11px]">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.isTaxable ? 'bg-purple-950/70 text-purple-300 border border-purple-800' : 'bg-emerald-950/70 text-emerald-300 border border-emerald-800'}">
@@ -8395,14 +8019,14 @@ Do not include markdown fences.`;
                             <tr class="hover:bg-slate-800/40 transition">
                                 <td class="p-2 font-bold text-slate-200 flex items-center gap-1.5">
                                     <span>${s.isOwner ? '👑' : '👤'}</span>
-                                    <span>${s.name}</span>
+                                    <span>${escapeHtml(s.name)}</span>
                                     ${s.isOwner ? '<span class="text-[9px] text-amber-400 bg-amber-950/60 border border-amber-900/60 px-1.5 py-0.2 rounded font-semibold ml-1">Owner</span>' : ''}
                                 </td>
                                 <td class="p-2 text-right font-mono text-slate-300">${s.shifts}</td>
                                 <td class="p-2 text-right font-mono text-slate-200 font-bold">${s.hours.toFixed(1)} hrs</td>
                                 <td class="p-2 text-right font-mono text-slate-400">${s.taxHours.toFixed(1)} hrs</td>
                                 <td class="p-2 text-right font-mono font-bold text-amber-300">$${s.taxPay.toFixed(2)}</td>
-                                <td class="p-2 text-right font-mono font-bold text-amber-400">$${s.taxWithheld.toFixed(2)}</td>
+                                <td class="p-2 text-right font-mono font-bold text-amber-400">Not recorded</td>
                             </tr>
                         `;
                     });
@@ -8410,12 +8034,12 @@ Do not include markdown fences.`;
                     // Summary footer row
                     staffRowsHtml += `
                         <tr class="bg-slate-950/80 font-black border-t-2 border-slate-700 text-slate-100">
-                            <td class="p-2 uppercase text-[10px] text-amber-400">Total [Box W1 & W2]</td>
+                            <td class="p-2 uppercase text-[10px] text-amber-400">Actual Payroll Entered</td>
                             <td class="p-2 text-right font-mono text-slate-300">${totalShiftsCount}</td>
                             <td class="p-2 text-right font-mono text-white">${totalHoursSum.toFixed(1)} hrs</td>
                             <td class="p-2 text-right font-mono text-slate-300">${totalTaxHoursSum.toFixed(1)} hrs</td>
-                            <td class="p-2 text-right font-mono text-amber-300">$${totalWagesW1.toFixed(2)}</td>
-                            <td class="p-2 text-right font-mono text-amber-400">$${totalTaxWithheldW2.toFixed(2)}</td>
+                            <td class="p-2 text-right font-mono text-amber-300">${formatPayrollAmount(payrollActuals.w1)}</td>
+                            <td class="p-2 text-right font-mono text-amber-400">${formatPayrollAmount(payrollActuals.w2)}</td>
                         </tr>
                     `;
 
@@ -8450,7 +8074,7 @@ Do not include markdown fences.`;
                 };
             }
 
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
             const currentWeekMon = getMondayString(todayIso);
 
             // 1. Group bank wages by Monday of their week (EXCLUDING Green Juice, which is strictly roster-only!)
@@ -8969,7 +8593,7 @@ Do not include markdown fences.`;
 
         function setComparePreset(presetType) {
             activeCompPreset = presetType;
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
 
             if (presetType === 'this_vs_last_week') {
                 const monB = getMondayString(todayIso);
@@ -9207,7 +8831,7 @@ Do not include markdown fences.`;
                 html += '<div class="p-1.5"></div>';
             }
 
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
             const primaryBg = isA ? "bg-indigo-600" : "bg-emerald-600";
             const rangeBg = isA ? "bg-indigo-900/50 text-indigo-200" : "bg-emerald-900/50 text-emerald-200";
             const todayBorder = isA ? "border border-indigo-500 text-white" : "border border-emerald-500 text-white";
@@ -9846,7 +9470,7 @@ Do not include markdown fences.`;
 
         function renderHourlyHeatmapView() {
             const filterWeekVal = document.getElementById('filterWeek').value;
-            const startMondayStr = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
+            const startMondayStr = filterWeekVal ? getMondayString(filterWeekVal) : getLocalTodayIso();
             
             const badgeEl = document.getElementById('salesSelectedDayBadge');
             if (badgeEl) {
@@ -10011,7 +9635,7 @@ Do not include markdown fences.`;
         function updateChartDayNavUI(activeDate) {
             const btnDay = document.getElementById('chartDayNavBtn');
             const inputDate = document.getElementById('chartDatePickerInput');
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
             
             if (inputDate) {
                 inputDate.value = activeDate;
@@ -10033,7 +9657,7 @@ Do not include markdown fences.`;
         window.updateChartDayNavUI = updateChartDayNavUI;
 
         function navigateChartDay(delta) {
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
             if (!currentDailyChartDate) {
                 currentDailyChartDate = document.getElementById('date')?.value || todayIso;
             }
@@ -10046,7 +9670,7 @@ Do not include markdown fences.`;
         window.navigateChartDay = navigateChartDay;
 
         function jumpChartDayToToday() {
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
             currentDailyChartDate = todayIso;
             const dateInput = document.getElementById('date');
             if (dateInput) dateInput.value = todayIso;
@@ -10071,7 +9695,7 @@ Do not include markdown fences.`;
             }
             if (!targetDate) {
                 const filterWeekVal = document.getElementById('filterWeek')?.value;
-                targetDate = filterWeekVal ? getMondayString(filterWeekVal) : new Date().toISOString().split('T')[0];
+                targetDate = filterWeekVal ? getMondayString(filterWeekVal) : getLocalTodayIso();
             }
             targetDate = cleanDateStr(targetDate);
             currentDailyChartDate = targetDate;
@@ -10092,7 +9716,7 @@ Do not include markdown fences.`;
             const hourlyData = (salesRecord && salesRecord.hourly) ? salesRecord.hourly : {};
             const totalDaySales = salesRecord ? Number(salesRecord.totalSales || 0) : 0;
 
-            const todayIso = typeof getLocalTodayIso === 'function' ? getLocalTodayIso() : (new Date().toISOString().split('T')[0]);
+            const todayIso = getLocalTodayIso();
             const currentWeekMon = getMondayString(todayIso);
             const wMon = getMondayString(targetDate);
             const isCurWeek = (wMon === currentWeekMon);
@@ -10270,7 +9894,7 @@ Do not include markdown fences.`;
                         const badgeStyle = isOwner ? 
                             'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 
                             'bg-sky-500/20 text-sky-300 border border-sky-500/40';
-                        return `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeStyle} whitespace-nowrap">${s.name}</span>`;
+                        return `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeStyle} whitespace-nowrap">${escapeHtml(s.name)}</span>`;
                     }).join('');
                 } else {
                     staffPills = `<span class="text-[10px] text-slate-500 italic">No staff</span>`;
@@ -10410,7 +10034,7 @@ Do not include markdown fences.`;
                                     <span>🚫</span> <span>Access Denied</span>
                                 </div>
                                 <div class="text-xs text-slate-200">
-                                    <strong class="text-white">${user.email}</strong> is not an authorized account.
+                                    <strong class="text-white">${escapeHtml(user.email)}</strong> is not an authorized account.
                                 </div>
                                 <div class="text-[10px] text-red-300">
                                     Access is strictly restricted to approved managers:
@@ -10465,6 +10089,11 @@ Do not include markdown fences.`;
                 staffRegistry = [];
                 hourlySalesStore = [];
                 expensesStore = [];
+                basPayrollPeriodKey = null;
+                for (const id of ['basActualW1', 'basActualW2']) {
+                    const field = document.getElementById(id);
+                    if (field) field.value = '';
+                }
 
                 renderWeeklyTable();
                 populateStaffDropdowns();
