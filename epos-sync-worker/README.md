@@ -90,8 +90,14 @@ The portal now uses the authenticated worker for all reads and saves. A timed-ou
 From the repository root with Node.js 20 or newer:
 
 ~~~sh
-node --test tests/regressions.cjs tests/roster.cjs
+node --test tests/regressions.cjs tests/roster.cjs tests/bas-print.cjs
 node --check epos-sync-worker/server.js
 ~~~
 
 Tests use isolated DOM/API/database substitutes and do not contact the live POS, Firebase, or Supabase. They cover authentication gates, upload token scope and expiry, safe shop-specific mutations, complete pagination, date handling, rendering, failure messages, payroll worksheet behavior, and ten roster duration-edit scenarios. Verify live Google sign-in, database constraints, Epos selectors, and POS connectivity in staging before deploying.
+
+
+### Accountant printout
+The BAS Print / Save PDF action produces a dedicated two-page A4 working paper, separate from the dashboard. Page 1 follows the GST and PAYG label structure (G1, 1A, 1B, W1-W5, 4, 8A, 8B and 9). Page 2 contains cash-excluded sales reconciliation, monthly figures, the expense/GST-credit schedule, and adjustment notes.
+
+Defaults: Alhamd Enterprises Pty Ltd, ABN 64 647 160 030, cash GST accounting method. Accountant print details allow contact information and notes to be added. W3 and W4 require actual amounts, including explicit zero if not applicable. Missing payroll leaves W5 and the payment/refund unconfirmed. Whole-dollar summary figures drop cents; detailed schedules retain cents. The report is an accountant working paper, not an ATO-issued form; cash exclusions and estimated credits are disclosed for reconciliation before lodgment.

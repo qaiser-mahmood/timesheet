@@ -11,7 +11,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/regressions.cjs tests/roster.cjs
+      - run: node --test tests/regressions.cjs tests/roster.cjs tests/bas-print.cjs
         env:
           TZ: Australia/Perth
       - run: node --check epos-sync-worker/server.js

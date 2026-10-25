@@ -40,6 +40,58 @@
             table { page-break-inside: auto; }
             tr { page-break-inside: avoid; page-break-after: auto; }
         }
+#basPrintReport { display: none; }
+        @page { size: A4 portrait; margin: 12mm; }
+        @media print {
+            body.bas-print-active { margin: 0 !important; padding: 0 !important; background: white !important; }
+            body.bas-print-active > :not(#basPrintReport) { display: none !important; }
+            body.bas-print-active #basPrintReport { display: block !important; width: 186mm; font: 10pt Arial, Helvetica, sans-serif; line-height: 1.25; color: #111 !important; }
+            #basPrintReport * { box-sizing: border-box; color: #111 !important; text-shadow: none !important; box-shadow: none !important; }
+            #basPrintReport .bas-print-page { position: relative; min-height: 272mm; padding: 0 0 12mm; break-after: page; }
+            #basPrintReport .bas-print-page:last-child { break-after: auto; }
+            #basPrintReport .bas-print-topline { display:flex; justify-content:space-between; font-size:8pt; letter-spacing:.5px; padding-bottom:3mm; border-bottom:2px solid #111; }
+            #basPrintReport .bas-print-topline span { font-size:7pt; }
+            #basPrintReport .bas-print-title { display:flex; align-items:baseline; justify-content:space-between; margin:3mm 0; gap:6mm; }
+            #basPrintReport h1 { font-size:20pt; line-height:1.1; margin:0; font-weight:700; letter-spacing:-.5px; }
+            #basPrintReport .bas-print-title > span { font-size:10pt; white-space:nowrap; }
+            #basPrintReport .bas-print-identity { display:grid; grid-template-columns:1.35fr 1fr; border:1px solid #555; margin-bottom:3mm; }
+            #basPrintReport .bas-print-identity > div { padding:1.8mm 3mm; border-bottom:1px solid #bbb; min-width:0; }
+            #basPrintReport .bas-print-identity > div:nth-last-child(-n+2) { border-bottom:0; }
+            #basPrintReport .bas-print-identity span { display:block; font-size:7.5pt; margin-bottom:.7mm; }
+            #basPrintReport .bas-print-identity strong { font-size:10pt; font-weight:600; overflow-wrap:anywhere; }
+            #basPrintReport .bas-print-notice { font-size:8pt; padding:2.5mm 3mm; border-left:3px solid #222; background:#f3f4f2 !important; margin-bottom:3mm; }
+            #basPrintReport .bas-print-band { font-size:11pt; font-weight:700; background:#e7eee8 !important; border-top:1px solid #333; border-bottom:1px solid #777; margin:2.5mm 0 1mm; padding:1.3mm 2mm; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+            #basPrintReport .bas-print-section-caption { font-size:8pt; padding:1mm 0; }
+            #basPrintReport .bas-form-row, #basPrintReport .bas-print-result { display:grid; grid-template-columns:minmax(0,1fr) 10mm 39mm; align-items:center; gap:2mm; padding:1.2mm 0; min-height:8mm; border-bottom:1px solid #ccc; break-inside:avoid; }
+            #basPrintReport .bas-form-row > div:first-child { font-size:9pt; }
+            #basPrintReport .bas-form-row small, #basPrintReport .bas-print-result small { display:block; font-size:7pt; font-weight:400; margin-top:.5mm; }
+            #basPrintReport .bas-code { font-size:10pt; text-align:center; border:1px solid #333; padding:1mm 0; font-weight:700; background:#f6f6f4 !important; }
+            #basPrintReport .bas-amount { min-height:7mm; border:1px solid #333; padding:1.2mm 2mm; text-align:right; font-size:12pt; font-variant-numeric:tabular-nums; font-family:Arial, sans-serif; white-space:nowrap; }
+            #basPrintReport .bas-amount .bas-digits small { display:inline; font-size:8pt; padding-left:1mm; }
+            #basPrintReport .bas-missing { font:italic 7pt Arial,sans-serif; }
+            #basPrintReport .bas-print-columns { display:grid; grid-template-columns:1fr 1fr; gap:6mm; }
+            #basPrintReport .bas-print-columns .bas-form-row { grid-template-columns:minmax(0,1fr) 8mm 32mm; gap:1.5mm; }
+            #basPrintReport .bas-print-columns .bas-amount { font-size:11pt; }
+            #basPrintReport .bas-print-columns .bas-form-row > div:first-child { font-size:8pt; }
+            #basPrintReport h3 { margin:1.5mm 0 1mm; font-size:9pt; font-weight:700; }
+            #basPrintReport .bas-print-fine { font-size:7.5pt; line-height:1.35; margin:2mm 0; }
+            #basPrintReport .bas-print-result { margin-top:3mm; border:2px solid #222; padding:2mm; background:#f1f4f0 !important; }
+            #basPrintReport .bas-print-result .bas-amount { font-size:14pt; background:#fff !important; }
+            #basPrintReport .bas-print-footer { position:absolute; bottom:0; left:0; right:0; display:flex; justify-content:space-between; padding-top:2mm; border-top:1px solid #555; font-size:7pt; }
+            #basPrintReport .bas-print-subtitle { font-size:9pt; margin:1mm 0 5mm; }
+            #basPrintReport .bas-print-table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:8.5pt; }
+            #basPrintReport .bas-print-table th, #basPrintReport .bas-print-table td { border-bottom:1px solid #bbb; padding:1.3mm 1.7mm; vertical-align:top; overflow-wrap:anywhere; }
+            #basPrintReport .bas-print-table th { text-align:left; background:#f1f1ef !important; font-weight:700; }
+            #basPrintReport .bas-print-table .bas-num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+            #basPrintReport .bas-print-table th.bas-num { width:30%; }
+            #basPrintReport .bas-print-table .bas-total { font-weight:700; border-top:1.5px solid #333; background:#f6f6f3 !important; }
+            #basPrintReport .bas-print-schedules { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-top:3mm; }
+            #basPrintReport .bas-print-schedules .bas-print-table { font-size:7.5pt; }
+            #basPrintReport .bas-print-schedules .bas-print-table th, #basPrintReport .bas-print-schedules .bas-print-table td { padding:1mm 1.2mm; }
+            #basPrintReport .bas-print-notes { min-height:21mm; font-size:8pt; white-space:pre-wrap; overflow-wrap:anywhere; }
+            #basPrintReport .bas-print-notes div { height:6mm; border-bottom:1px solid #aaa; }
+            #basPrintReport .bas-print-signoff { display:flex; justify-content:space-between; margin-top:3mm; font-size:8pt; }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-2 sm:p-3 pb-24">
@@ -909,6 +961,22 @@
                         </button>
                     </div>
                 </div>
+
+<details class="no-print rounded-xl border border-slate-700 bg-slate-900 p-3 text-slate-200 text-xs">
+                    <summary class="font-bold cursor-pointer">Accountant print details</summary>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                        <label>Registered business name<input id="basPrintBusiness" maxlength="120" value="Alhamd Enterprises Pty Ltd" class="block w-full mt-1 bg-slate-800 rounded p-2"></label>
+                        <label>ABN<input id="basPrintAbn" maxlength="20" value="64 647 160 030" class="block w-full mt-1 bg-slate-800 rounded p-2"></label>
+                        <label>GST accounting method<select id="basPrintMethod" class="block w-full mt-1 bg-slate-800 rounded p-2"><option>Cash</option><option>Non-cash (accruals)</option></select></label>
+                        <label>Prepared by<input id="basPrintContact" maxlength="80" class="block w-full mt-1 bg-slate-800 rounded p-2"></label>
+                        <label>Phone<input id="basPrintPhone" maxlength="30" type="tel" class="block w-full mt-1 bg-slate-800 rounded p-2"></label>
+                        <div>Enter actual W1/W2 above. For the print summary, enter 0 below only when not applicable.</div>
+                        <label>W3 - other amounts withheld<input id="basActualW3" type="number" min="0" step="0.01" placeholder="Actual amount, or 0" class="block w-full mt-1 bg-slate-800 rounded p-2"></label>
+                        <label>W4 - withheld where no ABN quoted<input id="basActualW4" type="number" min="0" step="0.01" placeholder="Actual amount, or 0" class="block w-full mt-1 bg-slate-800 rounded p-2"></label>
+                        <label>Notes for accountant<textarea id="basPrintNotes" maxlength="600" rows="2" class="block w-full mt-1 bg-slate-800 rounded p-2"></textarea></label>
+                    </div>
+                    <p class="mt-2 text-slate-400">Prints two A4 pages: BAS labels and summary, then reconciliation and schedules. Cash remains excluded from worksheet figures and is shown separately for your accountant.</p>
+                </details>
 
                 <!-- Active Quarter Info Banner -->
                 <div class="bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/40 border border-amber-500/30 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
@@ -7564,9 +7632,139 @@ Do not include markdown fences.`;
             });
         }
 
-        function printBasReport() {
-            window.print();
-        }
+/* A4 accountant handoff. All figures come from the current worksheet period/store. */
+function collectBasPrintData() {
+    const period = getBasQuarterDates(currentBasQuarter, currentBasFY);
+    const inPeriod = value => {
+        const date = cleanDateStr(value);
+        return date >= period.start && date <= period.end;
+    };
+    const sales = hourlySalesStore.filter(s => inPeriod(s.date) && isStoreMatch(s.store_id, currentStore));
+    const expenses = expensesStore.filter(x => inPeriod(x.date) && isExpenseMatch(x.store_id, currentStore)
+        && !((x.store_id || 'anatolya') === 'green_juice' && (x.category || '').toLowerCase() === 'wages'));
+    let allSales = 0, cashSales = 0, includedSales = 0;
+    sales.forEach(s => {
+        const b = getBasSalesBreakdown(s);
+        allSales += b.total; cashSales += b.cash; includedSales += b.included;
+    });
+    const categories = new Map();
+    expenses.forEach(x => {
+        const name = x.category || 'Others';
+        const row = categories.get(name) || { name, amount: 0, gst: 0, records: 0 };
+        const amount = Number(x.amount) || 0;
+        const rule = BAS_GST_RULES[name] || { taxable: true };
+        row.amount += amount; row.gst += rule.taxable ? amount / 11 : 0; row.records++;
+        categories.set(name, row);
+    });
+    const categoryRows = [...categories.values()].sort((a,b) => a.name.localeCompare(b.name));
+    const gstSales = includedSales / 11;
+    const gstCredits = categoryRows.reduce((sum, row) => sum + row.gst, 0);
+    const payroll = getBasPayrollActuals();
+    const read = id => {
+        const field = document.getElementById(id);
+        return field && field.value.trim() !== '' && Number.isFinite(Number(field.value)) && Number(field.value) >= 0 ? Number(field.value) : null;
+    };
+    const whole = value => value === null || !Number.isFinite(value) || value < 0 ? null : Math.trunc(value);
+    const w1 = whole(payroll.w1), w2 = whole(payroll.w2), w3 = whole(read('basActualW3')), w4 = whole(read('basActualW4'));
+    const w5 = [w2,w3,w4].some(v => v === null) ? null : w2 + w3 + w4;
+    const a1 = whole(gstSales), b1 = whole(gstCredits);
+    const a8 = a1 === null || w5 === null ? null : a1 + w5;
+    const b8 = b1;
+    const net = a8 === null || b8 === null ? null : a8 - b8;
+    const monthly = period.months.map(month => {
+        let total = 0, cash = 0, included = 0;
+        sales.filter(s => cleanDateStr(s.date) >= month.start && cleanDateStr(s.date) <= month.end).forEach(s => {
+            const b = getBasSalesBreakdown(s); total += b.total; cash += b.cash; included += b.included;
+        });
+        return { name: month.name, total, cash, included, gst: included / 11 };
+    });
+    const text = (id, fallback = '') => (document.getElementById(id)?.value || fallback).trim();
+    return {
+        period, allSales, cashSales, includedSales, gstSales, gstCredits, categoryRows, monthly,
+        w1,w2,w3,w4,w5,a1,b1,a8,b8,net, g1: whole(includedSales),
+        business: text('basPrintBusiness', 'Alhamd Enterprises Pty Ltd'),
+        abn: text('basPrintAbn', '64 647 160 030'),
+        method: text('basPrintMethod', 'Cash'),
+        preparedBy: text('basPrintContact'), phone: text('basPrintPhone'), notes: text('basPrintNotes'),
+        store: ({all:'All businesses',anatolya:'Anatolya Kebabs',green_juice:'Green Juice Bar',company_shared:'Company shared expenses'})[currentStore] || currentStore,
+        generated: new Intl.DateTimeFormat('en-AU', {timeZone:'Australia/Perth',day:'2-digit',month:'short',year:'numeric'}).format(new Date()),
+        expenseRecords: expenses.length,
+        expenseTotal: categoryRows.reduce((sum,row) => sum + row.amount, 0)
+    };
+}
+function buildBasPrintHtml(d) {
+    const e = escapeHtml;
+    const money = value => Number(value || 0).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const amount = value => value === null ? '<span class="bas-missing">Not supplied / review</span>' : '<span class="bas-digits">' + value.toLocaleString('en-AU') + '<small>.00</small></span>';
+    const row = (label,code,value,small='') => '<div class="bas-form-row"><div>' + label + (small?'<small>'+small+'</small>':'') + '</div><b class="bas-code">' + code + '</b><div class="bas-amount">' + amount(value) + '</div></div>';
+    const header = page => '<div class="bas-print-topline"><b>ALHAMD ENTERPRISES PTY LTD</b><span>ACCOUNTANT WORKING PAPER</span></div><div class="bas-print-title"><h1>' + (page===1?'Business activity statement':'Supporting schedules') + '</h1><span>' + e(d.period.title) + '</span></div>';
+    const footer = page => '<div class="bas-print-footer"><span>' + e(d.abn) + ' | ' + e(d.period.title) + '</span><span>Prepared ' + e(d.generated) + ' | Page ' + page + ' of 2</span></div>';
+    const period = e(formatDisplayDateStr(d.period.start)) + ' - ' + e(formatDisplayDateStr(d.period.end));
+    const needsPayroll = d.w5 === null;
+    return '<section class="bas-print-page">' + header(1) +
+      '<div class="bas-print-identity"><div><span>Registered business name</span><strong>' + e(d.business) + '</strong></div><div><span>ABN</span><strong>' + e(d.abn) + '</strong></div><div><span>Reporting period</span><strong>' + period + '</strong></div><div><span>GST accounting method</span><strong>' + e(d.method) + '</strong></div><div><span>Business scope</span><strong>' + e(d.store) + '</strong></div><div><span>Contact / phone</span><strong>' + e([d.preparedBy,d.phone].filter(Boolean).join(' | ') || 'Not supplied') + '</strong></div></div>' +
+      '<div class="bas-print-notice"><b>For accountant review and lodgment preparation.</b> This is not an ATO-issued form. Cash sales are excluded from the working figures below and disclosed on page 2 for reconciliation before lodgment.</div>' +
+      '<h2 class="bas-print-band">Goods and services tax (GST)</h2>' +
+      '<div class="bas-print-section-caption">Worksheet figures in whole Australian dollars. Does G1 include GST? <b>Yes</b></div>' +
+      row('Total sales <sup>*</sup>','G1',d.g1,'* Cash-excluded worksheet scope; see supporting reconciliation.') +
+      '<div class="bas-print-columns"><div>' + row('GST on sales','1A',d.a1) + '</div><div>' + row('GST on purchases','1B',d.b1) + '</div></div>' +
+      '<p class="bas-print-fine">GST estimates use the current category rules. The accountant must verify taxable sales, input tax credits and supporting tax invoices.</p>' +
+      '<h2 class="bas-print-band">PAYG tax withheld</h2>' +
+      row('Total salary, wages and other payments','W1',d.w1) +
+      row('Amount withheld from payments shown at W1','W2',d.w2) +
+      row('Other amounts withheld','W3',d.w3,'Excluding amounts shown at W2 or W4.') +
+      row('Amount withheld where no ABN is quoted','W4',d.w4) +
+      row('Total amounts withheld','W5',d.w5,'W2 + W3 + W4. Transfer this figure to label 4.') +
+      '<h2 class="bas-print-band">Summary</h2>' +
+      '<div class="bas-print-columns bas-print-summary"><div><h3>Amounts you owe the ATO</h3>' +
+      row('GST on sales','1A',d.a1) + row('PAYG tax withheld','4',d.w5) + row('Total (1A + 4)','8A',d.a8) +
+      '</div><div><h3>Amounts the ATO owes you</h3>' + row('GST on purchases','1B',d.b1) +
+      row('Total credits','8B',d.b8) + '<p class="bas-print-fine">GST and PAYG withholding only. Other BAS obligations or credits require accountant review.</p></div></div>' +
+      '<div class="bas-print-result"><div><b>' + (d.net===null?'Payment or refund pending review':d.net<0?'Refund / credit': 'Payment to the ATO') + '</b><small>' + (d.net===null?'Complete the missing payroll or review figures.':'Difference between 8A and 8B.') + '</small></div><b class="bas-code">9</b><div class="bas-amount">' + amount(d.net===null?null:Math.abs(d.net)) + '</div></div>' +
+      '<p class="bas-print-fine">' + (needsPayroll?'W1-W4 must come from payroll records. Missing amounts are left unconfirmed; enter 0 only where not applicable. ':'W1-W4 are manually entered payroll figures, not amounts inferred from roster pay rates. ') + 'Summary figures drop cents; detailed schedules retain cents.</p>' +
+      footer(1) + '</section>' +
+      '<section class="bas-print-page">' + header(2) +
+      '<div class="bas-print-subtitle">' + e(d.business) + ' | ' + period + ' | ' + e(d.store) + '</div>' +
+      '<h2 class="bas-print-band">Sales reconciliation</h2>' +
+      '<table class="bas-print-table"><thead><tr><th>Description</th><th class="bas-num">Amount (AUD)</th></tr></thead><tbody>' +
+      '<tr><td>Total recorded sales - all payment methods</td><td class="bas-num">' + money(d.allSales) + '</td></tr>' +
+      '<tr><td>Less: cash sales excluded from this worksheet</td><td class="bas-num">' + money(d.cashSales) + '</td></tr>' +
+      '<tr class="bas-total"><td>Included sales used for G1 working figure</td><td class="bas-num">' + money(d.includedSales) + '</td></tr>' +
+      '<tr><td>GST on included taxable sales (included sales / 11)</td><td class="bas-num">' + money(d.gstSales) + '</td></tr>' +
+      '</tbody></table>' +
+      '<p class="bas-print-fine">Cash-excluded scope is an owner instruction. The accountant must reconcile all sales and confirm final reportable amounts before lodgment.</p>' +
+      '<div class="bas-print-schedules"><div><h2 class="bas-print-band">Monthly sales working figures</h2><table class="bas-print-table"><thead><tr><th>Month</th><th class="bas-num">Included sales</th><th class="bas-num">GST</th></tr></thead><tbody>' +
+      d.monthly.map(m=>'<tr><td>'+e(m.name)+'</td><td class="bas-num">'+money(m.included)+'</td><td class="bas-num">'+money(m.gst)+'</td></tr>').join('') +
+      '<tr class="bas-total"><td>Total</td><td class="bas-num">'+money(d.includedSales)+'</td><td class="bas-num">'+money(d.gstSales)+'</td></tr></tbody></table></div>' +
+      '<div><h2 class="bas-print-band">Expense / GST-credit schedule</h2><table class="bas-print-table"><thead><tr><th>Category</th><th class="bas-num">Recorded</th><th class="bas-num">GST credit</th></tr></thead><tbody>' +
+      (d.categoryRows.length?d.categoryRows.map(c=>'<tr><td>'+e(c.name)+'</td><td class="bas-num">'+money(c.amount)+'</td><td class="bas-num">'+money(c.gst)+'</td></tr>').join(''):'<tr><td colspan="3">No expense records for this scope.</td></tr>') +
+      '<tr class="bas-total"><td>Total</td><td class="bas-num">'+money(d.expenseTotal)+'</td><td class="bas-num">'+money(d.gstCredits)+'</td></tr></tbody></table><p class="bas-print-fine">'+d.expenseRecords+' expense records. Recorded expenses include non-GST items; the GST credit column follows category rules.</p></div></div>' +
+      '<h2 class="bas-print-band">Accountant adjustments / notes</h2><div class="bas-print-notes">' + (d.notes?'<p>'+e(d.notes)+'</p>':'') + (d.notes ? '<div></div>' : '<div></div><div></div><div></div>') + '</div>' +
+      '<div class="bas-print-signoff"><span>Reviewed by: __________________________</span><span>Date: __________________</span></div>' +
+      footer(2) + '</section>';
+}
+function renderBasPrintReport() {
+    let report = document.getElementById('basPrintReport');
+    if (!report) {
+        report = document.createElement('div');
+        report.id = 'basPrintReport';
+        document.body.appendChild(report);
+    }
+    report.innerHTML = buildBasPrintHtml(collectBasPrintData());
+}
+function prepareBasPrint() {
+    if (currentAnalyticsTab !== 'bas') return;
+    renderBasPrintReport();
+    document.body.classList.add('bas-print-active');
+}
+function printBasReport() {
+    renderBasReportView();
+    renderBasPrintReport();
+    document.body.classList.add('bas-print-active');
+    window.print();
+}
+window.addEventListener('beforeprint', prepareBasPrint);
+window.addEventListener('afterprint', () => document.body.classList.remove('bas-print-active'));
 
         function getBasSalesBreakdown(s) {
             const h = s.hourly || {};
@@ -7588,6 +7786,10 @@ Do not include markdown fences.`;
             if (key !== basPayrollPeriodKey) {
                 if (w1) w1.value = '';
                 if (w2) w2.value = '';
+                for (const id of ['basActualW3', 'basActualW4']) {
+                    const field = document.getElementById(id);
+                    if (field) field.value = '';
+                }
                 basPayrollPeriodKey = key;
             }
             const read = el => el && el.value.trim() !== '' && Number.isFinite(Number(el.value)) && Number(el.value) >= 0 ? Number(el.value) : null;
