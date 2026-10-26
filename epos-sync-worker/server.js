@@ -2474,7 +2474,10 @@ async function runSync(isManual = false, notifyTelegram = false, from = null, to
     const ranges = splitDateRangeIntoChunks(from || today, to || today, 31);
     const scrapeResult = { daysBatch: [], totalTx: 0, pagesLoaded: 0 };
     for (const range of ranges) {
-      await applyEposDateFilter(page, range.from, range.to, notifyTelegram);
+      const isTodayOnly = range.from === today && range.to === today;
+      // A fresh report opens on Today. Avoid the fragile period dropdown for live syncs.
+      // The scraper still rejects out-of-range rows before writing any sales.
+      if (!isTodayOnly) await applyEposDateFilter(page, range.from, range.to, notifyTelegram);
       const result = await scrapeAndSaveCurrentPage(page, range.from + ' to ' + range.to, false, range.from, range.to);
       scrapeResult.daysBatch.push(...result.daysBatch);
       scrapeResult.totalTx += result.totalTx;

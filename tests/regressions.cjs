@@ -266,3 +266,23 @@ test('Anatolya Sync opens the date-range dialog instead of immediately scraping 
  c.handlePanelSyncClick();assert.equal(calls.pop(),'epos-range');
  c.currentStore='green_juice';c.handlePanelSyncClick();assert.equal(calls.pop(),'loyverse');
 });
+
+test('scheduled today sync never uses the Epos period selector and enforces today-only dates',async()=>{
+ const w=worker(),calls=[];
+ w.context.ensureLoggedIn=async()=>({goto:async()=>{},waitForLoadState:async()=>{},waitForTimeout:async()=>{}});
+ w.context.applyEposDateFilter=async()=>assert.fail('today sync must not touch period selector');
+ w.context.scrapeAndSaveCurrentPage=async(page,label,notify,from,to)=>{
+  calls.push({from,to});return {daysBatch:[{date:from,totalSales:10}],totalTx:1,pagesLoaded:1};
+ };
+ const result=await w.context.runSync(false,false);
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Australia/Perth'}).format(new Date());
+ assert.equal(calls.length,1);assert.equal(calls[0].from,today);assert.equal(calls[0].to,today);assert.equal(result.txCount,1);
+});
+test('explicit today range bypasses the dropdown without weakening historical filtering',async()=>{
+ const w=worker(),today=new Intl.DateTimeFormat('en-CA',{timeZone:'Australia/Perth'}).format(new Date());
+ w.context.ensureLoggedIn=async()=>({goto:async()=>{},waitForLoadState:async()=>{},waitForTimeout:async()=>{}});
+ w.context.applyEposDateFilter=async()=>assert.fail('explicit today range must bypass selector');
+ w.context.scrapeAndSaveCurrentPage=async()=>({daysBatch:[],totalTx:0,pagesLoaded:1});
+ const result=await w.context.runSync(true,false,today,today);
+ assert.equal(result.txCount,0);
+});
