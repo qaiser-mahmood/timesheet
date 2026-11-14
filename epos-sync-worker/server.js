@@ -1580,18 +1580,34 @@ async function ensureLoggedIn(force = false, isManual = false) {
 
     console.log(`Checking session on ${TARGET_URL}...`);
 
-    // Wait for full load including HTTP and JS redirects
-    await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    let isSessionValid = false;
 
-    const currentUrl = page.url();
-    console.log(`Current page URL: ${currentUrl}`);
+    if (!force) {
+      // Navigate to target report and wait for network/DOM to settle
+      await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 });
+      await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
 
-    // If redirected to login - use safe locator check
-    const hasLoginInputs = await page.locator('#username, input[name="username"], input[type="password"]').count() > 0;
-    const isLoginPage = currentUrl.toLowerCase().includes('login') || hasLoginInputs;
+      // Race between authenticated report elements and unauthenticated login elements
+      try {
+        const checkResult = await Promise.race([
+          page.waitForSelector('.MuiDataGrid-root, button[aria-label="Filters"], #period, .MuiTablePagination-root', { timeout: 12000 }).then(() => 'logged_in'),
+          page.waitForSelector('#username, input[name="username"], input[type="email"]', { timeout: 12000 }).then(() => 'login_required'),
+          page.waitForURL(url => url.hostname.includes('login.eposnowhq.com') || url.pathname.includes('login') || url.hostname.includes('onboarding-oauth'), { timeout: 12000 }).then(() => 'login_required')
+        ]);
+        if (checkResult === 'logged_in') {
+          isSessionValid = true;
+        }
+      } catch (_) {
+        const curUrl = page.url().toLowerCase();
+        const hasInputs = (await page.locator('#username, input[name="username"], input[type="password"]').count()) > 0;
+        const hasGrid = (await page.locator('.MuiDataGrid-root, button[aria-label="Filters"], #period').count()) > 0;
+        if (!curUrl.includes('login') && !curUrl.includes('onboarding-oauth') && !hasInputs && hasGrid) {
+          isSessionValid = true;
+        }
+      }
+    }
 
-    if (!isLoginPage && !force) {
+    if (isSessionValid && !force) {
       console.log('Already logged in to Epos Now.');
       appState.isAuthenticated = true;
       appState.consecutive2FAFailures = 0;
@@ -1599,68 +1615,61 @@ async function ensureLoggedIn(force = false, isManual = false) {
     }
 
     console.log('Login required. Checking credentials...');
-    if (!EPOS_PASSWORD) {
-      const msg = '❌ EPOS_PASSWORD is not configured in Render environment variables! Please add EPOS_PASSWORD in Render Dashboard -> Environment.';
+    if (!EPOS_USERNAME || !EPOS_PASSWORD) {
+      const missing = [];
+      if (!EPOS_USERNAME) missing.push('EPOS_USERNAME');
+      if (!EPOS_PASSWORD) missing.push('EPOS_PASSWORD');
+      const msg = `❌ Missing configuration in Render environment variables: ${missing.join(', ')}! Please configure in Render Dashboard -> Environment.`;
       await sendTelegramMessage(msg);
       throw new Error(msg);
     }
 
-    // Target inputs on https://login.eposnowhq.com using safe locators
-    const userField = page.locator('#username, input[name="username"], input[type="email"]');
-    await userField.first().waitFor({ state: 'visible', timeout: 20000 });
-    await userField.first().fill(EPOS_USERNAME);
-
-    const passField = page.locator('#password, input[name="password"], input[type="password"]');
-    await passField.first().waitFor({ state: 'visible', timeout: 15000 });
-    await passField.first().fill(EPOS_PASSWORD);
-
-    // Submit form and cleanly wait for page navigation
-    const submitBtn = page.locator('button[type="submit"], .submission-form__btn, input[type="submit"]');
-    
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: 'load', timeout: 35000 }).catch(() => {}),
-      submitBtn.first().click()
-    ]);
-
-    // Give page time to settle after redirect
-    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-    await page.waitForTimeout(3000);
-
-    // Safely retrieve URL and text with retry if still navigating
-    let afterUrl = '';
-    let pageText = '';
-    for (let attempt = 0; attempt < 6; attempt++) {
-      try {
-        await page.waitForLoadState('domcontentloaded').catch(() => {});
-        afterUrl = page.url();
-        pageText = await page.innerText('body');
-        break;
-      } catch (e) {
-        console.log(`Waiting for navigation to settle (attempt ${attempt + 1})...`);
-        await page.waitForTimeout(1500);
-      }
+    // If not already on login page, navigate via clean SSO sign-in redirect
+    const curUrl = page.url().toLowerCase();
+    const hasLoginInputs = (await page.locator('#username, input[name="username"], input[type="email"]').count()) > 0;
+    if (!curUrl.includes('login.eposnowhq.com') || !hasLoginInputs) {
+      console.log('Navigating to Epos Now sign-in portal...');
+      await page.goto('https://www.eposnowhq.com/sso/Auth/SignIn', { waitUntil: 'load', timeout: 45000 });
+      await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
     }
+
+    // Target inputs on https://login.eposnowhq.com using safe locators
+    const userField = page.locator('#username, input[name="username"], input[type="email"]').first();
+    await userField.waitFor({ state: 'visible', timeout: 25000 });
+    await userField.click();
+    await userField.fill('');
+    await userField.fill(EPOS_USERNAME);
+
+    const passField = page.locator('#password, input[name="password"], input[type="password"]').first();
+    await passField.waitFor({ state: 'visible', timeout: 15000 });
+    await passField.click();
+    await passField.fill('');
+    await passField.fill(EPOS_PASSWORD);
+
+    // Submit form
+    const submitBtn = page.locator('button[type="submit"], .submission-form__btn, input[type="submit"]').first();
+    await submitBtn.click();
+
+    // Give page time to settle after submission and redirect
+    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+
+    // Safely retrieve URL and text
+    let afterUrl = page.url();
+    let pageText = await page.innerText('body').catch(() => '');
     console.log(`URL after submission: ${afterUrl}`);
 
-    // Check for login error (e.g. invalid password)
-    if (pageText.toLowerCase().includes('invalid username or password') ||
-        pageText.toLowerCase().includes('incorrect username or password') ||
-        pageText.toLowerCase().includes('check your details')) {
-      const authErr = '❌ Epos Now rejected credentials (Invalid username or password). Please double check EPOS_PASSWORD in Render.';
+    // Check for login error (e.g. invalid username or password)
+    const hasCredError = /invalid username or password|incorrect username or password|check your details|invalid login|we could not find your account/i.test(pageText);
+    if (hasCredError) {
+      const authErr = '❌ Epos Now rejected credentials (Invalid username or password). Please double check EPOS_USERNAME and EPOS_PASSWORD in Render.';
       await sendTelegramMessage(authErr);
       throw new Error(authErr);
     }
 
     // Detect 2FA SMS challenge
-    const is2FA = afterUrl.toLowerCase().includes('twofactor') ||
-      afterUrl.toLowerCase().includes('verification') ||
-      afterUrl.toLowerCase().includes('challenge') ||
-      afterUrl.toLowerCase().includes('2fa') ||
-      pageText.toLowerCase().includes('verification code') ||
-      pageText.toLowerCase().includes('enter code') ||
-      pageText.toLowerCase().includes('security code') ||
-      pageText.toLowerCase().includes('sent a code') ||
-      pageText.toLowerCase().includes('sms');
+    const is2FA = /twofactor|verification|challenge|2fa/i.test(afterUrl) ||
+      /verification code|security code|enter code|sent a code|text message|\bsms\b/i.test(pageText);
 
     if (is2FA) {
       console.log('2FA Challenge detected on screen!');
@@ -1705,17 +1714,17 @@ async function ensureLoggedIn(force = false, isManual = false) {
       const code = await waitFor2FACode(300000);
       await sendTelegramMessage(`👍 Received code ${code}. Submitting to Epos Now...`);
 
-      // 1. Detect multi-box single digit inputs (common in modern OTP screens)
-      const visibleInputs = page.locator('form input:visible, main input:visible, input[type="text"]:visible, input[type="tel"]:visible, input[type="number"]:visible');
-      const inputCount = await visibleInputs.count();
+      // 1. Detect multi-box single digit inputs (filter to text/number/tel to avoid checkboxes)
+      const digitInputs = page.locator('form input[type="text"]:visible, form input[type="tel"]:visible, form input[type="number"]:visible, main input[type="text"]:visible, main input[type="tel"]:visible, main input[type="number"]:visible, input[maxlength="1"]:visible');
+      const inputCount = await digitInputs.count();
       let filled = false;
 
       if (inputCount >= 6) {
-        console.log(`Found ${inputCount} visible inputs on 2FA screen. Attempting multi-box fill...`);
+        console.log(`Found ${inputCount} visible digit inputs on 2FA screen. Attempting multi-box fill...`);
         try {
           for (let i = 0; i < Math.min(code.length, inputCount); i++) {
-            await visibleInputs.nth(i).click().catch(() => {});
-            await visibleInputs.nth(i).fill(code[i]);
+            await digitInputs.nth(i).click().catch(() => {});
+            await digitInputs.nth(i).fill(code[i]);
             await page.waitForTimeout(60);
           }
           filled = true;
@@ -1726,11 +1735,11 @@ async function ensureLoggedIn(force = false, isManual = false) {
 
       // 2. Single code input fallback
       if (!filled) {
-        const codeInput = page.locator('input[name*="code" i], input[id*="code" i], input[autocomplete*="one-time-code" i], input[type="tel"], input[type="number"], input[type="text"]:visible');
+        const codeInput = page.locator('input[name*="code" i], input[id*="code" i], input[autocomplete*="one-time-code" i], input[type="tel"]:visible, input[type="number"]:visible, input[type="text"]:visible').first();
         if (await codeInput.count() > 0) {
-          await codeInput.first().click().catch(() => {});
-          await codeInput.first().fill('');
-          await codeInput.first().fill(code);
+          await codeInput.click().catch(() => {});
+          await codeInput.fill('');
+          await codeInput.fill(code);
           filled = true;
         }
       }
@@ -1748,45 +1757,38 @@ async function ensureLoggedIn(force = false, isManual = false) {
         }
       } catch (_) {}
 
-      // Submit 2FA code: Click verify button or press Enter, safely handling immediate navigation
+      // Submit 2FA code: Click verify button or press Enter
       try {
-        const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue"), button:has-text("Log in"), button:has-text("Next")');
-        const btnExists = (await verifyBtn.count().catch(() => 0)) > 0;
-        
-        if (btnExists) {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
-            verifyBtn.first().click().catch(() => {})
-          ]);
+        const verifyBtn = page.locator('button[type="submit"], input[type="submit"], button:has-text("Verify"), button:has-text("Submit"), button:has-text("Continue"), button:has-text("Log in"), button:has-text("Next")').first();
+        if ((await verifyBtn.count().catch(() => 0)) > 0) {
+          await verifyBtn.click().catch(() => {});
         } else {
-          await Promise.all([
-            page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 35000 }).catch(() => {}),
-            page.keyboard.press('Enter').catch(() => {})
-          ]);
+          await page.keyboard.press('Enter').catch(() => {});
         }
       } catch (submitErr) {
-        console.log('Notice during 2FA submit trigger (page likely already navigating):', submitErr.message);
+        console.log('Notice during 2FA submit trigger:', submitErr.message);
       }
 
-      // Safely wait for navigation and network to settle
-      try {
-        await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
-        await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
-      } catch (_) {}
-      await page.waitForTimeout(3000);
-
-      // Verify post-2FA state safely
+      // Wait for navigation and network to settle across OAuth redirects
       let after2faUrl = '';
       let after2faText = '';
-      for (let attempt = 0; attempt < 6; attempt++) {
-        try {
-          await page.waitForLoadState('domcontentloaded').catch(() => {});
-          after2faUrl = page.url();
-          after2faText = await page.innerText('body');
+      for (let attempt = 0; attempt < 12; attempt++) {
+        await page.waitForTimeout(2000);
+        after2faUrl = page.url();
+        after2faText = await page.innerText('body').catch(() => '');
+
+        const isStillLogin = after2faUrl.toLowerCase().includes('twofactor') ||
+          after2faUrl.toLowerCase().includes('verification') ||
+          after2faUrl.toLowerCase().includes('challenge') ||
+          after2faUrl.toLowerCase().includes('login');
+
+        // Once navigated away from login/challenge screens, break cleanly
+        if (!isStillLogin) {
           break;
-        } catch (_) {
-          console.log(`Waiting for post-2FA page to settle (attempt ${attempt + 1})...`);
-          await page.waitForTimeout(1500);
+        }
+        // If an explicit error appeared on the 2FA screen
+        if (/invalid code|incorrect code|expired|too many attempts/i.test(after2faText)) {
+          break;
         }
       }
 
@@ -1794,10 +1796,7 @@ async function ensureLoggedIn(force = false, isManual = false) {
         after2faUrl.toLowerCase().includes('verification') ||
         after2faUrl.toLowerCase().includes('challenge') ||
         after2faUrl.toLowerCase().includes('login') ||
-        after2faText.toLowerCase().includes('invalid code') ||
-        after2faText.toLowerCase().includes('incorrect code') ||
-        after2faText.toLowerCase().includes('expired') ||
-        after2faText.toLowerCase().includes('enter code');
+        /invalid code|incorrect code|expired|too many attempts/i.test(after2faText);
 
       if (isStill2FAOrLogin) {
         appState.consecutive2FAFailures++;
@@ -1826,6 +1825,18 @@ async function ensureLoggedIn(force = false, isManual = false) {
         );
 
         throw new Error(reason);
+      }
+    } else {
+      // Non-2FA login check: confirm we navigated away from login screen
+      const finalUrl = page.url();
+      const finalInputs = await page.locator('#username, input[name="username"]').count();
+      if (finalUrl.toLowerCase().includes('login') || finalInputs > 0) {
+        const failReason = 'Epos Now form submitted but remained on login screen. Check credentials or authentication challenge.';
+        try {
+          const failBuf = await page.screenshot();
+          await sendTelegramPhoto(failBuf, `❌ Login Stalled on Login Screen`);
+        } catch (_) {}
+        throw new Error(failReason);
       }
     }
 
@@ -2093,14 +2104,15 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         if (!str) return null;
         var now = new Date();
         var curYear = now.getFullYear();
-        if (/\btoday\b/i.test(str)) return toIso(curYear, now.getMonth() + 1, now.getDate());
-        if (/\byesterday\b/i.test(str)) {
+        var s = str.trim();
+        if (/\btoday\b/i.test(s)) return toIso(curYear, now.getMonth() + 1, now.getDate());
+        if (/\byesterday\b/i.test(s)) {
           var yDate = new Date(now.getTime() - 86400000);
           return toIso(yDate.getFullYear(), yDate.getMonth() + 1, yDate.getDate());
         }
-        var mIso = str.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+        var mIso = s.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
         if (mIso) return mIso[0];
-        var mSlash = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+        var mSlash = s.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/);
         if (mSlash) {
           var d = parseInt(mSlash[1], 10);
           var mo = parseInt(mSlash[2], 10);
@@ -2109,11 +2121,34 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
             return toIso(yr3, mo, d);
           }
         }
+        // Support word month formats like "14 Nov 2026" or "Nov 14, 2026"
+        var months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+        var sMonths = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+        var mWord = s.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]+([A-Za-z]{3,9})(?:[\s\-\/,]+(\d{2,4}))?\b/i);
+        if (mWord) {
+          var mName = mWord[2].toLowerCase();
+          var mIdx = months.indexOf(mName);
+          if (mIdx === -1) mIdx = sMonths.indexOf(mName.slice(0, 3));
+          if (mIdx !== -1) {
+            var yr2 = mWord[3] ? (mWord[3].length === 2 ? '20' + mWord[3] : mWord[3]) : String(curYear);
+            return toIso(yr2, mIdx + 1, parseInt(mWord[1], 10));
+          }
+        }
+        var mWord2 = s.match(/\b([A-Za-z]{3,9})[\s\-\/]+(\d{1,2})(?:st|nd|rd|th)?(?:[\s\-\/,]+(\d{2,4}))?\b/i);
+        if (mWord2) {
+          var mName2 = mWord2[1].toLowerCase();
+          var mIdx2 = months.indexOf(mName2);
+          if (mIdx2 === -1) mIdx2 = sMonths.indexOf(mName2.slice(0, 3));
+          if (mIdx2 !== -1) {
+            var yr4 = mWord2[3] ? (mWord2[3].length === 2 ? '20' + mWord2[3] : mWord2[3]) : String(curYear);
+            return toIso(yr4, mIdx2 + 1, parseInt(mWord2[2], 10));
+          }
+        }
         return null;
       }
 
       function parseTimeStr(timeStr) {
-        var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([apAP][mM])?/i);
+        var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([apAP][mM]))?/i);
         if (!tm) return null;
         var h = parseInt(tm[1], 10);
         var ampm = tm[4] ? tm[4].toUpperCase() : '';
@@ -2131,21 +2166,23 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         const cells = Array.from(r.querySelectorAll('.MuiDataGrid-cell, td'));
         let dateStr = '', amountVal = null, payStr = '', staffStr = '', pspStr = '';
         cells.forEach(c => {
-          const f = c.getAttribute('data-field') || '';
+          const f = (c.getAttribute('data-field') || '').toLowerCase();
           const t = c.innerText.trim();
-          if (f === 'date') dateStr = t;
-          else if (f === 'amount') {
+          if (f.includes('date') || f.includes('time')) {
+            if (!dateStr || parseAnyDate(t)) dateStr = t;
+          }
+          else if (f.includes('amount') || f.includes('total') || f.includes('value')) {
             const m = t.match(/([0-9]+\.[0-9]{2})/);
             if (m) amountVal = parseFloat(m[1]);
           }
-          else if (f === 'paymentMethod') payStr = t;
-          else if (f === 'staff') staffStr = t;
-          else if (f === 'pspReferences') pspStr = t;
+          else if (f.includes('pay') || f.includes('tender') || f.includes('method')) payStr = t;
+          else if (f.includes('staff')) staffStr = t;
+          else if (f.includes('psp') || f.includes('ref')) pspStr = t;
         });
 
         const rText = r.innerText.replace(/\s+/g, ' ').trim();
         if (!dateStr) {
-          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
+          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b)/i);
           if (dM) dateStr = dM[1];
         }
         if (amountVal === null) {
@@ -2158,7 +2195,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         }
 
         const isoDate = parseAnyDate(dateStr);
-        const tM = (dateStr + ' ' + rText).match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
+        const tM = (dateStr + ' ' + rText).match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
         const timeStr = tM ? tM[1] : '';
         const hourStr = parseTimeStr(timeStr);
         const isCash = payStr.toLowerCase().includes('cash') || (/\bcash\b/i.test(rText) && !/\bcard\b/i.test(rText));
@@ -2182,8 +2219,8 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         for (let i = 0; i < trs.length; i++) {
           const rText = trs[i].innerText.replace(/\s+/g, ' ').trim();
           if (!rText || rText.toLowerCase().includes('transaction report')) continue;
-          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b)/);
-          const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*[apAP][mM]?)/);
+          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b)/i);
+          const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
           const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
           if (dM && tM && aM) {
             const iso = parseAnyDate(dM[1]);
@@ -2322,6 +2359,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       time: t.time || '',
       amount: t.amount,
       payment_method: t.isCash ? 'Cash' : 'Card',
+      store_id: 'anatolya',
       raw_line: rawC
     };
   });
@@ -2402,8 +2440,13 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     });
     if (!txRes.ok) {
       const errTxt = await txRes.text();
-      if (errTxt.includes('payment_method')) {
-        const strippedChunk = chunk.map(c => ({ id: c.id, date: c.date, time: c.time, amount: c.amount, raw_line: c.raw_line }));
+      if (errTxt.includes('payment_method') || errTxt.includes('store_id')) {
+        const strippedChunk = chunk.map(c => {
+          const row = { id: c.id, date: c.date, time: c.time, amount: c.amount, raw_line: c.raw_line };
+          if (!errTxt.includes('payment_method')) row.payment_method = c.payment_method;
+          if (!errTxt.includes('store_id')) row.store_id = c.store_id;
+          return row;
+        });
         txRes = await fetch(`${SUPABASE_URL}/rest/v1/raw_transactions?on_conflict=id`, {
           method: 'POST',
           headers: {
@@ -2535,8 +2578,9 @@ async function sessionHeartbeat() {
         await page.evaluate(() => document.title).catch(() => {});
       }
 
-      const isLoginPage = page.url().toLowerCase().includes('login');
-      if (!isLoginPage) {
+      const urlNow = page.url().toLowerCase();
+      const isLoginPage = urlNow.includes('login') || urlNow.includes('onboarding-oauth');
+      if (!isLoginPage && (urlNow.includes('reporting.eposnowhq.com') || urlNow.includes('eposnowhq.com'))) {
         appState.isAuthenticated = true;
       } else {
         console.log('[Heartbeat] Session appears logged out. Awaiting manual /login or scheduled run.');
