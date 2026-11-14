@@ -2064,6 +2064,13 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
 async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = true, expectedFrom = null, expectedTo = null) {
   console.log(`[EposScrape] Scraping transactions view (${chunkLabel})...`);
 
+  const now = new Date();
+  const defaultDateIso = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(now);
+  const yDate = new Date(now);
+  yDate.setDate(yDate.getDate() - 1);
+  const yesterdayIso = new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE }).format(yDate);
+  const defaultYear = parseInt(defaultDateIso.slice(0, 4), 10);
+
   // Step 1: Switch Rows per page to 100 for fast, full extraction
   try {
     const combobox = page.locator('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-select').first();
@@ -2086,7 +2093,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   }
 
   // Step 2: Page traversal loop
-  const allTxList = [];
+  let allTxList = [];
   const seenIds = new Set();
   let pageNum = 0;
   const maxPages = 1000; // Abort before saving if this safety limit is reached.
@@ -2094,24 +2101,33 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   while (pageNum < maxPages) {
     pageNum++;
 
+    if (typeof page.waitForSelector === 'function') {
+      await page.waitForSelector('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr', { timeout: 8000 }).catch(() => {});
+    }
+
     // Extract rows from current page DOM
-    const pageRows = await page.evaluate(() => {
+    const pageRows = await page.evaluate(({ defaultYear, defaultDateIso, yesterdayIso } = {}) => {
       function toIso(y, m, d) {
         return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
       }
 
+      var defDate = defaultDateIso || new Intl.DateTimeFormat('en-CA').format(new Date());
+      var defYr = defaultYear || parseInt(defDate.slice(0, 4), 10);
+      var yDef = yesterdayIso || new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+      var months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+      var sMonths = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
       function parseAnyDate(str) {
         if (!str) return null;
-        var now = new Date();
-        var curYear = now.getFullYear();
         var s = str.trim();
-        if (/\btoday\b/i.test(s)) return toIso(curYear, now.getMonth() + 1, now.getDate());
-        if (/\byesterday\b/i.test(s)) {
-          var yDate = new Date(now.getTime() - 86400000);
-          return toIso(yDate.getFullYear(), yDate.getMonth() + 1, yDate.getDate());
-        }
+        if (/\btoday\b/i.test(s)) return defDate;
+        if (/\byesterday\b/i.test(s)) return yDef;
+
         var mIso = s.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
         if (mIso) return mIso[0];
+
+        // DD/MM/YYYY or DD/MM/YY
         var mSlash = s.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/);
         if (mSlash) {
           var d = parseInt(mSlash[1], 10);
@@ -2121,33 +2137,47 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
             return toIso(yr3, mo, d);
           }
         }
-        // Support word month formats like "14 Nov 2026" or "Nov 14, 2026"
-        var months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-        var sMonths = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-        var mWord = s.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]+([A-Za-z]{3,9})(?:[\s\-\/,]+(\d{2,4}))?\b/i);
+
+        // DD/MM without year (e.g. 14/11 or 14/11 22:30, avoiding times like 10:30)
+        var mSlashNoYr = s.match(/\b(\d{1,2})[\/\-](\d{1,2})(?![\/\-\d:])\b/);
+        if (mSlashNoYr) {
+          var d2 = parseInt(mSlashNoYr[1], 10);
+          var mo2 = parseInt(mSlashNoYr[2], 10);
+          if (d2 >= 1 && d2 <= 31 && mo2 >= 1 && mo2 <= 12) {
+            return toIso(defYr, mo2, d2);
+          }
+        }
+
+        // Word month: '14 Nov 2026', '14 Nov 26', '14 Nov 22:30'
+        // Using (\d{4}|\d{2}(?!:)) so hours like 22:30 are NEVER captured as 2-digit years!
+        var mWord = s.match(/\b(\d{1,2})(?:st|nd|rd|th)?[\s\-\/]+([A-Za-z]{3,9})(?:[\s\-\/,]+(\d{4}|\d{2}(?!:)))?\b/i);
         if (mWord) {
           var mName = mWord[2].toLowerCase();
           var mIdx = months.indexOf(mName);
           if (mIdx === -1) mIdx = sMonths.indexOf(mName.slice(0, 3));
           if (mIdx !== -1) {
-            var yr2 = mWord[3] ? (mWord[3].length === 2 ? '20' + mWord[3] : mWord[3]) : String(curYear);
+            var yr2 = mWord[3] ? (mWord[3].length === 2 ? '20' + mWord[3] : mWord[3]) : String(defYr);
             return toIso(yr2, mIdx + 1, parseInt(mWord[1], 10));
           }
         }
-        var mWord2 = s.match(/\b([A-Za-z]{3,9})[\s\-\/]+(\d{1,2})(?:st|nd|rd|th)?(?:[\s\-\/,]+(\d{2,4}))?\b/i);
+
+        // Word month first: 'Nov 14 2026', 'Nov 14 22:30'
+        var mWord2 = s.match(/\b([A-Za-z]{3,9})[\s\-\/]+(\d{1,2})(?:st|nd|rd|th)?(?:[\s\-\/,]+(\d{4}|\d{2}(?!:)))?\b/i);
         if (mWord2) {
           var mName2 = mWord2[1].toLowerCase();
           var mIdx2 = months.indexOf(mName2);
           if (mIdx2 === -1) mIdx2 = sMonths.indexOf(mName2.slice(0, 3));
           if (mIdx2 !== -1) {
-            var yr4 = mWord2[3] ? (mWord2[3].length === 2 ? '20' + mWord2[3] : mWord2[3]) : String(curYear);
+            var yr4 = mWord2[3] ? (mWord2[3].length === 2 ? '20' + mWord2[3] : mWord2[3]) : String(defYr);
             return toIso(yr4, mIdx2 + 1, parseInt(mWord2[2], 10));
           }
         }
+
         return null;
       }
 
       function parseTimeStr(timeStr) {
+        if (!timeStr) return null;
         var tm = timeStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*([apAP][mM]))?/i);
         if (!tm) return null;
         var h = parseInt(tm[1], 10);
@@ -2158,18 +2188,23 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       }
 
       const rows = [];
-      // Primary: MuiDataGrid rows with data-id
-      const gridRows = document.querySelectorAll('.MuiDataGrid-row, tr[data-id]');
+      const gridRows = document.querySelectorAll('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr');
       for (let i = 0; i < gridRows.length; i++) {
         const r = gridRows[i];
+        const rText = (r.innerText || r.textContent || '').replace(/\s+/g, ' ').trim();
+        if (!rText || rText.toLowerCase().includes('transaction report')) continue;
+
         const eposId = r.getAttribute('data-id') || '';
-        const cells = Array.from(r.querySelectorAll('.MuiDataGrid-cell, td'));
-        let dateStr = '', amountVal = null, payStr = '', staffStr = '', pspStr = '';
+        const cells = Array.from(r.querySelectorAll('.MuiDataGrid-cell, td, [role="cell"], [role="gridcell"]'));
+        let dateStr = '', timeStr = '', amountVal = null, payStr = '', staffStr = '', pspStr = '';
+
         cells.forEach(c => {
           const f = (c.getAttribute('data-field') || '').toLowerCase();
           const t = c.innerText.trim();
           if (f.includes('date') || f.includes('time')) {
-            if (!dateStr || parseAnyDate(t)) dateStr = t;
+            if (parseAnyDate(t)) dateStr = t;
+            const tMatch = t.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
+            if (tMatch) timeStr = tMatch[1];
           }
           else if (f.includes('amount') || f.includes('total') || f.includes('value')) {
             const m = t.match(/([0-9]+\.[0-9]{2})/);
@@ -2180,10 +2215,13 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
           else if (f.includes('psp') || f.includes('ref')) pspStr = t;
         });
 
-        const rText = r.innerText.replace(/\s+/g, ' ').trim();
         if (!dateStr) {
-          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b)/i);
+          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b|\btoday\b|\byesterday\b)/i);
           if (dM) dateStr = dM[1];
+        }
+        if (!timeStr) {
+          const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
+          if (tM) timeStr = tM[1];
         }
         if (amountVal === null) {
           const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
@@ -2194,9 +2232,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
           else if (/\bcard\b|\beftpos\b|\bvisa\b|\bmastercard\b/i.test(rText)) payStr = 'Card';
         }
 
-        const isoDate = parseAnyDate(dateStr);
-        const tM = (dateStr + ' ' + rText).match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
-        const timeStr = tM ? tM[1] : '';
+        const isoDate = parseAnyDate(dateStr) || parseAnyDate(rText);
         const hourStr = parseTimeStr(timeStr);
         const isCash = payStr.toLowerCase().includes('cash') || (/\bcash\b/i.test(rText) && !/\bcard\b/i.test(rText));
 
@@ -2204,7 +2240,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
           rows.push({
             eposId: eposId,
             date: isoDate,
-            time: timeStr,
+            time: timeStr || '',
             hour: hourStr || '12:00',
             amount: amountVal,
             isCash: isCash,
@@ -2219,7 +2255,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         for (let i = 0; i < trs.length; i++) {
           const rText = trs[i].innerText.replace(/\s+/g, ' ').trim();
           if (!rText || rText.toLowerCase().includes('transaction report')) continue;
-          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b)/i);
+          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b|\btoday\b|\byesterday\b)/i);
           const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
           const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
           if (dM && tM && aM) {
@@ -2243,7 +2279,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       }
 
       return rows;
-    });
+    }, { defaultYear, defaultDateIso, yesterdayIso });
 
     if (pageRows.length === 0) {
       console.log(`[EposScrape] Page ${pageNum}: 0 rows found. Finishing pagination.`);
@@ -2322,7 +2358,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     daysGroup[dKey].hourly[tx.hour] = (daysGroup[dKey].hourly[tx.hour] || 0) + tx.amount;
   }
 
-  const daysBatch = [];
+  let daysBatch = [];
   const sortedDays = Object.keys(daysGroup).sort().reverse();
   for (let d = 0; d < sortedDays.length; d++) {
     const dayDate = sortedDays[d];
@@ -2344,8 +2380,16 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     });
   }
 
-  if (expectedFrom && expectedTo && daysBatch.some(d => d.date < expectedFrom || d.date > expectedTo)) {
-    throw new Error('Epos returned transactions outside the selected range. Sales were not saved.');
+  if (expectedFrom && expectedTo) {
+    const outOfRange = daysBatch.filter(d => d.date < expectedFrom || d.date > expectedTo);
+    if (outOfRange.length === daysBatch.length) {
+      throw new Error('Epos returned transactions outside the selected range. Sales were not saved.');
+    }
+    if (outOfRange.length > 0) {
+      console.warn(`[EposScrape] Filtered out ${outOfRange.length} out-of-range day(s) outside [${expectedFrom}, ${expectedTo}].`);
+      daysBatch = daysBatch.filter(d => d.date >= expectedFrom && d.date <= expectedTo);
+      allTxList = allTxList.filter(t => t.date >= expectedFrom && t.date <= expectedTo);
+    }
   }
 
   const txRows = allTxList.map((t, idx) => {

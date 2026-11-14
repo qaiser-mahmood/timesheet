@@ -286,3 +286,34 @@ test('explicit today range bypasses the dropdown without weakening historical fi
  const result=await w.context.runSync(true,false,today,today);
  assert.equal(result.txCount,0);
 });
+
+test('Epos preserves in-range transactions and prunes trailing out-of-range rows',async()=>{
+ const w=worker();let writes=0,evaluations=0;
+ w.context.fetch=async()=>{writes++;return dbResponse();};
+ const emptyLocator={first(){return this;},count:async()=>0};
+ const rowToday={eposId:'one',date:'2026-11-14',time:'22:30',hour:'22:00',amount:50,isCash:false,raw:'row1'};
+ const rowYesterday={eposId:'two',date:'2026-11-13',time:'23:55',hour:'23:00',amount:20,isCash:false,raw:'row2'};
+ const page={locator:()=>emptyLocator,waitForTimeout:async()=>{},evaluate:async()=>++evaluations===1?[rowToday,rowYesterday]:false};
+ const result=await w.context.scrapeAndSaveCurrentPage(page,'test',false,'2026-11-14','2026-11-14');
+ assert.equal(writes,2); // 1 for hourly_sales, 1 for raw_transactions chunk
+ assert.equal(result.daysBatch.length,1);
+ assert.equal(result.daysBatch[0].date,'2026-11-14');
+ assert.equal(result.daysBatch[0].totalSales,50);
+});
+
+test('Epos date parser correctly parses word-month dates with hours and slash dates without year',()=>{
+ const fnStr = sourceBetween(server, '      function parseAnyDate(str) {', '      function parseTimeStr(');
+ const parseCode = 'function toIso(y, m, d) { return String(y) + "-" + String(m).padStart(2, "0") + "-" + String(d).padStart(2, "0"); }\n' +
+   'var defDate = defaultDateIso, defYr = defaultYear, yDef = yesterdayIso;\n' +
+   'var months = ["january","february","march","april","may","june","july","august","september","october","november","december"];\n' +
+   'var sMonths = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];\n' +
+   fnStr + '\nreturn parseAnyDate;';
+ const parseAnyDate = new Function('{ defaultYear, defaultDateIso, yesterdayIso } = {}', parseCode)({ defaultYear: 2026, defaultDateIso: '2026-11-14', yesterdayIso: '2026-11-13' });
+ assert.equal(parseAnyDate('14 Nov 22:30'), '2026-11-14');
+ assert.equal(parseAnyDate('14 Nov 15:45'), '2026-11-14');
+ assert.equal(parseAnyDate('14 Nov 11:20'), '2026-11-14');
+ assert.equal(parseAnyDate('Nov 14 22:30'), '2026-11-14');
+ assert.equal(parseAnyDate('14/11 22:30'), '2026-11-14');
+ assert.equal(parseAnyDate('Today 10:30 PM'), '2026-11-14');
+ assert.equal(parseAnyDate('Yesterday 11:45 AM'), '2026-11-13');
+});
