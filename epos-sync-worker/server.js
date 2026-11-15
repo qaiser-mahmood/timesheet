@@ -909,20 +909,56 @@ Do not include markdown fences.`;
 
 // Upload-only authorization; never expose a manager token on the POS site.
 const bookmarkletTokens = new Map();
-function pruneBookmarkletTokens() {
-  for (const [token, expires] of bookmarkletTokens) {
-    if (expires <= Date.now()) bookmarkletTokens.delete(token);
-  }
+const BOOKMARKLET_TOKENS_PATH = path.join(__dirname, '.bookmarklet-tokens.json');
+
+function loadBookmarkletTokensFromDisk() {
+  try {
+    if (fs.existsSync(BOOKMARKLET_TOKENS_PATH)) {
+      const data = JSON.parse(fs.readFileSync(BOOKMARKLET_TOKENS_PATH, 'utf8'));
+      const now = Date.now();
+      for (const [t, exp] of Object.entries(data)) {
+        if (typeof exp === 'number' && exp > now) {
+          bookmarkletTokens.set(t, exp);
+        }
+      }
+    }
+  } catch (_) {}
 }
+
+function saveBookmarkletTokensToDisk() {
+  try {
+    const data = {};
+    for (const [t, exp] of bookmarkletTokens) {
+      data[t] = exp;
+    }
+    fs.writeFileSync(BOOKMARKLET_TOKENS_PATH, JSON.stringify(data), 'utf8');
+  } catch (_) {}
+}
+
+loadBookmarkletTokensFromDisk();
+
+function pruneBookmarkletTokens() {
+  let changed = false;
+  for (const [token, expires] of bookmarkletTokens) {
+    if (expires <= Date.now()) {
+      bookmarkletTokens.delete(token);
+      changed = true;
+    }
+  }
+  if (changed) saveBookmarkletTokensToDisk();
+}
+
 app.post('/api/bookmarklet-token', requireAuthorizedManager, (req, res) => {
   pruneBookmarkletTokens();
-  if (bookmarkletTokens.size >= 100) return res.status(429).json({ error: 'Too many active upload tokens' });
+  if (bookmarkletTokens.size >= 500) return res.status(429).json({ error: 'Too many active upload tokens' });
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = Date.now() + 15 * 60 * 1000;
   bookmarkletTokens.set(token, expiresAt);
+  saveBookmarkletTokensToDisk();
   res.setHeader('Cache-Control', 'no-store');
   res.json({ token, expiresAt });
 });
+
 function requireBookmarkletUpload(req, res, next) {
   pruneBookmarkletTokens();
   const token = (req.headers.authorization || '').replace(/^Bearer /, '');
