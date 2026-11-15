@@ -381,12 +381,39 @@ app.get('/debug/apply-filter', requireAuthorizedManager, async (req, res) => {
 });
 
 // Health endpoint for keep-alive cron & monitoring (Public)
-app.get(['/', '/health'], (req, res) => {
+app.get(['/', '/health'], async (req, res) => {
+  const { hour, minute, formatted } = getLocalTimeParts();
+  const isOperating = (hour >= OPERATING_START_HOUR && hour < OPERATING_END_HOUR) || (hour === OPERATING_END_HOUR && minute === 0);
+  const isPeak = (hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR);
+
+  let pageInfo = { url: 'none', title: 'none' };
+  try {
+    if (appState.activePage) {
+      pageInfo.url = appState.activePage.url();
+      pageInfo.title = await appState.activePage.title().catch(() => '');
+    }
+  } catch (_) {}
+
   res.json({
     status: 'ok',
     service: 'epos-sync-worker',
     time: new Date().toISOString(),
-    uptimeSeconds: Math.floor(process.uptime())
+    localTime: formatted,
+    timezone: TIMEZONE,
+    isOperatingHours: isOperating,
+    isPeakHours: isPeak,
+    uptimeSeconds: Math.floor(process.uptime()),
+    syncState: {
+      isSyncing: appState.isSyncing,
+      isLoggingIn: appState.isLoggingIn,
+      isAuthenticated: appState.isAuthenticated,
+      isPaused: appState.isPaused,
+      consecutiveFailures: appState.consecutiveFailures,
+      lastSyncTime: appState.lastSyncTime,
+      lastSyncResult: appState.lastSyncResult,
+      lastError: appState.lastError || null,
+      page: pageInfo
+    }
   });
 });
 
@@ -1857,6 +1884,7 @@ async function ensureLoggedIn(force = false, isManual = false) {
     return page;
   } catch (err) {
     appState.isAuthenticated = false;
+    appState.lastError = err.message;
     const stackTop = err.stack ? err.stack.split('\n').slice(0, 3).join('\n') : '';
     console.error('Login flow failed:', err.message, stackTop);
     try {
@@ -1961,7 +1989,7 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
 
     // Step 2: Open "Time period" dropdown in MUI drawer
     console.log('[EposFilter] Step 2: Opening Time Period dropdown...');
-    const periodCombobox = page.locator('#period, div[role="combobox"]').first();
+    const periodCombobox = page.locator('.MuiDrawer-root #period, .MuiDrawer-root div[role="combobox"], [role="presentation"] #period, [role="presentation"] div[role="combobox"], #period, div[role="combobox"]').first();
     await periodCombobox.click({ force: true });
     await page.waitForTimeout(600);
 
@@ -1990,13 +2018,13 @@ async function applyEposDateFilter(page, fromIso, toIso, notifyTelegram = true) 
     // Step 4: If "Custom", set Start Date & End Date
     if (targetPeriod === 'custom') {
       console.log(`[EposFilter] Step 4: Setting Custom dates: ${fromFormatted} to ${toFormatted}...`);
-      const dateInputs = page.locator('input[placeholder*="DD / MM / YYYY"]');
+      const dateInputs = page.locator('.MuiDrawer-root input[placeholder*="DD" i], [role="presentation"] input[placeholder*="DD" i], input[placeholder*="DD" i], .MuiDrawer-root input[type="text"]');
       if (await dateInputs.count() >= 2) {
         await dateInputs.nth(0).fill(`${fDay} / ${fMonth} / ${fYear} 12:00 AM`);
         await dateInputs.nth(1).fill(`${tDay} / ${tMonth} / ${tYear} 11:59 PM`);
       } else {
         const datesSet = await page.evaluate(({ fDay, fMonth, fYear, tDay, tMonth, tYear }) => {
-          const inps = Array.from(document.querySelectorAll('input')).filter(i => (i.placeholder || '').includes('DD / MM / YYYY'));
+          const inps = Array.from(document.querySelectorAll('.MuiDrawer-root input, [role="presentation"] input, form input, input')).filter(i => /dd|mm|yyyy/i.test(i.placeholder || '') || (i.type === 'text' && !i.readOnly));
           function setVal(el, val) {
             if (!el) return;
             el.focus();
@@ -2565,7 +2593,18 @@ async function runSync(isManual = false, notifyTelegram = false, from = null, to
       // A fresh report opens on Today. Avoid the fragile period dropdown for live syncs.
       // The scraper still rejects out-of-range rows before writing any sales.
       if (!isTodayOnly) await applyEposDateFilter(page, range.from, range.to, notifyTelegram);
-      const result = await scrapeAndSaveCurrentPage(page, range.from + ' to ' + range.to, false, range.from, range.to);
+      let result;
+      try {
+        result = await scrapeAndSaveCurrentPage(page, range.from + ' to ' + range.to, false, range.from, range.to);
+      } catch (scrapeErr) {
+        if (isTodayOnly && scrapeErr.message && scrapeErr.message.includes('outside the selected range')) {
+          console.log(`[EposSync] Page date mismatch during today sync (${scrapeErr.message}). Applying date filter for ${range.from} and re-scraping...`);
+          await applyEposDateFilter(page, range.from, range.to, notifyTelegram);
+          result = await scrapeAndSaveCurrentPage(page, range.from + ' to ' + range.to, false, range.from, range.to);
+        } else {
+          throw scrapeErr;
+        }
+      }
       scrapeResult.daysBatch.push(...result.daysBatch);
       scrapeResult.totalTx += result.totalTx;
       scrapeResult.pagesLoaded += result.pagesLoaded;
@@ -2578,6 +2617,7 @@ async function runSync(isManual = false, notifyTelegram = false, from = null, to
       topDay: scrapeResult.daysBatch[0] ? `${scrapeResult.daysBatch[0].date}: $${scrapeResult.daysBatch[0].totalSales}` : 'N/A'
     };
     appState.consecutiveFailures = 0;
+    appState.lastError = null;
 
     // Send completion summary only if notifyTelegram is explicitly requested (e.g. via Telegram /sync command)
     if (notifyTelegram) {
@@ -2591,8 +2631,9 @@ async function runSync(isManual = false, notifyTelegram = false, from = null, to
     return appState.lastSyncResult;
   } catch (err) {
     appState.consecutiveFailures++;
+    appState.lastError = err.message;
     console.error('Sync failed:', err);
-    if (notifyTelegram || appState.consecutiveFailures === 3) {
+    if (notifyTelegram || (appState.consecutiveFailures > 0 && appState.consecutiveFailures % 3 === 0)) {
       await sendTelegramMessage(`⚠️ *Epos Sync Error*: ${err.message}`);
     }
     throw err;

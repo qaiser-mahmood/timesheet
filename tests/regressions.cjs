@@ -287,6 +287,22 @@ test('explicit today range bypasses the dropdown without weakening historical fi
  assert.equal(result.txCount,0);
 });
 
+test('today sync recovers and applies date filter when page was left on an old date',async()=>{
+ const w=worker(),today=new Intl.DateTimeFormat('en-CA',{timeZone:'Australia/Perth'}).format(new Date());
+ let filterApplied=false,scrapeAttempts=0;
+ w.context.ensureLoggedIn=async()=>({goto:async()=>{},waitForLoadState:async()=>{},waitForTimeout:async()=>{}});
+ w.context.applyEposDateFilter=async(page,from,to)=>{filterApplied=true;assert.equal(from,today);assert.equal(to,today);};
+ w.context.scrapeAndSaveCurrentPage=async(page,label,notify,from,to)=>{
+  scrapeAttempts++;
+  if(scrapeAttempts===1)throw new Error('Epos returned transactions outside the selected range. Sales were not saved.');
+  return {daysBatch:[{date:today,totalSales:100}],totalTx:5,pagesLoaded:1};
+ };
+ const result=await w.context.runSync(false,false);
+ assert.equal(scrapeAttempts,2);
+ assert.equal(filterApplied,true);
+ assert.equal(result.txCount,5);
+});
+
 test('Epos preserves in-range transactions and prunes trailing out-of-range rows',async()=>{
  const w=worker();let writes=0,evaluations=0;
  w.context.fetch=async()=>{writes++;return dbResponse();};
