@@ -1617,19 +1617,28 @@ async function ensureLoggedIn(force = false, isManual = false) {
       // Race between authenticated report elements and unauthenticated login elements
       try {
         const checkResult = await Promise.race([
-          page.waitForSelector('.MuiDataGrid-root, button[aria-label="Filters"], #period, .MuiTablePagination-root', { timeout: 12000 }).then(() => 'logged_in'),
-          page.waitForSelector('#username, input[name="username"], input[type="email"]', { timeout: 12000 }).then(() => 'login_required'),
-          page.waitForURL(url => url.hostname.includes('login.eposnowhq.com') || url.pathname.includes('login') || url.hostname.includes('onboarding-oauth'), { timeout: 12000 }).then(() => 'login_required')
+          page.waitForSelector('.MuiDataGrid-root, button[aria-label="Filters"], #period, .MuiTablePagination-root', { timeout: 25000 }).then(() => 'logged_in'),
+          page.waitForSelector('#username, input[name="username"], input[type="email"]', { timeout: 25000 }).then(() => 'login_required'),
+          page.waitForURL(url => url.hostname.includes('login.eposnowhq.com') || url.pathname.includes('login') || url.hostname.includes('onboarding-oauth'), { timeout: 25000 }).then(() => 'login_required')
         ]);
         if (checkResult === 'logged_in') {
           isSessionValid = true;
         }
       } catch (_) {
         const curUrl = page.url().toLowerCase();
-        const hasInputs = (await page.locator('#username, input[name="username"], input[type="password"]').count()) > 0;
-        const hasGrid = (await page.locator('.MuiDataGrid-root, button[aria-label="Filters"], #period').count()) > 0;
-        if (!curUrl.includes('login') && !curUrl.includes('onboarding-oauth') && !hasInputs && hasGrid) {
-          isSessionValid = true;
+        if (curUrl.includes('organisations.eposnowhq.com') || curUrl.includes('dashboard')) {
+          console.log('[ensureLoggedIn] Page is on organisations dashboard. Navigating directly to reporting TARGET_URL...');
+          await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 }).catch(() => {});
+          const hasGridNow = (await page.locator('.MuiDataGrid-root, button[aria-label="Filters"], #period').count()) > 0;
+          if (hasGridNow || (!page.url().includes('login') && !page.url().includes('onboarding-oauth'))) {
+            isSessionValid = true;
+          }
+        } else {
+          const hasInputs = (await page.locator('#username, input[name="username"], input[type="password"]').count()) > 0;
+          const hasGrid = (await page.locator('.MuiDataGrid-root, button[aria-label="Filters"], #period').count()) > 0;
+          if (!curUrl.includes('login') && !curUrl.includes('onboarding-oauth') && !hasInputs && hasGrid) {
+            isSessionValid = true;
+          }
         }
       }
     }
@@ -1658,6 +1667,20 @@ async function ensureLoggedIn(force = false, isManual = false) {
       console.log('Navigating to Epos Now sign-in portal...');
       await page.goto('https://www.eposnowhq.com/sso/Auth/SignIn', { waitUntil: 'load', timeout: 45000 });
       await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+    }
+
+    // Check if SSO bounced back to an already-authenticated session
+    const postSsoUrl = page.url().toLowerCase();
+    const hasSsoLoginInputs = (await page.locator('#username, input[name="username"], input[type="email"]').count()) > 0;
+    if (!hasSsoLoginInputs && (postSsoUrl.includes('organisations.eposnowhq.com') || postSsoUrl.includes('reporting.eposnowhq.com') || postSsoUrl.includes('dashboard'))) {
+      console.log('[ensureLoggedIn] SSO session is already active (redirected to dashboard). Navigating to TARGET_URL...');
+      await page.goto(TARGET_URL, { waitUntil: 'load', timeout: 45000 }).catch(() => {});
+      const hasGridNow = (await page.locator('.MuiDataGrid-root, button[aria-label="Filters"], #period').count()) > 0;
+      if (hasGridNow || !page.url().includes('login')) {
+        appState.isAuthenticated = true;
+        appState.consecutive2FAFailures = 0;
+        return page;
+      }
     }
 
     // Target inputs on https://login.eposnowhq.com using safe locators
