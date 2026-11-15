@@ -333,3 +333,31 @@ test('Epos date parser correctly parses word-month dates with hours and slash da
  assert.equal(parseAnyDate('Today 10:30 PM'), '2026-11-14');
  assert.equal(parseAnyDate('Yesterday 11:45 AM'), '2026-11-13');
 });
+
+test('Epos multi-page pagination advances and collects all transactions across pages',async()=>{
+ const w=worker();let writes=0,evaluations=0;
+ w.context.fetch=async()=>{writes++;return dbResponse();};
+ const emptyLocator={first(){return this;},count:async()=>0};
+ const row1={eposId:'tx1',date:'2026-11-15',time:'10:00',hour:'10:00',amount:45,isCash:false,raw:'row1'};
+ const row2={eposId:'tx2',date:'2026-11-15',time:'11:30',hour:'11:00',amount:55,isCash:true,raw:'row2'};
+ const page={
+  locator:()=>emptyLocator,
+  waitForTimeout:async()=>{},
+  evaluate:async()=>{
+   evaluations++;
+   if(evaluations===1)return [row1]; // Page 1 rows
+   if(evaluations===2)return true;   // Next clicked
+   if(evaluations===3)return 'tx2';  // Next page row loaded (advancement confirmed)
+   if(evaluations===4)return [row2]; // Page 2 rows
+   return false;                     // Next button disabled (final page)
+  }
+ };
+ const result=await w.context.scrapeAndSaveCurrentPage(page,'test',false);
+ assert.equal(writes,2); // 1 for hourly_sales, 1 for raw_transactions chunk
+ assert.equal(result.totalTx,2);
+ assert.equal(result.pagesLoaded,2);
+ assert.equal(result.daysBatch.length,1);
+ assert.equal(result.daysBatch[0].totalSales,100);
+ assert.equal(result.daysBatch[0].cardSales,45);
+ assert.equal(result.daysBatch[0].cashSales,55);
+});

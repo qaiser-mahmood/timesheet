@@ -2101,18 +2101,27 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 
   // Step 1: Switch Rows per page to 100 for fast, full extraction
   try {
-    const combobox = page.locator('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-select').first();
-    if (await combobox.count() > 0) {
-      const curVal = (await combobox.innerText()).trim();
-      if (curVal !== '100') {
-        await combobox.scrollIntoViewIfNeeded().catch(() => {});
-        await combobox.click({ force: true });
-        await page.waitForTimeout(400);
-        const opt100 = page.locator('li[data-value="100"], [role="option"][data-value="100"]').first();
-        if (await opt100.count() > 0) {
-          await opt100.click({ force: true });
-          await page.waitForTimeout(2500);
-          console.log('[EposScrape] Set rows per page to 100.');
+    const nativeSelect = page.locator('.MuiTablePagination-root select, select.MuiTablePagination-select, select[aria-label*="rows" i]').first();
+    if (await nativeSelect.count() > 0) {
+      await nativeSelect.selectOption('100').catch(() => {});
+      await page.waitForTimeout(1500);
+      console.log('[EposScrape] Selected 100 rows per page via native select.');
+    } else {
+      const combobox = page.locator('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-root div[role="button"], .MuiTablePagination-select, [aria-labelledby*="pagination"] [role="combobox"]').first();
+      if (await combobox.count() > 0) {
+        const curVal = (await combobox.innerText().catch(() => '')).trim();
+        if (curVal !== '100') {
+          await combobox.scrollIntoViewIfNeeded().catch(() => {});
+          await combobox.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(500);
+          const opt100 = page.locator('li[data-value="100"], [role="option"][data-value="100"], .MuiMenuItem-root[data-value="100"], li:has-text("100"), [role="option"]:has-text("100")').first();
+          if (await opt100.count() > 0) {
+            await opt100.click({ force: true }).catch(() => {});
+            await page.waitForTimeout(2500);
+            console.log('[EposScrape] Set rows per page to 100.');
+          } else {
+            await page.keyboard.press('Escape').catch(() => {});
+          }
         }
       }
     }
@@ -2133,8 +2142,8 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       await page.waitForSelector('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr', { timeout: 8000 }).catch(() => {});
     }
 
-    // Extract rows from current page DOM
-    const pageRows = await page.evaluate(({ defaultYear, defaultDateIso, yesterdayIso } = {}) => {
+    // Extract rows from current page DOM (including scrolling through virtualized scroller if present)
+    const pageRows = await page.evaluate(async ({ defaultYear, defaultDateIso, yesterdayIso } = {}) => {
       function toIso(y, m, d) {
         return String(y) + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
       }
@@ -2215,70 +2224,100 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         return String(h).padStart(2, '0') + ':00';
       }
 
-      const rows = [];
-      const gridRows = document.querySelectorAll('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr');
-      for (let i = 0; i < gridRows.length; i++) {
-        const r = gridRows[i];
-        const rText = (r.innerText || r.textContent || '').replace(/\s+/g, ' ').trim();
-        if (!rText || rText.toLowerCase().includes('transaction report')) continue;
+      function extractMountedRows() {
+        const batch = [];
+        const gridRows = document.querySelectorAll('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr');
+        for (let i = 0; i < gridRows.length; i++) {
+          const r = gridRows[i];
+          const rText = (r.innerText || r.textContent || '').replace(/\s+/g, ' ').trim();
+          if (!rText || rText.toLowerCase().includes('transaction report')) continue;
 
-        const eposId = r.getAttribute('data-id') || '';
-        const cells = Array.from(r.querySelectorAll('.MuiDataGrid-cell, td, [role="cell"], [role="gridcell"]'));
-        let dateStr = '', timeStr = '', amountVal = null, payStr = '', staffStr = '', pspStr = '';
+          const eposId = r.getAttribute('data-id') || '';
+          const cells = Array.from(r.querySelectorAll('.MuiDataGrid-cell, td, [role="cell"], [role="gridcell"]'));
+          let dateStr = '', timeStr = '', amountVal = null, payStr = '', staffStr = '', pspStr = '';
 
-        cells.forEach(c => {
-          const f = (c.getAttribute('data-field') || '').toLowerCase();
-          const t = c.innerText.trim();
-          if (f.includes('date') || f.includes('time')) {
-            if (parseAnyDate(t)) dateStr = t;
-            const tMatch = t.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
-            if (tMatch) timeStr = tMatch[1];
-          }
-          else if (f.includes('amount') || f.includes('total') || f.includes('value')) {
-            const m = t.match(/([0-9]+\.[0-9]{2})/);
-            if (m) amountVal = parseFloat(m[1]);
-          }
-          else if (f.includes('pay') || f.includes('tender') || f.includes('method')) payStr = t;
-          else if (f.includes('staff')) staffStr = t;
-          else if (f.includes('psp') || f.includes('ref')) pspStr = t;
-        });
-
-        if (!dateStr) {
-          const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b|\btoday\b|\byesterday\b)/i);
-          if (dM) dateStr = dM[1];
-        }
-        if (!timeStr) {
-          const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
-          if (tM) timeStr = tM[1];
-        }
-        if (amountVal === null) {
-          const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
-          if (aM) amountVal = parseFloat(aM[1]);
-        }
-        if (!payStr) {
-          if (/\bcash\b/i.test(rText)) payStr = 'Cash';
-          else if (/\bcard\b|\beftpos\b|\bvisa\b|\bmastercard\b/i.test(rText)) payStr = 'Card';
-        }
-
-        const isoDate = parseAnyDate(dateStr) || parseAnyDate(rText);
-        const hourStr = parseTimeStr(timeStr);
-        const isCash = payStr.toLowerCase().includes('cash') || (/\bcash\b/i.test(rText) && !/\bcard\b/i.test(rText));
-
-        if (isoDate && amountVal !== null && !isNaN(amountVal)) {
-          rows.push({
-            eposId: eposId,
-            date: isoDate,
-            time: timeStr || '',
-            hour: hourStr || '12:00',
-            amount: amountVal,
-            isCash: isCash,
-            raw: rText
+          cells.forEach(c => {
+            const f = (c.getAttribute('data-field') || '').toLowerCase();
+            const t = c.innerText.trim();
+            if (f.includes('date') || f.includes('time')) {
+              if (parseAnyDate(t)) dateStr = t;
+              const tMatch = t.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
+              if (tMatch) timeStr = tMatch[1];
+            }
+            else if (f.includes('amount') || f.includes('total') || f.includes('value')) {
+              const m = t.match(/([0-9]+\.[0-9]{2})/);
+              if (m) amountVal = parseFloat(m[1]);
+            }
+            else if (f.includes('pay') || f.includes('tender') || f.includes('method')) payStr = t;
+            else if (f.includes('staff')) staffStr = t;
+            else if (f.includes('psp') || f.includes('ref')) pspStr = t;
           });
+
+          if (!dateStr) {
+            const dM = rText.match(/(\b\d{1,2}[\/\-\.]\d{1,2}(?:[\/\-\.]\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{2,4})?\b|\btoday\b|\byesterday\b)/i);
+            if (dM) dateStr = dM[1];
+          }
+          if (!timeStr) {
+            const tM = rText.match(/(\d{1,2}:\d{2}(?::\d{2})?(?:\s*[apAP][mM])?)/i);
+            if (tM) timeStr = tM[1];
+          }
+          if (amountVal === null) {
+            const aM = rText.match(/(?:[\$£€]\s*)?([0-9]+\.[0-9]{2})/);
+            if (aM) amountVal = parseFloat(aM[1]);
+          }
+          if (!payStr) {
+            if (/\bcash\b/i.test(rText)) payStr = 'Cash';
+            else if (/\bcard\b|\beftpos\b|\bvisa\b|\bmastercard\b/i.test(rText)) payStr = 'Card';
+          }
+
+          const isoDate = parseAnyDate(dateStr) || parseAnyDate(rText);
+          const hourStr = parseTimeStr(timeStr);
+          const isCash = payStr.toLowerCase().includes('cash') || (/\bcash\b/i.test(rText) && !/\bcard\b/i.test(rText));
+
+          if (isoDate && amountVal !== null && !isNaN(amountVal)) {
+            batch.push({
+              eposId: eposId,
+              date: isoDate,
+              time: timeStr || '',
+              hour: hourStr || '12:00',
+              amount: amountVal,
+              isCash: isCash,
+              raw: rText
+            });
+          }
+        }
+        return batch;
+      }
+
+      const rowsMap = new Map();
+      function ingest(arr) {
+        for (let i = 0; i < arr.length; i++) {
+          const item = arr[i];
+          const k = item.eposId ? ('epos_' + item.eposId) : (item.date + '_' + item.time + '_' + item.amount.toFixed(2) + '_' + item.raw);
+          if (!rowsMap.has(k)) {
+            rowsMap.set(k, item);
+          }
         }
       }
 
+      // Initial collection
+      ingest(extractMountedRows());
+
+      // If virtual scroller exists (MUI DataGrid), scroll down incrementally to mount all virtualized rows
+      const scroller = document.querySelector('.MuiDataGrid-virtualScroller, .MuiDataGrid-windowContainer, .MuiDataGrid-window, [role="grid"]');
+      if (scroller && scroller.scrollHeight > scroller.clientHeight + 40) {
+        const step = Math.max(200, Math.floor(scroller.clientHeight * 0.7));
+        const maxScroll = scroller.scrollHeight;
+        for (let top = step; top <= maxScroll + step; top += step) {
+          scroller.scrollTop = Math.min(top, maxScroll);
+          await new Promise(r => setTimeout(r, 70));
+          ingest(extractMountedRows());
+        }
+        scroller.scrollTop = 0;
+      }
+
       // Fallback: If no grid rows found, try regular tr rows
-      if (rows.length === 0) {
+      if (rowsMap.size === 0) {
         const trs = document.querySelectorAll('tbody tr, table tr');
         for (let i = 0; i < trs.length; i++) {
           const rText = trs[i].innerText.replace(/\s+/g, ' ').trim();
@@ -2292,7 +2331,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
             const amt = parseFloat(aM[1]);
             const isCash = /\bcash\b/i.test(rText);
             if (iso && !isNaN(amt)) {
-              rows.push({
+              ingest([{
                 eposId: '',
                 date: iso,
                 time: tM[1],
@@ -2300,13 +2339,13 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
                 amount: amt,
                 isCash: isCash,
                 raw: rText
-              });
+              }]);
             }
           }
         }
       }
 
-      return rows;
+      return Array.from(rowsMap.values());
     }, { defaultYear, defaultDateIso, yesterdayIso });
 
     if (pageRows.length === 0) {
@@ -2332,15 +2371,66 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       throw new Error('Epos repeated a results page. Partial sales were not saved.');
     }
 
-    // Click Next Page button via DOM (ensures no out-of-viewport exceptions)
+    // Click Next Page button via DOM (checks all MUI TablePagination, DataGrid and bookmarklet button patterns)
     const firstRowBefore = pageRows[0] ? (pageRows[0].eposId || pageRows[0].raw) : '';
     const nextClicked = await page.evaluate(() => {
-      const btn = document.querySelector('button[aria-label="Go to next page"], button[title="Go to next page"]');
-      if (btn && !btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
-        btn.scrollIntoView({ behavior: 'instant', block: 'center' });
-        btn.click();
+      function isUsable(btn) {
+        if (!btn) return false;
+        if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return false;
+        if (btn.classList && (btn.classList.contains('Mui-disabled') || btn.classList.contains('disabled'))) return false;
         return true;
       }
+
+      // 1. Text buttons: load more / show more / more transactions
+      const allBtns = Array.from(document.querySelectorAll('button, a[role="button"], div[role="button"], [class*="button" i], [class*="btn" i]'));
+      for (let i = 0; i < allBtns.length; i++) {
+        const b = allBtns[i];
+        const txt = (b.innerText || b.textContent || '').trim().toLowerCase();
+        if (txt.includes('more transaction') || txt.includes('load more') || txt.includes('show more') || (txt.includes('more') && txt.includes('tx'))) {
+          if (isUsable(b)) {
+            b.scrollIntoView({ behavior: 'instant', block: 'center' });
+            b.click();
+            return true;
+          }
+        }
+      }
+
+      // 2. Comprehensive selectors for Next Page button
+      const nextSelectors = [
+        'button[aria-label="Go to next page"]',
+        'button[aria-label="Next page"]',
+        'button[title="Go to next page"]',
+        'button[title="Next page"]',
+        'button[aria-label*="next page" i]',
+        'button[title*="next page" i]',
+        'button[aria-label*="next" i]',
+        'button[title*="next" i]',
+        '.MuiTablePagination-actions button:last-child',
+        '.MuiDataGrid-footerContainer button:last-child'
+      ];
+
+      for (let s = 0; s < nextSelectors.length; s++) {
+        try {
+          const btn = document.querySelector(nextSelectors[s]);
+          if (isUsable(btn)) {
+            btn.scrollIntoView({ behavior: 'instant', block: 'center' });
+            btn.click();
+            return true;
+          }
+        } catch (_) {}
+      }
+
+      // 3. Right arrow SVG icons inside buttons
+      const rightIcons = document.querySelectorAll('svg[data-testid="KeyboardArrowRightIcon"], svg[data-testid="NavigateNextIcon"], svg[data-testid*="Right" i]');
+      for (let j = 0; j < rightIcons.length; j++) {
+        const arrowBtn = rightIcons[j].closest('button, [role="button"]');
+        if (isUsable(arrowBtn)) {
+          arrowBtn.scrollIntoView({ behavior: 'instant', block: 'center' });
+          arrowBtn.click();
+          return true;
+        }
+      }
+
       return false;
     });
 
@@ -2349,14 +2439,14 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       break;
     }
 
-    // Wait for next page to load (up to 2.5s)
+    // Wait for next page to load (up to 5s)
     let changed = false;
-    for (let w = 0; w < 10; w++) {
-      await page.waitForTimeout(250);
+    for (let w = 0; w < 16; w++) {
+      await page.waitForTimeout(300);
       const newFirstRow = await page.evaluate(() => {
-        const first = document.querySelector('.MuiDataGrid-row, tr[data-id]');
+        const first = document.querySelector('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr');
         if (!first) return '';
-        return first.getAttribute('data-id') || first.innerText.slice(0, 50);
+        return first.getAttribute('data-id') || (first.innerText || '').slice(0, 50);
       });
       if (newFirstRow && newFirstRow !== firstRowBefore) {
         changed = true;
