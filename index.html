@@ -1362,77 +1362,51 @@
                 <button type="button" onclick="closeEposSyncModal()" class="text-slate-400 hover:text-white text-lg font-bold cursor-pointer">✕</button>
             </div>
 
-            <!-- Option 1: Quick Today Sync -->
-            <div class="p-3 bg-purple-950/40 rounded-xl border border-purple-800/40 space-y-2">
+            <!-- Option 1: Quick Today Sync (Cloud Worker) -->
+            <div class="p-3.5 bg-gradient-to-br from-purple-950/60 to-slate-900 rounded-xl border border-purple-600/40 space-y-2.5">
                 <div class="flex items-center justify-between">
                     <div>
-                        <div class="text-xs font-bold text-purple-200">⚡ Today's Live Sales</div>
-                        <div class="text-[10px] text-slate-400">Quick 10-second scrape of today's live trade</div>
+                        <div class="text-xs font-bold text-purple-200 flex items-center gap-1.5">
+                            <span>⚡ Today's Live Sales</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">Scrapes today's transactions directly into Supabase</div>
                     </div>
-                    <button type="button" onclick="closeEposSyncModal(); syncDirectFromEpos();" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1 cursor-pointer">
-                        <span>Sync Today</span>
+                    <button type="button" onclick="closeEposSyncModal(); syncDirectFromEpos();" class="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1.5 cursor-pointer shrink-0">
+                        <span>⚡ Sync Today</span>
                     </button>
+                </div>
+                <div class="text-[10px] text-purple-300/80 bg-purple-950/40 p-2 rounded border border-purple-900/40 leading-snug">
+                    Worker runs automatically every 5 min during peak rush (11am–3pm) and every 15 min off-peak.
                 </div>
             </div>
 
-            <!-- Option 2: Automated Date Range Sync -->
-            <form onsubmit="startRangeEposSync(event)" class="space-y-3">
-                <div class="text-xs font-bold text-slate-200 flex items-center justify-between">
-                    <span>📅 Custom Date Range</span>
-                    <span class="text-[10px] text-amber-400 font-semibold">≤ 31-day auto-chunks</span>
-                </div>
-
-                <!-- Presets buttons -->
-                <div class="grid grid-cols-4 gap-1.5 text-[10px]">
-                    <button type="button" onclick="setEposSyncPreset('yesterday')" class="py-1 px-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 hover:text-white rounded border border-purple-600/60 font-bold transition text-center cursor-pointer">Yesterday</button>
-                    <button type="button" onclick="setEposSyncPreset('week')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Week</button>
-                    <button type="button" onclick="setEposSyncPreset('lastWeek')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Week</button>
-                    <button type="button" onclick="setEposSyncPreset('month')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">This Month</button>
-                    <button type="button" onclick="setEposSyncPreset('lastMonth')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer">Last Month</button>
-                    <button type="button" onclick="setEposSyncPreset('curQuarter')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer col-span-1">Cur Qtr</button>
-                    <button type="button" onclick="setEposSyncPreset('prevQuarter')" class="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded border border-slate-700 font-medium transition text-center cursor-pointer col-span-2">Prev Qtr (BAS)</button>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-xs">
+            <!-- Option 2: Browser Bookmarklet for Past / Other Dates -->
+            <div class="p-3.5 bg-slate-800/80 rounded-xl border border-slate-700/80 space-y-2.5">
+                <div class="flex items-center justify-between">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-300 uppercase">From Date</label>
-                        <input type="date" id="eposSyncStartDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-purple-500 shadow-sm">
+                        <div class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <span>📱 Scrape Other Dates (Bookmarklet)</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400">For historical dates or custom date ranges</div>
                     </div>
-                    <div>
-                        <label class="block text-[10px] font-bold text-slate-300 uppercase">To Date</label>
-                        <input type="date" id="eposSyncEndDate" required class="mt-1 block w-full rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-white text-xs font-semibold focus:outline-none focus:border-purple-500 shadow-sm">
-                    </div>
-                </div>
-
-                <div class="p-2.5 bg-slate-800/80 rounded-lg border border-slate-700/80 text-[10px] text-slate-300 space-y-1">
-                    <div class="flex items-center gap-1.5 text-amber-400 font-bold">
-                        <span>ℹ️</span> <span>Epos Now 31-Day Rule Automated</span>
-                    </div>
-                    <p class="leading-relaxed">
-                        Epos Now does not allow queries over 31 days. Any selected multi-month period will automatically be divided into sequential 31-day chunks, scraped batch-by-batch, and safely stored in Supabase.
-                    </p>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 pt-1">
-                    <button type="button" onclick="closeEposSyncModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-lg transition cursor-pointer">
-                        Cancel
-                    </button>
-                    <button type="submit" id="startRangeSyncBtn" class="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1.5 cursor-pointer">
-                        <span>🚀 Start Range Sync</span>
+                    <button type="button" onclick="closeEposSyncModal(); openEposModal();" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-purple-200 hover:text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1 cursor-pointer shrink-0 border border-slate-600">
+                        <span>📋 Get Bookmarklet</span>
                     </button>
                 </div>
-            </form>
-
-            <!-- Option 3: Manual Browser Bookmarklet -->
-            <div class="p-3 bg-purple-950/30 rounded-xl border border-purple-800/40 flex items-center justify-between gap-2 mt-2">
-                <div class="min-w-0">
-                    <div class="text-xs font-bold text-purple-200 flex items-center gap-1.5 truncate">
-                        <span>📱 Browser Bookmarklet (v2.1)</span>
-                    </div>
-                    <div class="text-[10px] text-slate-400 truncate">Run directly in Safari / Chrome on Epos Now</div>
+                <div class="text-[10px] text-slate-400 bg-slate-900/60 p-2 rounded border border-slate-800 leading-snug">
+                    Open Epos Now in Safari or Chrome, filter to any date range on the site, and click the bookmarklet to sync directly.
                 </div>
-                <button type="button" onclick="closeEposSyncModal(); openEposModal();" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg transition shadow flex items-center gap-1 cursor-pointer shrink-0">
-                    <span>📋 Copy Bookmarklet</span>
+            </div>
+
+            <!-- Hidden inputs preserved for backward compatibility -->
+            <div class="hidden">
+                <input type="date" id="eposSyncStartDate">
+                <input type="date" id="eposSyncEndDate">
+            </div>
+
+            <div class="flex items-center justify-end pt-1">
+                <button type="button" onclick="closeEposSyncModal()" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-lg transition cursor-pointer">
+                    Close
                 </button>
             </div>
         </div>

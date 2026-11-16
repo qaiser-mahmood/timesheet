@@ -361,3 +361,27 @@ test('Epos multi-page pagination advances and collects all transactions across p
  assert.equal(result.daysBatch[0].cardSales,45);
  assert.equal(result.daysBatch[0].cashSales,55);
 });
+
+test('Epos pagination saves all scraped rows when encountering 0 new rows on subsequent page',async()=>{
+ const w=worker();let writes=0,evaluations=0;
+ w.context.fetch=async()=>{writes++;return dbResponse();};
+ const emptyLocator={first(){return this;},count:async()=>0};
+ const row1={eposId:'tx1',date:'2026-11-16',time:'10:00',hour:'10:00',amount:60,isCash:false,raw:'row1'};
+ const page={
+  locator:()=>emptyLocator,
+  waitForTimeout:async()=>{},
+  evaluate:async()=>{
+   evaluations++;
+   if(evaluations===1)return [row1]; // Page 1 rows
+   if(evaluations===2)return true;   // Next clicked
+   if(evaluations===3)return 'tx1-repeat'; // DOM changed
+   if(evaluations===4)return [row1]; // Page 2 returns same row1 (0 new rows added)
+   return false;
+  }
+ };
+ const result=await w.context.scrapeAndSaveCurrentPage(page,'test',false);
+ assert.equal(writes,2);
+ assert.equal(result.totalTx,1);
+ assert.equal(result.daysBatch.length,1);
+ assert.equal(result.daysBatch[0].totalSales,60);
+});

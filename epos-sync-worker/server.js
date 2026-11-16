@@ -2424,10 +2424,10 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 
     console.log(`[EposScrape] Page ${pageNum}: found ${pageRows.length} rows, added ${addedThisPage} new (total: ${allTxList.length})`);
 
-    // If no new rows were added, we have reached the end or duplicated page
+    // If no new rows were added, we have reached the end of available pages
     if (addedThisPage === 0 && pageNum > 1) {
-      console.log(`[EposScrape] Page ${pageNum}: 0 new rows added. Finishing pagination.`);
-      throw new Error('Epos repeated a results page. Partial sales were not saved.');
+      console.log(`[EposScrape] Page ${pageNum}: 0 new rows added. All transactions captured across ${pageNum - 1} page(s).`);
+      break;
     }
 
     // Click Next Page button via DOM (checks all MUI TablePagination, DataGrid and bookmarklet button patterns)
@@ -2714,6 +2714,9 @@ function validateSyncRange(from, to) {
 }
 async function runSync(isManual = false, notifyTelegram = false, from = null, to = null) {
   if (from || to) validateSyncRange(from, to);
+  if (isManual) {
+    appState.isPaused = false;
+  }
   if (appState.isPaused && !isManual) {
     console.log('Sync is paused by user command (/pause). Skipping.');
     return;
