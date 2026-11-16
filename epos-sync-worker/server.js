@@ -2160,6 +2160,9 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
 
   // Step 1: Switch Rows per page to 100 for fast, full extraction
   try {
+    if (typeof page.waitForSelector === 'function') {
+      await page.waitForSelector('.MuiTablePagination-root, .MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr', { timeout: 12000 }).catch(() => {});
+    }
     const nativeSelect = page.locator('.MuiTablePagination-root select, select.MuiTablePagination-select, select[aria-label*="rows" i]').first();
     if (await nativeSelect.count() > 0) {
       await nativeSelect.selectOption('100').catch(() => {});
@@ -2172,7 +2175,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         if (curVal !== '100') {
           await combobox.scrollIntoViewIfNeeded().catch(() => {});
           await combobox.click({ force: true }).catch(() => {});
-          await page.waitForTimeout(500);
+          await page.waitForTimeout(600);
           const opt100 = page.locator('li[data-value="100"], [role="option"][data-value="100"], .MuiMenuItem-root[data-value="100"], li:has-text("100"), [role="option"]:has-text("100")').first();
           if (await opt100.count() > 0) {
             await opt100.click({ force: true }).catch(() => {});
@@ -2431,7 +2434,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     }
 
     // Click Next Page button via DOM (checks all MUI TablePagination, DataGrid and bookmarklet button patterns)
-    const firstRowBefore = pageRows[0] ? (pageRows[0].eposId || pageRows[0].raw) : '';
+    const firstRowBefore = pageRows[0] ? (pageRows[0].eposId || (pageRows[0].raw || '').replace(/\s+/g, ' ').trim().slice(0, 80)) : '';
     const nextClicked = await page.evaluate(() => {
       function isUsable(btn) {
         if (!btn) return false;
@@ -2498,14 +2501,16 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
       break;
     }
 
-    // Wait for next page to load (up to 5s)
+    // Wait for next page to load (up to 8.4s)
     let changed = false;
-    for (let w = 0; w < 16; w++) {
-      await page.waitForTimeout(300);
+    for (let w = 0; w < 24; w++) {
+      await page.waitForTimeout(350);
       const newFirstRow = await page.evaluate(() => {
         const first = document.querySelector('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr');
         if (!first) return '';
-        return first.getAttribute('data-id') || (first.innerText || '').slice(0, 50);
+        const did = first.getAttribute('data-id');
+        if (did) return did;
+        return (first.innerText || first.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
       });
       if (newFirstRow && newFirstRow !== firstRowBefore) {
         changed = true;
