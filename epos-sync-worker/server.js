@@ -2161,30 +2161,39 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
   // Step 1: Switch Rows per page to 100 for fast, full extraction
   try {
     if (typeof page.waitForSelector === 'function') {
-      await page.waitForSelector('.MuiTablePagination-root, .MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr', { timeout: 12000 }).catch(() => {});
+      await page.waitForSelector('.MuiTablePagination-root, .MuiDataGrid-row, tr[data-id], table tbody tr', { timeout: 12000 }).catch(() => {});
     }
-    const nativeSelect = page.locator('.MuiTablePagination-root select, select.MuiTablePagination-select, select[aria-label*="rows" i]').first();
-    if (await nativeSelect.count() > 0) {
-      await nativeSelect.selectOption('100').catch(() => {});
-      await page.waitForTimeout(1500);
-      console.log('[EposScrape] Selected 100 rows per page via native select.');
-    } else {
-      const combobox = page.locator('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-root div[role="button"], .MuiTablePagination-select, [aria-labelledby*="pagination"] [role="combobox"]').first();
-      if (await combobox.count() > 0) {
-        const curVal = (await combobox.innerText().catch(() => '')).trim();
-        if (curVal !== '100') {
-          await combobox.scrollIntoViewIfNeeded().catch(() => {});
-          await combobox.click({ force: true }).catch(() => {});
-          await page.waitForTimeout(600);
-          const opt100 = page.locator('li[data-value="100"], [role="option"][data-value="100"], .MuiMenuItem-root[data-value="100"], li:has-text("100"), [role="option"]:has-text("100")').first();
-          if (await opt100.count() > 0) {
-            await opt100.click({ force: true }).catch(() => {});
-            await page.waitForTimeout(2500);
-            console.log('[EposScrape] Set rows per page to 100.');
-          } else {
-            await page.keyboard.press('Escape').catch(() => {});
-          }
+
+    // Prioritize MUI combobox / select button
+    const combobox = page.locator('.MuiTablePagination-root div[role="combobox"], .MuiTablePagination-root div[role="button"], .MuiTablePagination-select, [aria-labelledby*="pagination"] [role="combobox"]').first();
+    let set100 = false;
+    if (await combobox.count() > 0) {
+      const curVal = (await combobox.innerText().catch(() => '')).trim();
+      if (curVal === '100') {
+        set100 = true;
+      } else {
+        await combobox.scrollIntoViewIfNeeded().catch(() => {});
+        await combobox.click({ force: true }).catch(() => {});
+        await page.waitForTimeout(600);
+        const opt100 = page.locator('li[data-value="100"], [role="option"][data-value="100"], .MuiMenuItem-root[data-value="100"], li:has-text("100"), [role="option"]:has-text("100")').first();
+        if (await opt100.count() > 0) {
+          await opt100.click({ force: true }).catch(() => {});
+          await page.waitForTimeout(2500);
+          console.log('[EposScrape] Set rows per page to 100 via combobox.');
+          set100 = true;
+        } else {
+          await page.keyboard.press('Escape').catch(() => {});
         }
+      }
+    }
+
+    // Fallback: If combobox not found or didn't set, try visible native select (excluding hidden MUI internal input)
+    if (!set100) {
+      const nativeSelect = page.locator('.MuiTablePagination-root select:not([aria-hidden="true"]):not(.MuiSelect-nativeInput), select[aria-label*="rows" i]:not([aria-hidden="true"])').first();
+      if (await nativeSelect.count() > 0) {
+        await nativeSelect.selectOption('100').catch(() => {});
+        await page.waitForTimeout(1500);
+        console.log('[EposScrape] Selected 100 rows per page via native select.');
       }
     }
   } catch (e) {
@@ -2477,6 +2486,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
           if (isUsable(btn)) {
             btn.scrollIntoView({ behavior: 'instant', block: 'center' });
             btn.click();
+            btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
             return true;
           }
         } catch (_) {}
@@ -2489,6 +2499,7 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
         if (isUsable(arrowBtn)) {
           arrowBtn.scrollIntoView({ behavior: 'instant', block: 'center' });
           arrowBtn.click();
+          arrowBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
           return true;
         }
       }
@@ -2506,11 +2517,18 @@ async function scrapeAndSaveCurrentPage(page, chunkLabel = '', notifyTelegram = 
     for (let w = 0; w < 24; w++) {
       await page.waitForTimeout(350);
       const newFirstRow = await page.evaluate(() => {
-        const first = document.querySelector('.MuiDataGrid-row, tr[data-id], [role="row"], table tbody tr');
-        if (!first) return '';
-        const did = first.getAttribute('data-id');
-        if (did) return did;
-        return (first.innerText || first.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+        const rows = document.querySelectorAll('.MuiDataGrid-row, .MuiTableBody-root tr, table tbody tr, tbody tr');
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const txt = (r.innerText || r.textContent || '').replace(/\s+/g, ' ').trim();
+          if (!txt || txt.toLowerCase().includes('transaction report')) continue;
+          if (/\d/.test(txt)) {
+            const did = r.getAttribute('data-id');
+            if (did) return did;
+            return txt.slice(0, 80);
+          }
+        }
+        return '';
       });
       if (newFirstRow && newFirstRow !== firstRowBefore) {
         changed = true;
